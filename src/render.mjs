@@ -248,7 +248,7 @@ function composeMap(room, parquet, wingRug) {
 }
 
 function drawSpeech(ctx, baron, cameraX, elapsed) {
-  const opacity = speechOpacity(baron, elapsed);
+  const opacity = speechOpacity(baron, cameraX, elapsed);
   if (opacity <= 0) return;
   ctx.save();
   ctx.globalAlpha = opacity;
@@ -280,7 +280,7 @@ function drawSpeech(ctx, baron, cameraX, elapsed) {
 function drawMilo(ctx, sprite, milo, elapsed) {
   if (!isReady(sprite)) return;
   const motion = milo.route.length ? Math.sin(milo.stride) : 0;
-  const lift = milo.route.length ? Math.abs(motion) * 2 : Math.sin(elapsed * 2.4) * 0.5;
+  const lift = milo.route.length ? Math.abs(motion) * (milo.fleeing ? 4 : 2) : Math.sin(elapsed * 2.4) * 0.5;
   ctx.save();
   ctx.translate(milo.x, milo.y + 20);
   ctx.fillStyle = '#25202a80';

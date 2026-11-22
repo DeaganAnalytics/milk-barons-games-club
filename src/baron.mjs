@@ -83,8 +83,13 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt) {
   }
 }
 
-export function speechOpacity(baron, elapsed) {
-  if (baron.speech?.visibleSince == null) return 0;
+export function callOutMilo(baron, milo, elapsed) {
+  baron.speech = {text: 'Milo, I see you!', visibleSince: elapsed};
+  if (!baron.walking) baron.facing = facingIndex(milo.x - baron.x, milo.y - baron.y);
+}
+
+export function speechOpacity(baron, cameraX, elapsed) {
+  if (!isOnscreen(baron, cameraX) || baron.speech?.visibleSince == null) return 0;
   return Math.max(0, Math.min(1, SPEECH_DURATION - (elapsed - baron.speech.visibleSince)));
 }
 

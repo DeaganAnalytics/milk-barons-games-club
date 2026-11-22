@@ -1,7 +1,7 @@
 import {createMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {createBaron, speechOpacity, talkToBaron, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
+import {callOutMilo, createBaron, speechOpacity, talkToBaron, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
 import {cameraLeft, CENTER_RUG, isBlocked, nearestInteraction, CLEAR_AISLE_Y, SIDE_RUGS} from '../src/room.mjs';
@@ -89,7 +89,7 @@ test('the Baron waits five continuous seconds off-screen then walks to the close
   assert.equal(baron.walking, true);
   assert.equal(baron.route.at(-1), SIDE_RUGS[0]);
   assert.match(baron.speech.text, /What's going on/);
-  assert.equal(speechOpacity(baron, 11), 0);
+  assert.equal(speechOpacity(baron, cameraLeft(-500), 11), 0);
 
   let time = 11;
   while (baron.route.length && time < 22) {
@@ -99,7 +99,7 @@ test('the Baron waits five continuous seconds off-screen then walks to the close
   }
   assert.deepEqual([baron.x, baron.y], [SIDE_RUGS[0].x, SIDE_RUGS[0].y]);
   assert.notEqual(baron.speech.visibleSince, null);
-  assert.equal(speechOpacity(baron, baron.speech.visibleSince + 3.5), 0.5);
+  assert.equal(speechOpacity(baron, cameraLeft(-500), baron.speech.visibleSince + 3.5), 0.5);
   update(-500, time + 4);
   assert.equal(baron.walking, false);
   assert.equal(baron.speech, null);
@@ -151,9 +151,33 @@ test('Milo rotates between corners and moves early if the Baron approaches', () 
   assert.equal(milo.route.length, 0);
   assert.equal(nearestInteraction(milo, baron, milo)?.title, 'Milo Milksworth');
 
-  baron.x = milo.x + 140;
+  // Stay in a different room to exercise the existing proximity avoidance.
+  milo.x = -60;
+  baron.x = 70;
   baron.y = milo.y;
   updateMilo(milo, baron, 16, 0.05);
   assert.ok(milo.route.length);
-  assert.ok(milo.y < 550);
+  assert.equal(milo.fleeing, false);
+});
+
+test('the Baron spots Milo once on entering the same room and Milo runs to the opposite wing', () => {
+  for (const x of [-574, 1264]) {
+    const milo = {...createMilo(), x};
+    const baron = createBaron();
+    assert.equal(updateMilo(milo, baron, 1, 0.05), false);
+
+    baron.x = x < 0 ? -345 : 1035;
+    assert.equal(updateMilo(milo, baron, 2, 0.05), true);
+    callOutMilo(baron, milo, 2);
+    assert.equal(baron.speech.text, 'Milo, I see you!');
+    assert.equal(speechOpacity(baron, cameraLeft(baron.x), 5.5), 0.5);
+    assert.equal(milo.fleeing, true);
+
+    for (let frame = 41; frame < 280; frame++) {
+      assert.equal(updateMilo(milo, baron, frame / 20, 0.05), false);
+      assert.equal(isBlocked(milo.x, milo.y, 13, {x: 0, y: 0}), false);
+    }
+    assert.equal(milo.x, x < 0 ? 1264 : -574);
+    assert.equal(milo.fleeing, false);
+  }
 });

@@ -1,4 +1,4 @@
-import {createBaron, talkToBaron, updateBaronAttention, updateBaronWalk} from './baron.mjs';
+import {callOutMilo, createBaron, talkToBaron, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
 import {createPlayer, movePlayer, updatePlayer} from './player.mjs';
@@ -36,7 +36,7 @@ function frame(timestamp) {
   const cameraX = cameraLeft(player.x);
   updateBaronWalk(baron, player, cameraX, elapsed, dt);
   updateBaronAttention(baron, player, elapsed, dt);
-  updateMilo(milo, baron, elapsed, dt);
+  if (updateMilo(milo, baron, elapsed, dt)) callOutMilo(baron, milo, elapsed);
   render(player, baron, milo, cameraX, elapsed);
   requestAnimationFrame(frame);
 }
