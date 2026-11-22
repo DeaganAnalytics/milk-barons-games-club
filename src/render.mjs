@@ -1,5 +1,6 @@
 import {FACING_STEP, TURN} from './directions.mjs';
-import {ROOM_WIDTH, ROOM_HEIGHT} from './room.mjs';
+import {speechOpacity} from './baron.mjs';
+import {PASSAGE_TOP, PASSAGE_BOTTOM, ROOM_WIDTH, ROOM_HEIGHT, SIDE_RUGS, WEST_EDGE} from './room.mjs';
 
 function loadSprite(name) {
   const image = new Image();
@@ -161,6 +162,75 @@ function drawPlayer(ctx, figure, player, elapsed) {
   ctx.restore();
 }
 
+function composeMap(room) {
+  const world = document.createElement('canvas');
+  world.width = ROOM_WIDTH * 3;
+  world.height = ROOM_HEIGHT;
+  const ctx = world.getContext('2d');
+  ctx.translate(-WEST_EDGE, 0);
+
+  // Sample a clear stretch of parquet from the original room for the new floors.
+  const tile = document.createElement('canvas');
+  tile.width = 196;
+  tile.height = 168;
+  tile.getContext('2d').drawImage(room, 445, 456, 196, 168, 0, 0, 196, 168);
+  ctx.fillStyle = ctx.createPattern(tile, 'repeat');
+  ctx.fillRect(WEST_EDGE, 0, world.width, world.height);
+  ctx.drawImage(room, 0, 0, ROOM_WIDTH, ROOM_HEIGHT);
+
+  for (const [index, x] of [WEST_EDGE, ROOM_WIDTH].entries()) {
+    const rug = SIDE_RUGS[index];
+    ctx.fillStyle = '#3e3740';
+    ctx.fillRect(x, 0, ROOM_WIDTH, 18);
+    ctx.fillRect(x, 674, ROOM_WIDTH, 11);
+
+    // Reuse the club's rear panelling, baseboard and pillars to frame each room.
+    for (let panel = 0; panel < 3; panel++) {
+      ctx.drawImage(room, 34, 18, 218, 193, x + panel * 230, 18, 230, 193);
+      ctx.drawImage(room, 40, 632, 206, 42, x + panel * 230, 632, 230, 42);
+    }
+    ctx.drawImage(room, 0, 18, 40, 667, x, 18, 40, 667);
+    ctx.drawImage(room, 650, 18, 40, 667, x + ROOM_WIDTH - 40, 18, 40, 667);
+    ctx.drawImage(room, 274, 256, 143, 224, rug.x - 46, rug.y - 72, 92, 144);
+  }
+
+  ctx.fillStyle = ctx.createPattern(tile, 'repeat');
+  for (const seam of [0, ROOM_WIDTH]) {
+    ctx.fillRect(seam - 40, PASSAGE_TOP, 80, PASSAGE_BOTTOM - PASSAGE_TOP);
+  }
+  return world;
+}
+
+function drawSpeech(ctx, baron, cameraX, elapsed) {
+  const opacity = speechOpacity(baron, elapsed);
+  if (opacity <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = opacity;
+  ctx.font = '600 21px system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = '#20170f';
+  ctx.fillStyle = '#fff4d8';
+
+  const lines = [''];
+  for (const word of baron.speech.text.split(' ')) {
+    const last = lines.length - 1;
+    const candidate = lines[last] ? lines[last] + ' ' + word : word;
+    if (ctx.measureText(candidate).width > 260 && lines[last]) lines.push(word);
+    else lines[last] = candidate;
+  }
+  const halfWidth = Math.max(...lines.map(line => ctx.measureText(line).width)) / 2 + 12;
+  const x = Math.max(cameraX + halfWidth, Math.min(cameraX + ROOM_WIDTH - halfWidth, baron.x));
+  lines.forEach((line, i) => {
+    const y = baron.y - 70 - (lines.length - 1 - i) * 25;
+    ctx.strokeText(line, x, y);
+    ctx.fillText(line, x, y);
+  });
+  ctx.restore();
+}
+
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
@@ -171,15 +241,20 @@ export function createRenderer(canvas) {
   const fallback = loadSprite('baron');
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
 
-  return (player, baron, elapsed) => {
+  let world;
+  return (player, baron, cameraX, elapsed) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (isReady(room)) {
-      ctx.drawImage(room, 0, 0, ROOM_WIDTH, ROOM_HEIGHT);
+      world ??= composeMap(room);
+      ctx.drawImage(world, cameraX - WEST_EDGE, 0, ROOM_WIDTH, ROOM_HEIGHT,
+        0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     } else {
       ctx.fillStyle = '#ae744c';
       ctx.fillRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     }
 
+    ctx.save();
+    ctx.translate(-cameraX, 0);
     // Characters farther up the room are drawn behind those nearer the camera.
     if (player.y < baron.y + 12) {
       drawPlayer(ctx, figure, player, elapsed);
@@ -188,5 +263,7 @@ export function createRenderer(canvas) {
       drawBaron(ctx, baronFrames[baron.facing], fallback, baron, elapsed);
       drawPlayer(ctx, figure, player, elapsed);
     }
+    drawSpeech(ctx, baron, cameraX, elapsed);
+    ctx.restore();
   };
 }

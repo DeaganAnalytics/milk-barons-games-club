@@ -108,6 +108,12 @@ try {
       window.hasGameFrame = true;
       return 1;
     };
+    const fillText = CanvasRenderingContext2D.prototype.fillText;
+    window.spokenLines = [];
+    CanvasRenderingContext2D.prototype.fillText = function (text, ...args) {
+      window.spokenLines.push({text, opacity: this.globalAlpha, timestamp});
+      return fillText.call(this, text, ...args);
+    };
     window.advanceFrames = count => {
       for (let i = 0; i < count; i++) callback(timestamp += 1000 / 60);
     };
@@ -145,8 +151,26 @@ try {
   await hold('ArrowUp', 62);
   await hold('ArrowLeft', 96);
   await activate('Cashier');
+  for (const direction of ['ArrowLeft', 'ArrowRight']) {
+    await load(1100, 950, false, direction);
+    await hold('ArrowUp', 72);
+    await hold(direction, 385);
+    await activate('The club');
+    assert.equal(await evaluate('window.spokenLines.length'), 0);
+    await frames(380);
+    assert.equal(await evaluate('window.spokenLines.some(line => line.text.startsWith("What\'s going on") && line.opacity === 1)'), true);
+    await frames(300);
+    assert.equal(await evaluate('window.spokenLines.some(line => line.opacity > 0 && line.opacity < 1)'), true);
+    const lines = await evaluate('window.spokenLines.length');
+    await frames(60);
+    assert.equal(await evaluate('window.spokenLines.length'), lines);
+    if (process.env.SCREENSHOT_PREFIX) {
+      const shot = await send('Page.captureScreenshot', {format: 'png'});
+      await writeFile(`${process.env.SCREENSHOT_PREFIX}-${direction}-rug.png`, Buffer.from(shot.data, 'base64'));
+    }
+  }
   assert.deepEqual(errors, [], JSON.stringify(errors));
-  console.log('Passed desktop and mobile layout, sprite loading, keyboard and touch movement, and all interactions.');
+  console.log('Passed desktop and mobile layout, sprite loading, keyboard and touch movement, all interactions, both side passages and fading Baron speech.');
 } finally {
   socket.close();
 }

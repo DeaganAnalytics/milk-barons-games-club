@@ -14,8 +14,8 @@ export function movePlayer(player, baron, dx, dy) {
   if (dx || dy) player.facing = facingIndex(dx, dy);
   const startX = player.x;
   const startY = player.y;
-  if (!isBlocked(player.x + dx, player.y, player.radius, baron)) player.x += dx;
-  if (!isBlocked(player.x, player.y + dy, player.radius, baron)) player.y += dy;
+  if (!isBlocked(player.x + dx, player.y, player.radius, baron, player)) player.x += dx;
+  if (!isBlocked(player.x, player.y + dy, player.radius, baron, player)) player.y += dy;
 
   const distance = Math.hypot(player.x - startX, player.y - startY);
   player.walking = distance > 0;

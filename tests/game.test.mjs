@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {createBaron, talkToBaron, updateBaronAttention, updateBaronPatrol} from '../src/baron.mjs';
+import {createBaron, speechOpacity, talkToBaron, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {isBlocked, nearestInteraction} from '../src/room.mjs';
+import {cameraLeft, isBlocked, nearestInteraction, PASSAGE_Y, SIDE_RUGS} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -57,17 +57,68 @@ test('stations and the Baron respond within their existing reach', () => {
   }
 });
 
-test('the Baron patrols on schedule and dialogue prompts a grin', () => {
+test('the camera clamps at the outer walls and both passages connect the wings', () => {
+  const baron = createBaron();
+  assert.equal(cameraLeft(-600), -690);
+  assert.equal(cameraLeft(345), 0);
+  assert.equal(cameraLeft(1300), 690);
+  for (const x of [0, 690]) {
+    assert.equal(isBlocked(x, 380, 13, baron), true);
+    assert.equal(isBlocked(x, PASSAGE_Y, 13, baron), false);
+  }
+  assert.equal(isBlocked(-653, PASSAGE_Y, 13, baron), true);
+  assert.equal(isBlocked(1342, PASSAGE_Y, 13, baron), true);
+});
+
+test('the Baron waits five continuous seconds off-screen then walks to the closest side rug', () => {
   const baron = createBaron();
   const player = createPlayer();
-  updateBaronPatrol(baron, 24);
+  const update = (x, time, dt = 0.05) => {
+    player.x = x;
+    updateBaronWalk(baron, player, cameraLeft(x), time, dt);
+  };
+  update(-500, 0);
+  update(-500, 4.9);
+  assert.equal(baron.walking, false);
+  update(350, 5);
+  update(-500, 6);
+  update(-500, 10.9);
+  assert.equal(baron.walking, false);
+  update(-500, 11);
   assert.equal(baron.walking, true);
-  assert.equal(baron.facing, 2);
-  updateBaronPatrol(baron, 25);
-  assert.ok(baron.stride > 0);
-  assert.ok(baron.x > 345);
-  updateBaronPatrol(baron, 29);
-  assert.deepEqual([baron.x, baron.y, baron.walking, baron.stride], [345, 357, false, 0]);
+  assert.equal(baron.route.at(-1), SIDE_RUGS[0]);
+  assert.match(baron.speech.text, /What's going on/);
+  assert.equal(speechOpacity(baron, 11), 0);
+
+  let time = 11;
+  while (baron.route.length && time < 22) {
+    time += 0.05;
+    update(-500, time);
+    assert.equal(isBlocked(baron.x, baron.y, 13, {x: 0, y: 0}), false);
+  }
+  assert.deepEqual([baron.x, baron.y], [SIDE_RUGS[0].x, SIDE_RUGS[0].y]);
+  assert.notEqual(baron.speech.visibleSince, null);
+  assert.equal(speechOpacity(baron, baron.speech.visibleSince + 3.5), 0.5);
+  update(-500, time + 4);
+  assert.equal(baron.walking, false);
+  assert.equal(baron.speech, null);
+
+  update(1200, time + 5);
+  update(1200, time + 10);
+  assert.equal(baron.route.at(-1), SIDE_RUGS[1]);
+  assert.match(baron.speech.text, /drink more milk/);
+});
+
+test('the player can step away if the Baron walks onto an occupied rug', () => {
+  const baron = {...createBaron(), ...SIDE_RUGS[0]};
+  const player = {...createPlayer(), ...SIDE_RUGS[0]};
+  movePlayer(player, baron, 5, 0);
+  assert.equal(player.x, SIDE_RUGS[0].x + 5);
+});
+
+test('talking to the Baron cycles his dialogue and prompts a grin', () => {
+  const baron = createBaron();
+  const player = createPlayer();
   assert.match(talkToBaron(baron, 29), /WELCOME/);
   assert.match(talkToBaron(baron, 29), /extremely fair/);
   updateBaronAttention(baron, player, 29.1, 0.05);
