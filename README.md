@@ -5,10 +5,26 @@ A retro RPG-style browser game featuring the Milk Baron, developed as an experim
 
 Move with WASD, the arrow keys, or the on-screen directional buttons. Press E, Space, or Interact near the Baron, the tables, or the cashier. The tables and cashier currently offer dialogue.
 
+## Run locally
+
+From the repository root, run `python3 -m http.server 8000` and open `http://localhost:8000`. The site uses native browser modules and runs directly from the static files.
+
+## Project structure
+
+- `index.html` and `style.css` define the page and responsive controls.
+- `src/main.mjs` creates the game state, connects the controls and dialogue panel, and runs the frame loop.
+- `src/input.mjs`, `src/player.mjs`, and `src/directions.mjs` handle keyboard and touch input, movement, and facing.
+- `src/room.mjs` holds the fixed room dimensions, station dialogue, and collision geometry. `src/baron.mjs` controls the Baron's patrol, dialogue, and expressions.
+- `src/render.mjs` draws the room and animates its characters using the original images in `assets/`.
+
+## Tests
+
+Run `node --test tests/game.test.mjs` for the movement, collision, interaction, and patrol tests.
+
+The browser smoke test uses Node 22 or newer and a local Chromium or Chrome instance. With the HTTP server running, start Chromium with `chromium --headless --remote-debugging-port=9227 --user-data-dir="$(mktemp -d)" about:blank`, then run `node tests/browser.mjs`. Set `GAME_URL` to test a different URL. Set `SCREENSHOT_PREFIX` to save desktop and mobile screenshots.
+
 ## GitHub Pages
 
 In **Settings → Pages**, select **Deploy from a branch**, choose **main** and **/ (root)**, and save. GitHub Pages serves `index.html` at the project URL.
 
 [Open the club](https://deagananalytics.github.io/milk-barons-games-club/)
-
-To preview locally, run `python3 -m http.server 8000` from the repository root and open `http://localhost:8000`.
