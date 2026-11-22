@@ -1,0 +1,87 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Milk Baron's Games Club — V1.3</title><style>
+*{box-sizing:border-box}body{margin:0;padding:15px 10px 25px;background:#15231b;color:#eee9d9;font-family:system-ui,sans-serif}.shell{max-width:710px;margin:auto}h1{font-size:clamp(20px,5vw,30px);margin:0 0 5px}header p{margin:0 0 12px;color:#b9c8b7;font-size:13px}.viewport{width:100%;aspect-ratio:690/685;border:4px solid #5b735e;border-radius:13px;overflow:hidden;background:#3e3740}canvas{width:100%;height:100%;display:block;image-rendering:auto}.panel{background:#2a3e30;border:2px solid #516b55;border-radius:14px;padding:12px 15px;margin-top:10px}.panel h2{font-size:19px;margin:0 0 6px}.panel p{font-size:15px;line-height:1.4;margin:0;min-height:38px}.hint{color:#b5c6b5;font-size:12px!important;margin-top:7px!important;min-height:0!important}.controls{display:flex;align-items:center;justify-content:space-between;gap:12px}.dpad{display:grid;grid-template-columns:repeat(3,var(--key));grid-template-rows:repeat(2,var(--key));gap:5px;--key:clamp(47px,12vw,68px);touch-action:none;user-select:none}.dpad button,.actions button{border:2px solid #8cae93;border-radius:12px;background:#4a6d58;color:#fff;font-size:24px;touch-action:none;user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer}.dpad button.pressed{background:#7c9b78}.up{grid-column:2;grid-row:1}.left{grid-column:1;grid-row:2}.down{grid-column:2;grid-row:2}.right{grid-column:3;grid-row:2}.actions button{background:#d8b67b;color:#213126;border-color:#e8c992;padding:14px 18px;font-size:17px;font-weight:600}@media(max-width:370px){.dpad{--key:45px}.panel{padding:10px}}@media(max-width:600px){.viewport{width:min(100%,calc(100svh - 280px));min-width:min(100%,230px);margin-inline:auto}.shell header p{margin-bottom:8px}}
+</style></head><body><main class="shell"><header><h1>MILK BARON'S GAMES CLUB</h1><p>Explore the club and meet the Milk Baron.</p></header><section class="viewport"><canvas id="game" width="1380" height="1370" aria-label="Milk Baron's club"></canvas></section><section class="panel" aria-live="polite"><h2 id="heading">The club</h2><p id="info">Approach the Milk Baron in the centre and press Interact.</p><p class="hint">WASD / arrows to move · E / Space to interact</p></section><section class="panel controls"><div class="dpad"><button class="up" data-dir="up" aria-label="Move up">▲</button><button class="left" data-dir="left" aria-label="Move left">◀</button><button class="down" data-dir="down" aria-label="Move down">▼</button><button class="right" data-dir="right" aria-label="Move right">▶</button></div><div class="actions"><button id="interact">Interact</button></div></section></main><script>
+'use strict';
+const canvas=document.getElementById('game'),ctx=canvas.getContext('2d'),heading=document.getElementById('heading'),info=document.getElementById('info');ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+const bg=new Image(),baron=new Image(),figure=new Image();bg.src='./assets/club.png';baron.src='./assets/baron.png';figure.src='./assets/player.png';
+
+ctx.setTransform(2,0,0,2,0,0);
+function createSprite(src){const img=new Image();img.src=src;return img}
+const baronFrames=[
+  createSprite("./assets/baron-0.png"),
+  createSprite("./assets/baron-1.png"),
+  createSprite("./assets/baron-2.png"),
+  createSprite("./assets/baron-3.png"),
+  createSprite("./assets/baron-4.png"),
+  createSprite("./assets/baron-5.png"),
+  createSprite("./assets/baron-6.png"),
+  createSprite("./assets/baron-7.png")
+];
+const P={x:350,y:585,speed:112,r:13},held=new Set(),touch=new Map();let last=0,chats=0,elapsed=0;const B={x:345,y:357,cx:345,cy:357,phase:0,walking:false};
+const objects=[{id:'baron',x:345,y:357,r:39,title:'The Milk Baron',msg:''},{id:'cards',x:171,y:319,r:85,title:'Card table',msg:'The cards are ready. The game itself is still being prepared.'},{id:'dice',x:535,y:319,r:85,title:'Dice table',msg:'Three dice. A suspiciously confident house.'},{id:'cashier',x:170,y:560,r:80,title:'Cashier',msg:'The cashier is preparing the chip counter.'}];
+const keyMap={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
+const directionButtons = document.querySelectorAll('[data-dir]');
+
+addEventListener('keydown', event => {
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  const direction = keyMap[event.code];
+  if (direction) {
+    held.add(event.code);
+    event.preventDefault();
+  }
+  if ((event.code === 'KeyE' || event.code === 'Space') && !event.repeat) {
+    if (event.code === 'Space' && event.target.closest?.('button')) return;
+    event.preventDefault();
+    interact();
+  }
+});
+addEventListener('keyup', event => held.delete(event.code));
+
+function clearInput() {
+  held.clear();
+  touch.clear();
+  directionButtons.forEach(button => button.classList.remove('pressed'));
+}
+addEventListener('blur', clearInput);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) clearInput();
+});
+
+directionButtons.forEach(button => {
+  const direction = button.dataset.dir;
+  const syncPressed = () => {
+    button.classList.toggle('pressed', Array.from(touch.values()).includes(direction));
+  };
+  const release = event => {
+    touch.delete(event.pointerId);
+    syncPressed();
+  };
+  button.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    button.setPointerCapture(event.pointerId);
+    touch.set(event.pointerId, direction);
+    syncPressed();
+  });
+  button.addEventListener('pointerup', release);
+  button.addEventListener('pointercancel', release);
+  button.addEventListener('lostpointercapture', release);
+  // Enter and Space activate a focused direction button.
+  button.addEventListener('click', event => {
+    if (event.detail !== 0) return;
+    const x = P.x + 12 * (Number(direction === 'right') - Number(direction === 'left'));
+    const y = P.y + 12 * (Number(direction === 'down') - Number(direction === 'up'));
+    if (!blocked(x, y)) {
+      P.x = x;
+      P.y = y;
+    }
+  });
+});
+function nearest(){objects[0].x=B.x;objects[0].y=B.y;return objects.map(o=>({...o,d:Math.hypot(P.x-o.x,P.y-o.y)})).filter(o=>o.d<o.r+27).sort((a,b)=>a.d-b.d)[0]}
+function interact(){const o=nearest();if(!o){heading.textContent='The club';info.textContent='Nothing to interact with here. Try a table, the cashier, or the Baron.';return}heading.textContent=o.title;if(o.id==='baron'){const lines=['WELCOME! This club is the finest establishment I personally own.','You may find our games extremely fair. To me.','Do you like the carpet? It cost several fortunes. Not mine, naturally.','I oversee every game personally. From this exact spot.'];info.textContent=lines[chats++%lines.length]}else info.textContent=o.msg}
+document.getElementById('interact').addEventListener('click',interact);
+function blocked(x,y){if(x<38||x>651||y<160||y>617)return true;if(y<190&&x>295&&x<395)return true;const rects=[{x:171,y:319,w:89,h:69},{x:535,y:319,w:89,h:69},{x:170,y:553,w:107,h:56},{x:B.x,y:B.y+6,w:29,h:35},{x:165,y:215,w:42,h:37},{x:520,y:215,w:42,h:37}];return rects.some(o=>Math.abs(x-o.x)<o.w+P.r&&Math.abs(y-o.y)<o.h+P.r)}
+function update(dt){elapsed+=dt;const cycle=elapsed%30;B.walking=cycle>=24&&cycle<29;B.phase=B.walking?(cycle-24)/5:0;const a=B.phase*Math.PI*2;B.x=B.cx+(B.walking?24*Math.sin(a):0);B.y=B.cy+(B.walking?16*(1-Math.cos(a)):0);objects[0].x=B.x;objects[0].y=B.y;const directions = new Set([...Array.from(held, code => keyMap[code]), ...touch.values()]);const down=d=>directions.has(d);let dx=Number(down('right'))-Number(down('left')),dy=Number(down('down'))-Number(down('up'));if(dx&&dy){dx*=Math.SQRT1_2;dy*=Math.SQRT1_2}const nx=P.x+dx*P.speed*dt,ny=P.y+dy*P.speed*dt;if(!blocked(nx,P.y))P.x=nx;if(!blocked(P.x,ny))P.y=ny}
+function draw(){ctx.clearRect(0,0,690,685);if(bg.complete&&bg.naturalWidth)ctx.drawImage(bg,0,0,690,685);else {ctx.fillStyle="#ae744c";ctx.fillRect(0,0,690,685)}const angle=Math.atan2(P.y-B.y,P.x-B.x);const index=(Math.round((Math.PI/2-angle)/(Math.PI/4))+8)%8;const pose=baronFrames[index];if(pose.complete&&pose.naturalWidth){ctx.drawImage(pose,Math.round(B.x-33),Math.round(B.y-57),66,91)}else if(baron.complete&&baron.naturalWidth)ctx.drawImage(baron,Math.round(B.x-30),Math.round(B.y-48),60,92);if(figure.complete&&figure.naturalWidth)ctx.drawImage(figure,Math.round(P.x-17),Math.round(P.y-49),34,72)}
+function frame(t){const dt=Math.min((t-last)/1000||0,.05);last=t;update(dt);draw();requestAnimationFrame(frame)}requestAnimationFrame(frame);
+</script></body></html>
