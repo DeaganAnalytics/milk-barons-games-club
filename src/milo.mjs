@@ -1,4 +1,4 @@
-import {EAST_EDGE, WEST_EDGE, CLEAR_AISLE_Y} from './room.mjs';
+import {EAST_EDGE, WEST_EDGE, CLEAR_AISLE_Y, ROOM_WIDTH} from './room.mjs';
 import {TURN} from './directions.mjs';
 
 const CORNERS = [
@@ -9,10 +9,12 @@ const CORNERS = [
 ];
 const HIDE_INTERVAL = 12;
 const THREAT_DISTANCE = 200;
-const SPEED = 102;
+const WALK_SPEED = 102;
+const RUN_SPEED = 235;
+const SPOT_COOLDOWN = 4;
 
 export function createMilo() {
-  return {...CORNERS[0], corner: 0, route: [], nextMove: HIDE_INTERVAL, stride: 0, facingLeft: false};
+  return {...CORNERS[0], corner: 0, route: [], nextMove: HIDE_INTERVAL, stride: 0, facingLeft: false, fleeing: false, nextSpot: 0};
 }
 
 function routeTo(milo, corner) {
@@ -45,7 +47,22 @@ function selectRoute(milo, baron, distance) {
   return [];
 }
 
+function startEscape(milo, baron, elapsed) {
+  // The hall is open, but its three room-width sections still define encounters.
+  const baronRoom = Math.floor(baron.x / ROOM_WIDTH);
+  if (milo.fleeing || elapsed < milo.nextSpot
+      || Math.floor(milo.x / ROOM_WIDTH) !== baronRoom) return false;
+
+  const goEast = baronRoom === -1 || (baronRoom === 0 && baron.x < ROOM_WIDTH / 2);
+  const topCorner = milo.y < CLEAR_AISLE_Y;
+  milo.corner = goEast ? (topCorner ? 3 : 2) : (topCorner ? 0 : 1);
+  milo.route = routeTo(milo, CORNERS[milo.corner]);
+  milo.fleeing = true;
+  return true;
+}
+
 export function updateMilo(milo, baron, elapsed, dt) {
+  const spotted = startEscape(milo, baron, elapsed);
   const distance = Math.hypot(milo.x - baron.x, milo.y - baron.y);
   if (!milo.route.length && (elapsed >= milo.nextMove || distance < THREAT_DISTANCE)) {
     milo.route = selectRoute(milo, baron, distance);
@@ -54,19 +71,19 @@ export function updateMilo(milo, baron, elapsed, dt) {
   const target = milo.route[0];
   if (!target) {
     milo.stride = 0;
-    return;
+    return spotted;
   }
 
   const dx = target.x - milo.x;
   const dy = target.y - milo.y;
   const remaining = Math.hypot(dx, dy);
-  const step = Math.min(SPEED * dt, remaining);
+  const step = Math.min((milo.fleeing ? RUN_SPEED : WALK_SPEED) * dt, remaining);
   const x = remaining ? milo.x + dx * step / remaining : milo.x;
   const y = remaining ? milo.y + dy * step / remaining : milo.y;
-  if (distance < 125 && Math.hypot(x - baron.x, y - baron.y) < distance - 0.01) {
+  if (!milo.fleeing && distance < 125 && Math.hypot(x - baron.x, y - baron.y) < distance - 0.01) {
     // A Baron who has started moving can cut across Milo's previous route.
     milo.route = selectRoute(milo, baron, distance);
-    return;
+    return spotted;
   }
 
   if (dx) milo.facingLeft = dx < 0;
@@ -75,9 +92,14 @@ export function updateMilo(milo, baron, elapsed, dt) {
     milo.x = target.x;
     milo.y = target.y;
     milo.route.shift();
-    if (!milo.route.length) milo.nextMove = elapsed + HIDE_INTERVAL;
+    if (!milo.route.length) {
+      milo.nextMove = elapsed + HIDE_INTERVAL;
+      if (milo.fleeing) milo.nextSpot = elapsed + SPOT_COOLDOWN;
+      milo.fleeing = false;
+    }
   } else {
     milo.x = x;
     milo.y = y;
   }
+  return spotted;
 }

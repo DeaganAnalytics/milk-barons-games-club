@@ -160,6 +160,9 @@ try {
     await frames(380);
     assert.equal(await evaluate('window.spokenLines.some(line => line.text.startsWith("What\'s going on") && line.opacity === 1)'), true);
     await frames(300);
+    if (direction === 'ArrowLeft') {
+      assert.equal(await evaluate('window.spokenLines.some(line => line.text === "Milo, I see you!")'), true);
+    }
     assert.equal(await evaluate('window.spokenLines.some(line => line.opacity > 0 && line.opacity < 1)'), true);
     const lines = await evaluate('window.spokenLines.length');
     await frames(60);
