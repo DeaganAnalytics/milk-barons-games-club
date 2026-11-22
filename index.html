@@ -17,7 +17,7 @@ const baronFrames=[
   createSprite("./assets/baron-6.png"),
   createSprite("./assets/baron-7.png")
 ];
-const P={x:350,y:585,speed:112,r:13,facing:0,stride:0,walking:false},held=new Set(),touch=new Map();let last=0,chats=0,elapsed=0;const B={x:345,y:357,cx:345,cy:357,walking:false,facing:0,stride:0};
+const P={x:350,y:585,speed:112,r:13,facing:0,stride:0,walking:false},held=new Set(),touch=new Map();let last=0,chats=0,elapsed=0;const B={x:345,y:357,cx:345,cy:357,walking:false,facing:0,stride:0,turn:0,expression:0,nextSmile:2.5,smileUntil:0};
 const objects=[{id:'baron',x:345,y:357,r:39,title:'The Milk Baron',msg:''},{id:'cards',x:171,y:319,r:85,title:'Card table',msg:'The cards are ready. The game itself is still being prepared.'},{id:'dice',x:535,y:319,r:85,title:'Dice table',msg:'Three dice. A suspiciously confident house.'},{id:'cashier',x:170,y:560,r:80,title:'Cashier',msg:'The cashier is preparing the chip counter.'}];
 const keyMap={ArrowUp:'up',KeyW:'up',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',ArrowRight:'right',KeyD:'right'};
 const directionButtons = document.querySelectorAll('[data-dir]');
@@ -75,7 +75,7 @@ directionButtons.forEach(button => {
   });
 });
 function nearest(){objects[0].x=B.x;objects[0].y=B.y;return objects.map(o=>({...o,d:Math.hypot(P.x-o.x,P.y-o.y)})).filter(o=>o.d<o.r+27).sort((a,b)=>a.d-b.d)[0]}
-function interact(){const o=nearest();if(!o){heading.textContent='The club';info.textContent='Nothing to interact with here. Try a table, the cashier, or the Baron.';return}heading.textContent=o.title;if(o.id==='baron'){const lines=['WELCOME! This club is the finest establishment I personally own.','You may find our games extremely fair. To me.','Do you like the carpet? It cost several fortunes. Not mine, naturally.','I oversee every game personally. From this exact spot.'];info.textContent=lines[chats++%lines.length]}else info.textContent=o.msg}
+function interact(){const o=nearest();if(!o){heading.textContent='The club';info.textContent='Nothing to interact with here. Try a table, the cashier, or the Baron.';return}heading.textContent=o.title;if(o.id==='baron'){B.smileUntil=elapsed+1.8;B.nextSmile=B.smileUntil+4;const lines=['WELCOME! This club is the finest establishment I personally own.','You may find our games extremely fair. To me.','Do you like the carpet? It cost several fortunes. Not mine, naturally.','I oversee every game personally. From this exact spot.'];info.textContent=lines[chats++%lines.length]}else info.textContent=o.msg}
 document.getElementById('interact').addEventListener('click',interact);
 function blocked(x,y){if(x<38||x>651||y<160||y>617)return true;if(y<190&&x>295&&x<395)return true;const rects=[{x:171,y:319,w:89,h:69},{x:535,y:319,w:89,h:69},{x:170,y:553,w:107,h:56},{x:B.x,y:B.y+6,w:29,h:35},{x:165,y:215,w:42,h:37},{x:520,y:215,w:42,h:37}];return rects.some(o=>Math.abs(x-o.x)<o.w+P.r&&Math.abs(y-o.y)<o.h+P.r)}
 const TURN = Math.PI * 2;
@@ -83,6 +83,19 @@ const FACING_STEP = Math.PI / 4;
 
 function facingIndex(dx, dy) {
   return (Math.round(Math.atan2(dx, dy) / FACING_STEP) + 8) % 8;
+}
+
+const baronBlend = document.createElement('canvas');
+baronBlend.width = 132;
+baronBlend.height = 182;
+const blend = baronBlend.getContext('2d');
+
+function updateBaronTurn(dt, dx, dy) {
+  const target = Math.atan2(dx, dy) / FACING_STEP;
+  const difference = ((target - B.facing + 12) % 8) - 4;
+  const step = Math.sign(difference) * Math.min(Math.abs(difference), 8 * dt);
+  B.facing = (B.facing + step + 8) % 8;
+  B.turn += (step / (8 * dt) - B.turn) * Math.min(1, dt * 12);
 }
 
 function movePlayer(dx, dy) {
@@ -110,7 +123,6 @@ function update(dt) {
   const x = B.cx + 24 * Math.sin(angle);
   const y = B.cy + 16 * (1 - Math.cos(angle));
   if (B.walking) {
-    B.facing = facingIndex(24 * Math.cos(angle), 16 * Math.sin(angle));
     B.stride = (B.stride + Math.hypot(x - B.x, y - B.y) * TURN / 18) % TURN;
   } else {
     B.stride = 0;
@@ -123,34 +135,97 @@ function update(dt) {
   const dy = Number(directions.has('down')) - Number(directions.has('up'));
   const step = P.speed * dt * (dx && dy ? Math.SQRT1_2 : 1);
   movePlayer(dx * step, dy * step);
+
+  if (dt > 0) {
+    const lookX = B.walking ? 24 * Math.cos(angle) : P.x - B.x;
+    const lookY = B.walking ? 16 * Math.sin(angle) : P.y - B.y;
+    updateBaronTurn(dt, lookX, lookY);
+  }
+  if (elapsed >= B.nextSmile) {
+    B.smileUntil = elapsed + 0.8 + Math.random() * 0.7;
+    B.nextSmile = B.smileUntil + 3 + Math.random() * 4;
+  }
+  B.expression += (Number(elapsed < B.smileUntil) - B.expression) * Math.min(1, dt * 9);
+}
+
+// Mouth centres in the forward-facing sprite artwork, in source pixels.
+const baronMouths = {0: [138, 115], 1: [161, 115], 7: [118, 115]};
+
+function drawBaronPose(index, opacity) {
+  const pose = baronFrames[index];
+  if (opacity <= 0 || !pose.complete || !pose.naturalWidth) return;
+  blend.globalAlpha = opacity;
+  blend.drawImage(pose, 0, 0, 132, 182);
+}
+
+function drawBaronMouth(index, x, y, bodyScale, opacity) {
+  const mouth = baronMouths[index];
+  if (!mouth || B.expression > 0.98) return;
+  ctx.save();
+  ctx.globalAlpha *= opacity * (1 - B.expression);
+  ctx.translate(x + mouth[0] * 66 / 280, y + mouth[1] * 91 / 395 * bodyScale);
+  const skin = ctx.createLinearGradient(0, -4, 0, 8);
+  skin.addColorStop(0, '#fbe1bd');
+  skin.addColorStop(1, '#f4d2a9');
+  ctx.fillStyle = skin;
+  ctx.beginPath();
+  ctx.ellipse(0, 1, 11.6, 6.5, 0, 0, TURN);
+  ctx.fill();
+  ctx.strokeStyle = '#19130e';
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(-6, -1);
+  ctx.quadraticCurveTo(0, 4, 6, -1);
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawBaron() {
-  const index = B.walking ? B.facing : facingIndex(P.x - B.x, P.y - B.y);
-  const pose = baronFrames[index];
-  const x = Math.round(B.x - 33);
-  const y = Math.round(B.y - 57);
-  if (!pose.complete || !pose.naturalWidth) {
+  const index = Math.floor(B.facing);
+  const next = (index + 1) % 8;
+  const fraction = B.facing - index;
+  const mix = fraction * fraction * (3 - 2 * fraction);
+  const mouthIndex = mix < 0.5 ? index : next;
+  const mouthOpacity = Math.abs(1 - 2 * mix);
+  const x = B.x - 33;
+  const y = B.y - 57;
+  if (!baronFrames[index].naturalWidth || !baronFrames[next].naturalWidth) {
     if (baron.complete && baron.naturalWidth) ctx.drawImage(baron, x + 3, y + 9, 60, 92);
     return;
   }
-  if (!B.walking) {
-    ctx.drawImage(pose, x, y, 66, 91);
-    return;
-  }
 
-  // Keep the legs joined to the torso while the shoes sweep through the step.
-  const legStart = 335;
-  const bodyHeight = 91 * legStart / pose.naturalHeight;
-  const legHeight = 91 - bodyHeight;
-  const swing = Math.sin(B.stride);
-  const lift = Math.abs(swing) * 2;
-  ctx.drawImage(pose, 0, 0, pose.naturalWidth, legStart, x, y - lift, 66, bodyHeight);
+  // Blend adjacent angles in isolation so the room never shows through the turn.
+  blend.clearRect(0, 0, 132, 182);
+  blend.globalCompositeOperation = 'source-over';
+  drawBaronPose(index, 1 - mix);
+  blend.globalCompositeOperation = 'lighter';
+  drawBaronPose(next, mix);
+
+  const swing = B.walking ? Math.sin(B.stride) : 0;
+  const breath = B.walking ? 0 : Math.sin(elapsed * 2.1) * 1.1;
+  const lift = Math.abs(swing) * 2 + Math.abs(B.turn) * 1.3 + breath;
+  const bodyScale = (91 + lift) / 91;
+  const top = y - lift;
+
   ctx.save();
-  ctx.translate(x, y - lift + bodyHeight);
-  ctx.transform(1, 0, swing * 5 / legHeight, 1, 0, 0);
-  ctx.drawImage(pose, 0, legStart, pose.naturalWidth, pose.naturalHeight - legStart,
-    0, 0, 66, legHeight + lift);
+  ctx.translate(x + 33, y + 91);
+  ctx.transform(1, 0, -B.turn * 0.027, 1, 0, 0);
+  ctx.translate(-x - 33, -y - 91);
+  if (B.walking) {
+    const bodyHeight = 91 * 335 / 395;
+    const legHeight = 91 - bodyHeight;
+    const split = 182 * 335 / 395;
+    ctx.drawImage(baronBlend, 0, 0, 132, split, x, top, 66, bodyHeight);
+    drawBaronMouth(mouthIndex, x, top, 1, mouthOpacity);
+    ctx.translate(x, top + bodyHeight);
+    ctx.transform(1, 0, swing * 5 / legHeight, 1, 0, 0);
+    ctx.drawImage(baronBlend, 0, split, 132, 182 - split, 0, 0, 66, legHeight + lift);
+  } else {
+    ctx.drawImage(baronBlend, x, top, 66, 91 + lift);
+    // Fade the expression briefly between poses so the mouth follows the head.
+    drawBaronMouth(mouthIndex, x, top, bodyScale, mouthOpacity);
+  }
   ctx.restore();
 }
 
@@ -158,8 +233,9 @@ function drawPlayer() {
   if (!figure.complete || !figure.naturalWidth) return;
   const x = Math.round(P.x);
   const y = Math.round(P.y);
+  const breath = P.walking ? 0 : Math.sin(elapsed * 2.8 + 0.8) * 0.9;
   if (!P.walking && P.facing === 0) {
-    ctx.drawImage(figure, x - 17, y - 49, 34, 72);
+    ctx.drawImage(figure, x - 17, y - 49 - breath, 34, 72 + breath);
     return;
   }
 
@@ -178,7 +254,9 @@ function drawPlayer() {
   ctx.ellipse(0, 18, 13, 3, 0, 0, TURN);
   ctx.fill();
 
-  ctx.translate(0, -lift);
+  ctx.translate(0, 16 - lift);
+  ctx.scale(1, 1 + breath / 65);
+  ctx.translate(0, -16);
   ctx.strokeStyle = '#100d0b';
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
