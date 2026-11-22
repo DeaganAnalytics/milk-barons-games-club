@@ -1,8 +1,8 @@
-import {createBaron, talkToBaron, updateBaronAttention, updateBaronPatrol} from './baron.mjs';
+import {createBaron, talkToBaron, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {bindControls} from './input.mjs';
 import {createPlayer, movePlayer, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
-import {nearestInteraction} from './room.mjs';
+import {cameraLeft, nearestInteraction} from './room.mjs';
 
 const player = createPlayer();
 const baron = createBaron();
@@ -30,10 +30,11 @@ function frame(timestamp) {
   lastFrame = timestamp;
   elapsed += dt;
 
-  updateBaronPatrol(baron, elapsed);
   updatePlayer(player, baron, readMovement(), dt);
+  const cameraX = cameraLeft(player.x);
+  updateBaronWalk(baron, player, cameraX, elapsed, dt);
   updateBaronAttention(baron, player, elapsed, dt);
-  render(player, baron, elapsed);
+  render(player, baron, cameraX, elapsed);
   requestAnimationFrame(frame);
 }
 
