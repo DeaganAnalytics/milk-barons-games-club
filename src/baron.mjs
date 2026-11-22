@@ -1,7 +1,6 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {PASSAGE_Y, ROOM_WIDTH, SIDE_RUGS} from './room.mjs';
+import {CENTER_RUG, CLEAR_AISLE_Y, closestRug, ROOM_WIDTH} from './room.mjs';
 
-const startingPoint = {x: 345, y: 357};
 const OFFSCREEN_DELAY = 5;
 const WALK_SPEED = 146;
 const SPEECH_DURATION = 4;
@@ -19,7 +18,7 @@ const dialogue = [
 
 export function createBaron() {
   return {
-    ...startingPoint, walking: false, facing: 0, stride: 0,
+    ...CENTER_RUG, walking: false, facing: 0, stride: 0,
     expression: 0, nextSmile: 2.5, smileUntil: 0, chats: 0,
     offscreenSince: null, route: [], speech: null, nextLine: 0
   };
@@ -37,11 +36,10 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt) {
     } else {
       baron.offscreenSince ??= elapsed;
       if (elapsed - baron.offscreenSince >= OFFSCREEN_DELAY) {
-        const midpoint = (SIDE_RUGS[0].x + SIDE_RUGS[1].x) / 2;
-        const rug = SIDE_RUGS[Number(player.x >= midpoint)];
+        const rug = closestRug(player.x);
         if (baron.x !== rug.x || baron.y !== rug.y) {
-          // Keep the walk below the tables and above the cashier at both doorways.
-          baron.route = [{x: baron.x, y: PASSAGE_Y}, {x: rug.x, y: PASSAGE_Y}, rug];
+          // The open aisle runs below the tables and above the cashier.
+          baron.route = [{x: baron.x, y: CLEAR_AISLE_Y}, {x: rug.x, y: CLEAR_AISLE_Y}, rug];
           baron.speech = {text: rugLines[baron.nextLine], visibleSince: null};
           baron.nextLine = (baron.nextLine + 1) % rugLines.length;
         }

@@ -1,4 +1,5 @@
 import {createBaron, talkToBaron, updateBaronAttention, updateBaronWalk} from './baron.mjs';
+import {createMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
 import {createPlayer, movePlayer, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
@@ -6,6 +7,7 @@ import {cameraLeft, nearestInteraction} from './room.mjs';
 
 const player = createPlayer();
 const baron = createBaron();
+const milo = createMilo();
 const render = createRenderer(document.getElementById('game'));
 const heading = document.getElementById('heading');
 const info = document.getElementById('info');
@@ -15,7 +17,7 @@ let elapsed = 0;
 const readMovement = bindControls({
   nudge: (dx, dy) => movePlayer(player, baron, dx, dy),
   interact: () => {
-    const target = nearestInteraction(player, baron);
+    const target = nearestInteraction(player, baron, milo);
     heading.textContent = target?.title ?? 'The club';
     if (!target) {
       info.textContent = 'Nothing to interact with here. Try a table, the cashier, or the Baron.';
@@ -34,7 +36,8 @@ function frame(timestamp) {
   const cameraX = cameraLeft(player.x);
   updateBaronWalk(baron, player, cameraX, elapsed, dt);
   updateBaronAttention(baron, player, elapsed, dt);
-  render(player, baron, cameraX, elapsed);
+  updateMilo(milo, baron, elapsed, dt);
+  render(player, baron, milo, cameraX, elapsed);
   requestAnimationFrame(frame);
 }
 

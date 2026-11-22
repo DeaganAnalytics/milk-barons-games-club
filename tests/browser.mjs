@@ -80,7 +80,7 @@ async function load(width, height, mobile, name) {
   const assetCount = await evaluate(`(async () => {
     const assets = new Set(performance.getEntriesByType('resource')
       .map(entry => entry.name)
-      .filter(url => url.endsWith('.png')));
+      .filter(url => /[.](png|webp)$/.test(url)));
     await Promise.all([...assets].map(url => {
       const image = new Image();
       image.src = url;
@@ -88,7 +88,7 @@ async function load(width, height, mobile, name) {
     }));
     return assets.size;
   })()`, true);
-  assert.equal(assetCount, 11);
+  assert.equal(assetCount, 14);
   await frames(1);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
@@ -168,9 +168,18 @@ try {
       const shot = await send('Page.captureScreenshot', {format: 'png'});
       await writeFile(`${process.env.SCREENSHOT_PREFIX}-${direction}-rug.png`, Buffer.from(shot.data, 'base64'));
     }
+    await hold(direction === 'ArrowLeft' ? 'ArrowRight' : 'ArrowLeft', 385);
+    await frames(770);
+    await hold('ArrowUp', 28);
+    await activate('The Milk Baron');
   }
+  await load(1100, 950, false, 'milo');
+  await hold('ArrowUp', 72);
+  await hold('ArrowLeft', 495);
+  await hold('ArrowUp', 100);
+  await activate('Milo Milksworth');
   assert.deepEqual(errors, [], JSON.stringify(errors));
-  console.log('Passed desktop and mobile layout, sprite loading, keyboard and touch movement, all interactions, both side passages and fading Baron speech.');
+  console.log('Passed desktop and mobile layout, sprite loading, keyboard and touch movement, all interactions, both wings, return to center, and fading Baron speech.');
 } finally {
   socket.close();
 }
