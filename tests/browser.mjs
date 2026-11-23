@@ -372,7 +372,7 @@ try {
     try { window.advanceFrames(1); }
     finally { CanvasRenderingContext2D.prototype.drawImage = original; }
     return guests.map(([file, height, x, y]) => [file, height, Math.round(x / 2), Math.round(y / 2)]);
-  })()`), [['plum.webp', 66, 82, 603], ['emerald.webp', 66, 141, 603]]);
+  })()`), [['plum.webp', 66, 147, 603], ['emerald.webp', 66, 206, 603]]);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-southwest.png`, Buffer.from(shot.data, 'base64'));

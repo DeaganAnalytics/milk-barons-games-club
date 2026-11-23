@@ -2,7 +2,7 @@ import {createPartyChatter, partySpeech, updatePartyChatter} from '../src/party-
 import {bartender, createCreameryGuard} from '../src/creamery.mjs';
 import {createMilkService, milkCalls, updateMilkService} from '../src/milk-service.mjs';
 import {createStaff, faceStaffMovement, updateStaff, staffFrame} from '../src/staff.mjs';
-import {speechTop} from '../src/speech-layout.mjs';
+import {speechBubbleLayout} from '../src/speech-layout.mjs';
 import {createGuards, summonGuard, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
@@ -379,9 +379,13 @@ test('the Baron records only completed rug trips and distinct looks toward the p
   assert.equal(baron.watchedDirections.size, 6);
 });
 
-test('Baron speech stays inside the camera near its top edge', () => {
-  assert.equal(speechTop(342.5, 330, 3), 345);
-  assert.equal(speechTop(575, 330, 3), 455);
+test('speech bubbles stay in the camera and point to the speaker near the edges', () => {
+  assert.deepEqual(speechBubbleLayout(14, 342, 437, 260, 90, 0, 330), {
+    left: 8, top: 449, tailX: 23, tailTipX: 14, tailTipY: 437, above: false
+  });
+  assert.deepEqual(speechBubbleLayout(687, 514, 609, 260, 90, 0, 330), {
+    left: 422, top: 412, tailX: 667, tailTipX: 682, tailTipY: 514, above: true
+  });
 });
 
 test('each staff member spawns in a separate spot and roams the hall', () => {
@@ -538,7 +542,7 @@ test('party guests shuffle whole conversations and refill both glasses after eve
 
   for (let i = 0; i < 40; i++) tick({x: 0, y: 0});
   assert.equal(chatter.remaining, 0.8);
-  while (elapsed < 100 && greetings.length < 8) {
+  while (elapsed < 160 && greetings.length < 13) {
     tick();
     const speech = partySpeech(chatter, camera);
     if (speech?.text !== lastText && speech && chatter.line === 0) greetings.push(speech.text);
@@ -560,9 +564,9 @@ test('party guests shuffle whole conversations and refill both glasses after eve
     }
   }
   assert.equal(refills, 1);
-  assert.equal(new Set(greetings.slice(0, 7)).size, 7);
-  assert.equal(greetings.length, 8);
-  assert.notEqual(greetings[6], greetings[7]);
+  assert.equal(new Set(greetings.slice(0, 12)).size, 12);
+  assert.equal(greetings.length, 13);
+  assert.notEqual(greetings[11], greetings[12]);
 });
 
 test('the nearest roving guard runs to Pip and reports one arrival', () => {

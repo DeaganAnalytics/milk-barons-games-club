@@ -3,13 +3,19 @@ import {partyGuests} from './party-guests.mjs';
 import {ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
 
 const exchanges = [
-  [[0, 'Oh I just I LOVE milk!'], [1, "It's the best!"]],
-  [[0, 'You look amazing darling.'], [1, 'The secret is a milk only diet.']],
-  [[1, 'The Baron is a handsome fellow.'], [0, 'I heard he is single.'], [1, 'Oh my.']],
-  [[0, 'Why do we let peasants have milk?'], [1, 'Its a travesty. Something must be done!']],
-  [[1, 'My milk investments returned 17%.'], [0, 'Only? Those peasants need to work harder!']],
-  [[0, 'Is that weird man looking at us?'], [1, "Don't make eye contact."]],
-  [[0, 'I dreamt I was the Milk Baroness!'], [1, 'Tell me more!']]
+  [[0, 'Oh, I just ADORE milk!'], [1, "Darling, it's simply divine!"]],
+  [[0, 'Your complexion is positively radiant, darling.'],
+    [1, 'The secret is a strict milk-only diet. Not a drop of water!']],
+  [[1, 'The Milk Baron is such a handsome fellow.'], [0, "I hear he's swimming in milk. And single!"], [1, 'Oh my!']],
+  [[0, 'Why do we allow peasants to drink milk?'], [1, "It's a travesty! They'll be demanding cream next!"]],
+  [[1, 'My dairy investments returned seventeen percent!'], [0, 'Only? Those cows need to work harder!']],
+  [[0, 'Is that strange man staring at us?'], [1, "Don't make eye contact. He looks lactose intolerant."]],
+  [[0, 'I dreamt I was the Milk Baroness!'], [1, 'Tell me everything! Was the throne made of cheese?']],
+  [[0, 'Have you heard? The peasants are running out of milk!'], [1, 'How dreadful! What will they put in our tea?']],
+  [[1, 'I only drink milk from cows with pedigrees.'], [0, 'Naturally. Common cows produce common milk.']],
+  [[0, 'The Baron donated a whole glass of milk to charity!'], [1, 'Such generosity! He truly is a man of the people.']],
+  [[1, 'Did you hear about Lady Butterworth?'], [0, "Don't tell me. Skim milk?"], [1, 'Worse. Oat milk!']],
+  [[0, 'The price of milk has doubled again!'], [1, 'Wonderful! The Baron must be doing splendidly!']]
 ];
 const [left, right] = partyGuests;
 const serviceSpot = {x: (left.x + right.x) / 2, y: left.y - 36};
