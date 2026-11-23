@@ -1,5 +1,6 @@
+import {guardBlocks} from './guards.mjs';
 import {facingIndex, TURN} from './directions.mjs';
-import {CENTER_RUG, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {HALL_CENTER, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 
 const OFFSCREEN_DELAY = 5;
 const WALK_SPEED = 146;
@@ -8,6 +9,11 @@ const rugLines = [
   "What's going on over here?",
   "I'm gonna have to drink more milk after all this exercise!",
   'The Milk Baron is always watching!'
+];
+const miloLines = [
+  'Milo, I see you!',
+  'Milo, Milo, Milo. Always causing trouble.',
+  'Milo my good friend. Why do you always run away?'
 ];
 const dialogue = [
   'WELCOME! This club is the finest establishment I personally own.',
@@ -18,9 +24,9 @@ const dialogue = [
 
 export function createBaron() {
   return {
-    ...CENTER_RUG, walking: false, facing: 0, stride: 0,
+    ...HALL_CENTER, walking: false, facing: 0, stride: 0,
     expression: 0, nextSmile: 2.5, smileUntil: 0, chats: 0,
-    offscreenSince: null, route: [], speech: null, nextLine: 0
+    offscreenSince: null, route: [], speech: null, nextLine: 0, remainingMiloLines: [], lastMiloLine: null
   };
 }
 
@@ -30,7 +36,7 @@ function isOnscreen(baron, cameraX, cameraY) {
     && baron.y + 34 > cameraY && baron.y - 57 < cameraY + ROOM_HEIGHT;
 }
 
-export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0) {
+export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0, guards = []) {
   if (!baron.route.length) {
     if (isOnscreen(baron, cameraX, cameraY)) {
       baron.offscreenSince = null;
@@ -57,6 +63,9 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
     const distance = Math.hypot(dx, dy);
     const step = Math.min(distance, remaining);
     if (step > 0) {
+      const x = baron.x + dx * step / distance;
+      const y = baron.y + dy * step / distance;
+      if (guardBlocks(x, y, baron, guards, 24)) break;
       baron.facing = facingIndex(dx, dy);
       baron.walking = true;
       baron.stride = (baron.stride + step * TURN / 18) % TURN;
@@ -84,7 +93,18 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
 }
 
 export function callOutMilo(baron, milo, elapsed) {
-  baron.speech = {text: 'Milo, I see you!', visibleSince: elapsed};
+  const lines = baron.remainingMiloLines;
+  if (lines.length === 0) {
+    lines.push(...miloLines.filter(line => line !== baron.lastMiloLine));
+    const index = Math.floor(Math.random() * lines.length);
+    const [first] = lines.splice(index, 1);
+    if (baron.lastMiloLine) lines.push(baron.lastMiloLine);
+    baron.lastMiloLine = first;
+  } else {
+    const index = Math.floor(Math.random() * lines.length);
+    [baron.lastMiloLine] = lines.splice(index, 1);
+  }
+  baron.speech = {text: baron.lastMiloLine, visibleSince: elapsed};
   if (!baron.walking) baron.facing = facingIndex(milo.x - baron.x, milo.y - baron.y);
 }
 

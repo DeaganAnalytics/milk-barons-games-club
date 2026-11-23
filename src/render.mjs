@@ -210,6 +210,19 @@ function drawMilo(ctx, sprite, milo, elapsed) {
   ctx.restore();
 }
 
+function drawGuard(ctx, sprite, guard) {
+  if (!isReady(sprite)) return;
+  const lift = guard.walking ? Math.abs(Math.sin(guard.stride)) * 2.5 : 0;
+  ctx.save();
+  ctx.translate(guard.x, guard.y + 22);
+  ctx.fillStyle = '#25202a80';
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 13, 3, 0, 0, TURN);
+  ctx.fill();
+  ctx.drawImage(sprite, guard.facing * 100, 0, 100, 200, -21, -84 - lift, 42, 86);
+  ctx.restore();
+}
+
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
@@ -217,13 +230,14 @@ export function createRenderer(canvas) {
   ctx.setTransform(canvas.width / ROOM_WIDTH, 0, 0, canvas.height / ROOM_HEIGHT, 0, 0);
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
+  const guardSprite = loadSprite('guards/concealed', 'webp');
   const miloSprite = loadSprite('milo', 'webp');
   const figure = loadSprite('player');
   const fallback = loadSprite('baron');
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
 
   let world;
-  return (player, baron, milo, cameraX, cameraY, elapsed) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -241,6 +255,9 @@ export function createRenderer(canvas) {
       {depth: baron.y + 34, draw: () => drawBaron(ctx, baronFrames[baron.facing], fallback, baron, elapsed)},
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
+    for (const guard of guards) {
+      actors.push({depth: guard.y + 22, draw: () => drawGuard(ctx, guardSprite, guard)});
+    }
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
     drawSpeech(ctx, baron, cameraX, cameraY, elapsed);

@@ -1,4 +1,5 @@
 import {callOutMilo, createBaron, talkToBaron, updateBaronAttention, updateBaronWalk} from './baron.mjs';
+import {createGuards, updateGuards} from './guards.mjs';
 import {createMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
 import {createPlayer, movePlayer, updatePlayer} from './player.mjs';
@@ -8,6 +9,7 @@ import {cameraLeft, cameraTop, nearestInteraction} from './room.mjs';
 const player = createPlayer();
 const baron = createBaron();
 const milo = createMilo();
+const guards = createGuards();
 const render = createRenderer(document.getElementById('game'));
 const heading = document.getElementById('heading');
 const info = document.getElementById('info');
@@ -15,7 +17,7 @@ let lastFrame = 0;
 let elapsed = 0;
 
 const readMovement = bindControls({
-  nudge: (dx, dy) => movePlayer(player, baron, dx, dy),
+  nudge: (dx, dy) => movePlayer(player, baron, dx, dy, guards),
   interact: () => {
     const target = nearestInteraction(player, baron, milo);
     heading.textContent = target?.title ?? 'The club';
@@ -32,13 +34,14 @@ function frame(timestamp) {
   lastFrame = timestamp;
   elapsed += dt;
 
-  updatePlayer(player, baron, readMovement(), dt);
+  updatePlayer(player, baron, readMovement(), dt, guards);
   const cameraY = cameraTop(player.y);
   const cameraX = cameraLeft(player.x);
-  updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY);
+  updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY, guards);
   updateBaronAttention(baron, player, elapsed, dt);
-  if (updateMilo(milo, baron, elapsed, dt)) callOutMilo(baron, milo, elapsed);
-  render(player, baron, milo, cameraX, cameraY, elapsed);
+  if (updateMilo(milo, baron, elapsed, dt, guards)) callOutMilo(baron, milo, elapsed);
+  updateGuards(guards, player, baron, milo, elapsed, dt);
+  render(player, baron, milo, guards, cameraX, cameraY, elapsed);
   requestAnimationFrame(frame);
 }
 

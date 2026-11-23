@@ -88,7 +88,7 @@ async function load(width, height, mobile, name, url = site) {
     }));
     return assets.size;
   })()`, true);
-  assert.equal(assetCount, 21);
+  assert.equal(assetCount, 22);
   await frames(1);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
@@ -101,6 +101,11 @@ try {
   await send('Runtime.enable');
   // Drive the same game loop at 60 Hz without depending on key hold durations.
   await send('Page.addScriptToEvaluateOnNewDocument', {source: `
+    let randomState = 42;
+    Math.random = () => {
+      randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
+      return randomState / 4294967296;
+    };
     let callback;
     let timestamp = 0;
     window.requestAnimationFrame = next => {
@@ -110,9 +115,11 @@ try {
     };
     const drawImage = CanvasRenderingContext2D.prototype.drawImage;
     CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
-      if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 2740) {
+      if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 3425) {
         [window.mapScrollX, window.mapScrollY] = args;
+        window.guardDraws = 0;
       }
+      if (source.src?.endsWith('/guards/concealed.webp')) window.guardDraws++;
       return drawImage.call(this, source, ...args);
     };
     const fillText = CanvasRenderingContext2D.prototype.fillText;
@@ -149,20 +156,34 @@ try {
   assert.equal(await evaluate('document.querySelector(".pressed") === null'), true);
   await activate('The Milk Baron');
 
+  await load(1100, 950, false, 'guards-start');
+  assert.equal(await evaluate('window.guardDraws'), 2);
+  await hold('ArrowRight', 85);
+  const approachedGuard = await evaluate('window.mapScrollX - 345');
+  assert.ok(approachedGuard >= 415 && approachedGuard <= 420);
+  await frames(150);
+  assert.equal(await evaluate('window.mapScrollX - 345'), approachedGuard);
+  assert.equal(await evaluate('window.guardDraws'), 2);
+  if (process.env.SCREENSHOT_PREFIX) {
+    const shot = await send('Page.captureScreenshot', {format: 'png'});
+    await writeFile(`${process.env.SCREENSHOT_PREFIX}-guard-approach.png`, Buffer.from(shot.data, 'base64'));
+  }
+
   await load(1100, 950, false, 'expanded-center');
+  await hold('ArrowDown', 50);
   await hold('ArrowLeft', 600);
-  await hold('ArrowUp', 850);
+  await hold('ArrowUp', 1200);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 0]);
-  await hold('ArrowDown', 1500);
-  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2055]);
+  await hold('ArrowDown', 1900);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2740]);
   await hold('ArrowRight', 1200);
-  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 2055]);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 2740]);
   assert.equal(await evaluate('window.spokenLines.some(line => line.opacity > 0 && line.opacity < 1)'), true);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-southeast.png`, Buffer.from(shot.data, 'base64'));
   }
-  await hold('ArrowUp', 1500);
+  await hold('ArrowUp', 1900);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 0]);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
