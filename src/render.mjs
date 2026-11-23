@@ -1,4 +1,4 @@
-import {waiterFrame} from './waiters.mjs';
+import {waiterFrame, waiterIds} from './waiters.mjs';
 import {speechTop} from './speech-layout.mjs';
 import {FACING_STEP, TURN} from './directions.mjs';
 import {speechOpacity} from './baron.mjs';
@@ -276,7 +276,7 @@ export function createRenderer(canvas) {
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
   const guardSprite = loadSprite('guards/concealed', 'webp');
-  const waiterSprites = Object.fromEntries(['male-waiter', 'female-waiter'].map(id => [id, loadSprite('waiters/' + id + '-walk', 'webp')]));
+  const waiterSprites = Object.fromEntries(waiterIds.map(id => [id, loadSprite('waiters/' + id + '-walk', 'webp')]));
   const miloSprite = loadSprite('milo', 'webp');
   const figure = loadSprite('player');
   const fallback = loadSprite('baron');

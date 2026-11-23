@@ -1,19 +1,30 @@
 import {guardBlocks} from './guards.mjs';
-import {HALL_CENTER, isBlocked, SIDE_RUGS} from './room.mjs';
+import {HALL_CENTER, isBlocked, ROOM_HEIGHT, SIDE_RUGS} from './room.mjs';
 
 const uniforms = [
-  {id: 'male-waiter', title: 'Waiter', message: 'A glass of milk, sir?'},
-  {id: 'female-waiter', title: 'Waitress', message: 'Can I tempt you with a glass of milk?'}
+  {id: 'male-waiter', title: 'Waiter', message: 'A glass of milk, sir?', wing: 0, row: 0},
+  {id: 'female-waiter', title: 'Waitress', message: 'Can I tempt you with a glass of milk?', wing: 1, row: 0},
+  {id: 'handlebar-waiter', title: 'Waiter', message: 'May I offer you a glass of milk?', wing: 0, row: -1},
+  {id: 'martini-waiter', title: 'Waiter', message: 'Milk, served straight up.', wing: 0, row: 1},
+  {id: 'blonde-waitress', title: 'Waitress', message: 'Would you care for a glass of milk?', wing: 1, row: -1},
+  {id: 'lin-waitress', title: 'Waitress Lin', message: 'A fresh glass of milk, if you like.', wing: 1, row: 1}
 ];
+
+export const waiterIds = uniforms.map(({id}) => id);
+
 const SPEED = 48;
 const TURNAROUND_PAUSE = 1.5;
 
 export function createWaiters() {
-  return uniforms.map((uniform, index) => ({
-    ...uniform, radius: 14, y: HALL_CENTER.y + 228, x: SIDE_RUGS[index].x - 104,
-    start: SIDE_RUGS[index].x - 104, end: SIDE_RUGS[index].x + 104,
-    facing: 1, pauseUntil: 1.5 + index, walkTime: 0, walking: false
-  }));
+  return uniforms.map(({wing, row, ...uniform}) => {
+    const center = SIDE_RUGS[wing].x;
+    const start = center - 104;
+    return {
+      ...uniform, radius: 14, y: HALL_CENTER.y + 228 + row * ROOM_HEIGHT,
+      x: start, start, end: center + 104,
+      facing: 1, pauseUntil: 1.5 + wing, walkTime: 0, walking: false
+    };
+  });
 }
 
 export function updateWaiters(waiters, player, baron, guards, elapsed, dt) {

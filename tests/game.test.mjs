@@ -379,11 +379,21 @@ test('Baron speech stays inside the camera near its top edge', () => {
   assert.equal(speechTop(575, 330, 3), 455);
 });
 
-test('two waiters patrol separately, animate, and pause when approached', () => {
+test('six waiters patrol separate routes, animate, and pause when approached', () => {
   const waiters = createWaiters();
   const baron = createBaron();
   const player = createPlayer();
   const [waiter, waitress] = waiters;
+  assert.equal(waiters.length, 6);
+  for (const server of waiters) {
+    assert.equal(nearestInteraction(server, baron, null, [], waiters).id, server.id);
+    assert.equal(isBlocked(server.start, server.y, server.radius, baron), false);
+    assert.equal(isBlocked(server.end, server.y, server.radius, baron), false);
+  }
+  assert.equal(new Set(waiters.map(server => server.id)).size, 6);
+  assert.equal(new Set(waiters.map(server => `${server.x},${server.y}`)).size, 6);
+  assert.equal(waiters.filter(server => server.x < HALL_CENTER.x).length, 3);
+  assert.equal(waiters.filter(server => server.x > HALL_CENTER.x).length, 3);
   assert.ok(waiter.x < HALL_CENTER.x && waitress.x > HALL_CENTER.x);
   for (let frame = 0; frame < 160; frame++) {
     updateWaiters(waiters, player, baron, [], 3 + frame * 0.05, 0.05);

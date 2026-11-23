@@ -1,3 +1,4 @@
+import {waiterIds} from '../src/waiters.mjs';
 import assert from 'node:assert/strict';
 import {writeFile} from 'node:fs/promises';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -107,7 +108,7 @@ async function load(width, height, mobile, name, url = site) {
     }));
     return [...assets];
   })()`, true);
-  for (const id of ['male-waiter', 'female-waiter']) {
+  for (const id of waiterIds) {
     assert.ok(assets.some(url => url.endsWith('/waiters/' + id + '-walk.webp')));
   }
   await frames(1);
@@ -334,6 +335,19 @@ try {
   await reply('Your eyes never leave me.', 'Pip my boy, I am merely supervising the business.');
   await closeConversation();
 
+  await load(1100, 950, false, 'waiter-roster');
+  await frames(220);
+  for (const id of waiterIds) {
+    assert.ok(await evaluate(`[...window.waiterWalkFrames].filter(frame =>
+      frame.includes('/${id}-walk.webp:')).length >= 2`), id);
+    assert.ok(await evaluate(`(async () => {
+      const image = new Image();
+      image.src = new URL('./assets/waiters/${id}-portrait.webp', location.href);
+      await image.decode();
+      return image.naturalWidth > 0;
+    })()`, true), id);
+  }
+
   for (const [direction, count, id, heading, line] of [
     ['ArrowLeft', 294, 'male-waiter', 'Waiter', 'A glass of milk, sir?'],
     ['ArrowRight', 370, 'female-waiter', 'Waitress', 'Can I tempt you with a glass of milk?']
@@ -342,8 +356,6 @@ try {
     await hold('ArrowUp', 60);
     await hold(direction, count);
     await hold('ArrowDown', 60);
-    assert.ok(await evaluate(`[...window.waiterWalkFrames].filter(frame =>
-      frame.includes('/${id}-walk.webp:')).length >= 2`));
     await activate(heading);
     assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), line);
     assert.equal(await evaluate(`(async () => {
