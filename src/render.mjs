@@ -163,8 +163,8 @@ function drawPlayer(ctx, figure, player, elapsed) {
   ctx.restore();
 }
 
-function drawSpeech(ctx, baron, cameraX, elapsed) {
-  const opacity = speechOpacity(baron, cameraX, elapsed);
+function drawSpeech(ctx, baron, cameraX, cameraY, elapsed) {
+  const opacity = speechOpacity(baron, cameraX, elapsed, cameraY);
   if (opacity <= 0) return;
   ctx.save();
   ctx.globalAlpha = opacity;
@@ -223,11 +223,11 @@ export function createRenderer(canvas) {
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
 
   let world;
-  return (player, baron, milo, cameraX, elapsed) => {
+  return (player, baron, milo, cameraX, cameraY, elapsed) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
-      ctx.drawImage(world, cameraX - WEST_EDGE, 0, ROOM_WIDTH, ROOM_HEIGHT,
+      ctx.drawImage(world, cameraX - WEST_EDGE, cameraY, ROOM_WIDTH, ROOM_HEIGHT,
         0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     } else {
       ctx.fillStyle = '#ae744c';
@@ -235,7 +235,7 @@ export function createRenderer(canvas) {
     }
 
     ctx.save();
-    ctx.translate(-cameraX, 0);
+    ctx.translate(-cameraX, -cameraY);
     const actors = [
       {depth: player.y + 22, draw: () => drawPlayer(ctx, figure, player, elapsed)},
       {depth: baron.y + 34, draw: () => drawBaron(ctx, baronFrames[baron.facing], fallback, baron, elapsed)},
@@ -243,7 +243,7 @@ export function createRenderer(canvas) {
     ];
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
-    drawSpeech(ctx, baron, cameraX, elapsed);
+    drawSpeech(ctx, baron, cameraX, cameraY, elapsed);
     ctx.restore();
   };
 }

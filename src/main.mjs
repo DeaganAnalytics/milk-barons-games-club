@@ -3,7 +3,7 @@ import {createMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
 import {createPlayer, movePlayer, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
-import {cameraLeft, nearestInteraction} from './room.mjs';
+import {cameraLeft, cameraTop, nearestInteraction, ROOM_HEIGHT} from './room.mjs';
 
 const player = createPlayer();
 const baron = createBaron();
@@ -33,11 +33,13 @@ function frame(timestamp) {
   elapsed += dt;
 
   updatePlayer(player, baron, readMovement(), dt);
-  const cameraX = cameraLeft(player.x);
-  updateBaronWalk(baron, player, cameraX, elapsed, dt);
+  const cameraY = cameraTop(player.y);
+  // Center the view horizontally as the side wings scroll out of the viewport.
+  const cameraX = cameraLeft(player.x) * Math.max(0, 1 - cameraY / ROOM_HEIGHT);
+  updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY);
   updateBaronAttention(baron, player, elapsed, dt);
   if (updateMilo(milo, baron, elapsed, dt)) callOutMilo(baron, milo, elapsed);
-  render(player, baron, milo, cameraX, elapsed);
+  render(player, baron, milo, cameraX, cameraY, elapsed);
   requestAnimationFrame(frame);
 }
 

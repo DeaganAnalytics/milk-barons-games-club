@@ -1,5 +1,9 @@
 export const ROOM_WIDTH = 690;
 export const ROOM_HEIGHT = 685;
+export const MAP_HEIGHT = ROOM_HEIGHT * 3;
+export const FRONT_TRIM_Y = ROOM_HEIGHT - 52;
+export const SOUTH_TRIM_Y = MAP_HEIGHT - 52;
+const FRONT_WALK_LIMIT = FRONT_TRIM_Y - 16;
 export const WEST_EDGE = -ROOM_WIDTH;
 export const EAST_EDGE = ROOM_WIDTH * 2;
 export const CLEAR_AISLE_Y = 451;
@@ -19,13 +23,20 @@ export function cameraLeft(playerX) {
   return Math.max(WEST_EDGE, Math.min(EAST_EDGE - ROOM_WIDTH, playerX - ROOM_WIDTH / 2));
 }
 
+export function cameraTop(playerY) {
+  // Keep the original hall framing until the player heads into the south wing.
+  return Math.max(0, Math.min(MAP_HEIGHT - ROOM_HEIGHT,
+    (playerY - FRONT_WALK_LIMIT) * 2, playerY - ROOM_HEIGHT / 2));
+}
+
 function overlaps(x, y, radius, obstacle) {
   return Math.abs(x - obstacle.x) < obstacle.halfWidth + radius
     && Math.abs(y - obstacle.y) < obstacle.halfHeight + radius;
 }
 
 export function isBlocked(x, y, radius, baron, from) {
-  if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < 160 || y > 617) return true;
+  if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < 160 || y > SOUTH_TRIM_Y - 16) return true;
+  if (y > FRONT_WALK_LIMIT && (x < 38 || x > ROOM_WIDTH - 39)) return true;
   // The closed center door stands proud of the back wall.
   if (y < 190 && Math.abs(x - CENTER_RUG.x) < 75 + radius) return true;
   const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};

@@ -108,6 +108,13 @@ try {
       window.hasGameFrame = true;
       return 1;
     };
+    const drawImage = CanvasRenderingContext2D.prototype.drawImage;
+    CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
+      if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 2055) {
+        window.mapScrollY = args[1];
+      }
+      return drawImage.call(this, source, ...args);
+    };
     const fillText = CanvasRenderingContext2D.prototype.fillText;
     window.spokenLines = [];
     CanvasRenderingContext2D.prototype.fillText = function (text, ...args) {
@@ -172,6 +179,17 @@ try {
   await hold('ArrowLeft', 495);
   await hold('ArrowUp', 100);
   await activate('Milo Milksworth');
+  await load(1100, 950, false, 'south-start');
+  await hold('ArrowDown', 800);
+  assert.equal(await evaluate('window.mapScrollY'), 1370);
+  if (process.env.SCREENSHOT_PREFIX) {
+    const shot = await send('Page.captureScreenshot', {format: 'png'});
+    await writeFile(`${process.env.SCREENSHOT_PREFIX}-south-end.png`, Buffer.from(shot.data, 'base64'));
+  }
+  await hold('ArrowUp', 850);
+  assert.equal(await evaluate('window.mapScrollY'), 0);
+  await activate('The Milk Baron');
+
   const plankUrl = new URL(site);
   plankUrl.searchParams.set('floor', 'planks');
   await load(1100, 950, false, 'wide-plank', plankUrl.href);

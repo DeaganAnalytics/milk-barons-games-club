@@ -4,7 +4,7 @@ import {test} from 'node:test';
 import {callOutMilo, createBaron, speechOpacity, talkToBaron, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {cameraLeft, CENTER_RUG, isBlocked, nearestInteraction, CLEAR_AISLE_Y, SIDE_RUGS} from '../src/room.mjs';
+import {cameraLeft, cameraTop, CENTER_RUG, isBlocked, nearestInteraction, CLEAR_AISLE_Y, MAP_HEIGHT, ROOM_HEIGHT, SIDE_RUGS, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -25,9 +25,9 @@ test('movement normalizes diagonals and stops animating when blocked', () => {
   assert.equal(player.walking, true);
   assert.ok(player.stride > 0);
 
-  player.y = 617;
+  player.y = SOUTH_TRIM_Y - 16;
   movePlayer(player, baron, 0, 1);
-  assert.equal(player.y, 617);
+  assert.equal(player.y, SOUTH_TRIM_Y - 16);
   assert.equal(player.facing, 0);
   assert.equal(player.walking, false);
   assert.equal(player.stride, 0);
@@ -63,6 +63,19 @@ test('the camera clamps at the outer walls and the floor is open between the end
   }
   assert.equal(isBlocked(-653, CLEAR_AISLE_Y, 13, baron), true);
   assert.equal(isBlocked(1342, CLEAR_AISLE_Y, 13, baron), true);
+});
+
+test('only the center opens into the two southern squares', () => {
+  const baron = createBaron();
+  for (const y of [618, ROOM_HEIGHT, ROOM_HEIGHT * 2, SOUTH_TRIM_Y - 16]) {
+    assert.equal(isBlocked(345, y, 13, baron), false);
+    assert.equal(isBlocked(-345, y, 13, baron), true);
+    assert.equal(isBlocked(1035, y, 13, baron), true);
+  }
+  assert.equal(isBlocked(345, SOUTH_TRIM_Y - 15, 13, baron), true);
+  assert.equal(cameraTop(617), 0);
+  assert.ok(cameraTop(900) > 0);
+  assert.equal(cameraTop(SOUTH_TRIM_Y - 16), MAP_HEIGHT - ROOM_HEIGHT);
 });
 
 test('the Baron waits five continuous seconds off-screen then walks to the closest side rug', () => {
