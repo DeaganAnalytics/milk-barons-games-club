@@ -1,3 +1,4 @@
+import {createGuards, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
@@ -209,4 +210,41 @@ test('the Baron spots Milo in the same square and Milo runs to the other side', 
       assert.equal(milo.fleeing, false);
     }
   }
+});
+
+test('the player can approach a guard and the guard holds position', () => {
+  const guards = createGuards();
+  const player = createPlayer();
+  const baron = createBaron();
+  const milo = createMilo();
+  const [guard] = guards;
+  for (let i = 0; i < 100; i++) movePlayer(player, baron, 2, 0, guards);
+  const separation = Math.hypot(player.x - guard.x, player.y - guard.y);
+  assert.ok(separation >= 27 && separation < 30);
+
+  const start = {x: guard.x, y: guard.y};
+  for (let frame = 0; frame < 120; frame++) {
+    updateGuards(guards, player, baron, milo, 3 + frame / 60, 1 / 60);
+  }
+  assert.deepEqual({x: guard.x, y: guard.y}, start);
+  assert.ok(guards[1].target);
+  movePlayer(player, baron, -5, 0, guards);
+  assert.ok(Math.hypot(player.x - guard.x, player.y - guard.y) > separation);
+});
+
+test('two guards with crossing patrols steer around one another', () => {
+  const guards = createGuards();
+  const [first, second] = guards;
+  const player = {...createPlayer(), x: 1000};
+  const baron = createBaron();
+  const milo = createMilo();
+  first.target = {x: second.x, y: second.y};
+  second.target = {x: first.x, y: first.y};
+  for (let frame = 0; frame < 250; frame++) {
+    updateGuards(guards, player, baron, milo, 3 + frame / 60, 1 / 60);
+    assert.ok(Math.hypot(first.x - second.x, first.y - second.y) >= 28);
+    assert.equal(isBlocked(first.x, first.y, first.radius, baron), false);
+    assert.equal(isBlocked(second.x, second.y, second.radius, baron), false);
+  }
+  assert.ok(first.x < second.x);
 });

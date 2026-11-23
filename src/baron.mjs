@@ -1,3 +1,4 @@
+import {guardBlocks} from './guards.mjs';
 import {facingIndex, TURN} from './directions.mjs';
 import {CENTER_RUG, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 
@@ -30,7 +31,7 @@ function isOnscreen(baron, cameraX, cameraY) {
     && baron.y + 34 > cameraY && baron.y - 57 < cameraY + ROOM_HEIGHT;
 }
 
-export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0) {
+export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0, guards = []) {
   if (!baron.route.length) {
     if (isOnscreen(baron, cameraX, cameraY)) {
       baron.offscreenSince = null;
@@ -57,6 +58,9 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
     const distance = Math.hypot(dx, dy);
     const step = Math.min(distance, remaining);
     if (step > 0) {
+      const x = baron.x + dx * step / distance;
+      const y = baron.y + dy * step / distance;
+      if (guardBlocks(x, y, baron, guards, 24)) break;
       baron.facing = facingIndex(dx, dy);
       baron.walking = true;
       baron.stride = (baron.stride + step * TURN / 18) % TURN;
