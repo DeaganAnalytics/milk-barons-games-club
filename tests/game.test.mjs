@@ -401,7 +401,7 @@ test('each staff member spawns in a separate spot and roams the hall', () => {
   }
 
   const cleaner = waiters.find(server => server.id === 'edmund-vale');
-  assert.equal(cleaner.title, 'Edmund Vale');
+  assert.equal(cleaner.title, 'Edmund Skim');
   assert.deepEqual(staffFrame(cleaner, 0.25), {column: 2, row: 1});
   assert.deepEqual(staffFrame(cleaner, 0.5), {column: 4, row: 1});
 

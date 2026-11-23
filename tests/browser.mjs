@@ -374,7 +374,7 @@ try {
   cleanerUrl.searchParams.set('cleaner-test', '1');
   await load(1100, 950, false, 'cleaner', cleanerUrl.href);
   await hold('ArrowUp', 20);
-  await activate('Edmund Vale');
+  await activate('Edmund Skim');
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Not now, busy busy busy');
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
     .backgroundImage.includes('/waiters/edmund-vale-portrait.webp')`));

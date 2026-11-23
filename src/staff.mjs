@@ -8,7 +8,7 @@ const uniforms = [
   {id: 'martini-waiter', title: 'Waiter'},
   {id: 'blonde-waitress', title: 'Waitress'},
   {id: 'lin-waitress', title: 'Waitress Lin'},
-  {id: 'edmund-vale', title: 'Edmund Vale', sweeps: true}
+  {id: 'edmund-vale', title: 'Edmund Skim', sweeps: true}
 ];
 export const staffIds = uniforms.map(({id}) => id);
 
