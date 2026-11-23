@@ -1,4 +1,5 @@
 import {callOutMilo, createBaron, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
+import {createDialogue} from './dialogue.mjs';
 import {createGuards, updateGuards} from './guards.mjs';
 import {createMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
@@ -11,7 +12,7 @@ const baron = createBaron();
 const milo = createMilo();
 const guards = createGuards();
 const render = createRenderer(document.getElementById('game'));
-const heading = document.getElementById('heading');
+const dialogue = createDialogue();
 const info = document.getElementById('info');
 let lastFrame = 0;
 let elapsed = 0;
@@ -19,19 +20,20 @@ let elapsed = 0;
 const readMovement = bindControls({
   nudge: (dx, dy) => movePlayer(player, baron, dx, dy, guards),
   interact: () => {
-    const target = nearestInteraction(player, baron, milo);
-    heading.textContent = target?.title ?? 'The club';
-    if (!target) {
-      info.textContent = 'Nothing to interact with here. Try talking to the Baron or Milo.';
-    } else {
-      info.textContent = target.message ?? '';
-    }
+    if (dialogue.isOpen()) return;
+    const target = nearestInteraction(player, baron, milo, guards);
+    if (target) dialogue.open(target);
+    else info.textContent = 'Nobody is close enough to talk to.';
   }
 });
 
 function frame(timestamp) {
   const dt = Math.min((timestamp - lastFrame) / 1000 || 0, 0.05);
   lastFrame = timestamp;
+  if (dialogue.isOpen()) {
+    requestAnimationFrame(frame);
+    return;
+  }
   elapsed += dt;
 
   updatePlayer(player, baron, readMovement(), dt, guards);

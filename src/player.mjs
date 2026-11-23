@@ -3,7 +3,7 @@ import {facingIndex, TURN} from './directions.mjs';
 import {HALL_CENTER, isBlocked} from './room.mjs';
 
 export function createPlayer() {
-  return {x: HALL_CENTER.x + 5, y: HALL_CENTER.y + 228, speed: 112, radius: 13, facing: 0, stride: 0, walking: false};
+  return {x: HALL_CENTER.x + 5, y: HALL_CENTER.y + 228, speed: 124, radius: 13, facing: 0, stride: 0, walking: false};
 }
 
 export function updatePlayer(player, baron, {dx, dy}, dt, guards = []) {

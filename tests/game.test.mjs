@@ -22,7 +22,7 @@ test('movement normalizes diagonals and stops animating when blocked', () => {
   const baron = createBaron();
   const start = {...player};
   updatePlayer(player, baron, {dx: 1, dy: -1}, 0.05);
-  assert.ok(Math.abs(Math.hypot(player.x - start.x, player.y - start.y) - 5.6) < 1e-9);
+  assert.ok(Math.abs(Math.hypot(player.x - start.x, player.y - start.y) - 6.2) < 1e-9);
   assert.equal(player.facing, 3);
   assert.equal(player.walking, true);
   assert.ok(player.stride > 0);
@@ -100,12 +100,12 @@ test('the Baron can follow the player north and south', () => {
     const baron = createBaron();
     const viewY = cameraTop(rug.y);
     updateBaronWalk(baron, rug, 0, 0, 0.05, viewY);
-    updateBaronWalk(baron, rug, 0, 5, 0.05, viewY);
+    updateBaronWalk(baron, rug, 0, 10, 0.05, viewY);
     assert.equal(baron.route.at(-1), rug);
   }
 });
 
-test('the Baron waits five continuous seconds off-screen then walks to the closest side rug', () => {
+test('the Baron waits ten continuous seconds off-screen then walks to the closest side rug', () => {
   const baron = createBaron();
   const player = createPlayer();
   const update = (x, time, dt = 0.05) => {
@@ -114,20 +114,20 @@ test('the Baron waits five continuous seconds off-screen then walks to the close
     updateBaronWalk(baron, player, cameraLeft(x), time, dt);
   };
   update(-500, 0);
-  update(-500, 4.9);
+  update(-500, 9.9);
   assert.equal(baron.walking, false);
-  update(350, 5);
-  update(-500, 6);
-  update(-500, 10.9);
-  assert.equal(baron.walking, false);
+  update(350, 10);
   update(-500, 11);
+  update(-500, 20.9);
+  assert.equal(baron.walking, false);
+  update(-500, 21);
   assert.equal(baron.walking, true);
   assert.equal(baron.route.at(-1), SIDE_RUGS[0]);
   assert.match(baron.speech.text, /What's going on/);
-  assert.equal(speechOpacity(baron, cameraLeft(-500), 11), 0);
+  assert.equal(speechOpacity(baron, cameraLeft(-500), 21), 0);
 
-  let time = 11;
-  while (baron.route.length && time < 22) {
+  let time = 21;
+  while (baron.route.length && time < 32) {
     time += 0.05;
     update(-500, time);
     assert.equal(isBlocked(baron.x, baron.y, 13, {x: 0, y: 0}), false);
@@ -140,7 +140,7 @@ test('the Baron waits five continuous seconds off-screen then walks to the close
   assert.equal(baron.speech, null);
 
   update(1200, time + 5);
-  update(1200, time + 10);
+  update(1200, time + 15);
   assert.equal(baron.route.at(-1), SIDE_RUGS[1]);
   assert.match(baron.speech.text, /drink more milk/);
 });
@@ -149,7 +149,7 @@ test('the Baron can return to the center from either wing', () => {
   const player = {...HALL_CENTER};
   for (const rug of SIDE_RUGS) {
     const baron = {...createBaron(), ...rug};
-    for (let frame = 0; frame <= 14 * 20; frame++) {
+    for (let frame = 0; frame <= 16 * 20; frame++) {
       updateBaronWalk(baron, player, cameraLeft(player.x), frame / 20, 0.05);
       assert.equal(isBlocked(baron.x, baron.y, 13, {x: 0, y: 0}), false);
     }

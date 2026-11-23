@@ -69,7 +69,20 @@ async function activate(heading, withButton = false) {
     await key('keyDown', 'KeyE', 'e');
     await key('keyUp', 'KeyE', 'e');
   }
-  assert.equal(await evaluate('document.getElementById("heading").textContent'), heading);
+  const visibleHeading = heading === 'The club' ? 'heading' : 'conversation-title';
+  assert.equal(await evaluate(`document.getElementById('${visibleHeading}').textContent`), heading);
+}
+
+async function reply(label, expected) {
+  const quoted = JSON.stringify(label);
+  assert.equal(await evaluate(`[...document.querySelectorAll('#conversation-replies button')]
+    .some(button => { if (button.textContent !== ${quoted}) return false; button.click(); return true; })`), true);
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), expected);
+}
+
+async function closeConversation() {
+  await evaluate('document.getElementById("conversation-close").click()');
+  assert.equal(await evaluate('document.getElementById("conversation").hidden'), true);
 }
 
 async function load(width, height, mobile, name, url = site) {
@@ -141,11 +154,23 @@ try {
   await frames(100);
   await key('keyUp', 'ArrowUp');
   await activate('The Milk Baron');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Welcome, welcome to my establishment!');
+  await reply('Do you own this place?', 'Of course, I own nearly every place.');
+  await closeConversation();
   await activate('The Milk Baron', true);
-  assert.equal(await evaluate('document.getElementById("info").textContent'), '');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Pip! Good to see you!');
+  await reply('Why do you have cows for guards?', 'What do you mean?');
+  await reply('The guards are cows.', 'I have guards.');
+  await reply('But the horns?', 'I have guards.');
+  await closeConversation();
+  await activate('The Milk Baron');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Enjoying your time?');
+  await closeConversation();
   assert.equal(await evaluate('window.spokenLines.length'), 0);
   await frames(1800);
   assert.equal(await evaluate('window.spokenLines.some(line => /WELCOME|extremely fair|carpet|oversee every game/.test(line.text))'), true);
+  await frames(180);
+  assert.equal(await evaluate('window.spokenLines.some(line => line.opacity > 0 && line.opacity < 1)'), true);
   await load(390, 844, true, 'mobile');
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth && document.querySelector(".controls").getBoundingClientRect().bottom <= innerHeight'), true);
   const point = await evaluate(`(() => {
@@ -158,6 +183,7 @@ try {
   await send('Input.dispatchTouchEvent', {type: 'touchEnd', touchPoints: []});
   assert.equal(await evaluate('document.querySelector(".pressed") === null'), true);
   await activate('The Milk Baron');
+  await closeConversation();
 
   await load(1100, 950, false, 'guards-start');
   assert.equal(await evaluate('window.guardDraws'), 2);
@@ -172,6 +198,25 @@ try {
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-guard-approach.png`, Buffer.from(shot.data, 'base64'));
   }
 
+  await activate('Bull Guard');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'),
+    'Do you have a problem to report? Otherwise get out of my way.');
+  if (process.env.SCREENSHOT_PREFIX) {
+    await evaluate(`(() => { const image = new Image(); image.src = './assets/dialogue/portraits.webp'; return image.decode(); })()`, true);
+    const shot = await send('Page.captureScreenshot', {format: 'png'});
+    await writeFile(`${process.env.SCREENSHOT_PREFIX}-guard-dialogue.png`, Buffer.from(shot.data, 'base64'));
+  }
+  await reply('Are you a cow?', 'I am a guard.');
+  await reply('But you have horns.', 'I am a guard.');
+  await closeConversation();
+  await activate('Bull Guard');
+  await reply("No I don't have anything to report.", 'Then get out of my way!');
+  await closeConversation();
+  await activate('Bull Guard');
+  await reply('Ah yes, I do.', 'What is the problem.');
+  await reply('Actually nevermind.', '...');
+  await closeConversation();
+
   await load(1100, 950, false, 'expanded-center');
   await hold('ArrowDown', 50);
   await hold('ArrowLeft', 600);
@@ -181,7 +226,6 @@ try {
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2740]);
   await hold('ArrowRight', 1200);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 2740]);
-  assert.equal(await evaluate('window.spokenLines.some(line => line.opacity > 0 && line.opacity < 1)'), true);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-southeast.png`, Buffer.from(shot.data, 'base64'));
@@ -192,6 +236,21 @@ try {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-northeast.png`, Buffer.from(shot.data, 'base64'));
   }
+
+  await load(390, 844, true, 'milo-dialogue');
+  await evaluate(`(async () => {
+    const [{createDialogue}, {createMilo}, {createBaron}, {nearestInteraction}] = await Promise.all(
+      ['./src/dialogue.mjs', './src/milo.mjs', './src/baron.mjs', './src/room.mjs'].map(path => import(path)));
+    const milo = createMilo();
+    createDialogue().open(nearestInteraction(milo, createBaron(), milo));
+    return true;
+  })()`, true);
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'),
+    'Shh! I’m trying to stay out of the Baron’s way.');
+  await reply("Hey, don't I know you?", "No. Don't talk to me.");
+  await reply('Are you Milo, the milk activist.', 'Please leave me alone.');
+  assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
+  await closeConversation();
 
   const plankUrl = new URL(site);
   plankUrl.searchParams.set('floor', 'planks');

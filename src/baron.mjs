@@ -2,7 +2,7 @@ import {guardBlocks} from './guards.mjs';
 import {facingIndex, TURN} from './directions.mjs';
 import {HALL_CENTER, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 
-const OFFSCREEN_DELAY = 5;
+const OFFSCREEN_DELAY = 10;
 const WALK_SPEED = 146;
 const SPEECH_DURATION = 4;
 const rugLines = [

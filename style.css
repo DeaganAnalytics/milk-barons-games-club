@@ -129,3 +129,59 @@ canvas {
     margin-bottom: 8px;
   }
 }
+
+[hidden] {
+  display: none !important;
+}
+
+.conversation-portraits {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px;
+  overflow: hidden;
+  border: 3px solid #637961;
+  border-radius: 12px;
+  background: #bd9b65;
+}
+
+.conversation-portraits figure {
+  margin: 0;
+  min-width: 0;
+  background: #e9d4ad;
+}
+
+.conversation-portrait {
+  aspect-ratio: 1;
+  background: url('./assets/dialogue/portraits.webp') no-repeat;
+  background-size: 300% 400%;
+}
+
+.conversation-portraits figcaption {
+  padding: 8px;
+  background: #24392c;
+  color: #f3ead7;
+  text-align: center;
+  font-weight: 700;
+}
+
+.conversation-replies {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+
+.conversation button {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid #819583;
+  border-radius: 8px;
+  background: #3c5746;
+  color: #fff8ea;
+  font: inherit;
+  cursor: pointer;
+}
+
+#conversation-close {
+  margin-top: 12px;
+}
