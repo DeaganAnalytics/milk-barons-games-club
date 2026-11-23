@@ -1,5 +1,5 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {HALL_CENTER, EAST_EDGE, isBlocked, NORTH_EDGE, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {EAST_EDGE, isBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const RADIUS = 14;
 const SPEED = 71;
@@ -7,12 +7,29 @@ const APPROACH_DISTANCE = 40;
 const PATROL_INSET = 75;
 const STEERING_ANGLES = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];
 
-export function createGuards() {
-  return [1, -1].map(side => ({
-    x: HALL_CENTER.x + side * 98, y: HALL_CENTER.y + 240,
-    side, radius: RADIUS, facing: 0, stride: 0, walking: false,
-    target: null, pauseUntil: 2.5, blockedTime: 0
-  }));
+export function createGuards(player, baron, milo, random = Math.random) {
+  const guards = [];
+  for (const side of [1, -1]) {
+    const occupied = [player, baron, milo, ...guards];
+    const isClear = ({x, y}) => !isBlocked(x, y, RADIUS, baron)
+      && occupied.every(actor => Math.hypot(x - actor.x, y - actor.y) >= 80);
+    let spawn;
+    for (let attempt = 0; attempt < 12; attempt++) {
+      const candidate = patrolTarget(random);
+      if (isClear(candidate)) {
+        spawn = candidate;
+        break;
+      }
+    }
+    // A fixed set of walkable points bounds the retries on unlucky rolls.
+    spawn ??= RUGS.find(isClear);
+    guards.push({
+      x: spawn.x, y: spawn.y,
+      side, radius: RADIUS, facing: 0, stride: 0, walking: false,
+      target: null, pauseUntil: 2.5, blockedTime: 0
+    });
+  }
+  return guards;
 }
 
 // An actor already overlapping a guard can step away without being trapped.
@@ -25,10 +42,10 @@ export function guardBlocks(x, y, actor, guards, radius = actor.radius) {
   });
 }
 
-function patrolTarget() {
+function patrolTarget(random = Math.random) {
   return {
-    x: WEST_EDGE + PATROL_INSET + Math.random() * (EAST_EDGE - WEST_EDGE - PATROL_INSET * 2),
-    y: NORTH_EDGE + 230 + Math.random() * (SOUTH_TRIM_Y - 42 - NORTH_EDGE - 230)
+    x: WEST_EDGE + PATROL_INSET + random() * (EAST_EDGE - WEST_EDGE - PATROL_INSET * 2),
+    y: NORTH_EDGE + 230 + random() * (SOUTH_TRIM_Y - 42 - NORTH_EDGE - 230)
   };
 }
 

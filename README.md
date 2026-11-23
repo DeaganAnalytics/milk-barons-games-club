@@ -3,7 +3,7 @@ A retro RPG-style browser game featuring the Milk Baron, developed as an experim
 
 ## Play
 
-Move with WASD, the arrow keys, or the on-screen directional buttons. Press E, Space, or Interact near the Baron or Milo. Walk across the open hall to explore the two wings. If the Baron stays out of view for five seconds, he heads for the rug nearest you, including the center rug. Milo Milksworth moves between corners and tries to keep clear of the Baron.
+Move with WASD, the arrow keys, or the on-screen directional buttons. Press E, Space, or Interact near the Baron, Milo, or a guard to choose dialogue replies. Listen for the Baron’s overhead remarks as you explore the hall. If the Baron stays out of view for ten seconds, he heads for the rug nearest you, including the center rug. Milo Milksworth moves between corners and tries to keep clear of the Baron.
 
 ## Run locally
 

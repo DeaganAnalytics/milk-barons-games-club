@@ -58,14 +58,16 @@ export function isBlocked(x, y, radius, baron, from) {
       <= Math.hypot(from.x - baronObstacle.x, from.y - baronObstacle.y);
 }
 
-export function nearestInteraction(player, baron, milo) {
+export function nearestInteraction(player, baron, milo, guards = []) {
   const baronTarget = {
     id: 'baron', x: baron.x, y: baron.y, radius: 39, title: 'The Milk Baron'
   };
-  const targets = [baronTarget];
+  const targets = [baronTarget, ...guards.map(guard => ({
+    id: 'guard', x: guard.x, y: guard.y, radius: guard.radius, title: 'Bull Guard'
+  }))];
   if (milo) {
     targets.push({
-      x: milo.x, y: milo.y, radius: 24, title: 'Milo Milksworth',
+      id: 'milo', x: milo.x, y: milo.y, radius: 24, title: 'Milo Milksworth',
       message: 'Shh! I’m trying to stay out of the Baron’s way.'
     });
   }
