@@ -2,7 +2,7 @@ import {createGuards, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {callOutMilo, createBaron, speechOpacity, talkToBaron, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
+import {callOutMilo, createBaron, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
 import {cameraLeft, cameraTop, HALL_CENTER, isBlocked, nearestInteraction, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
@@ -22,7 +22,7 @@ test('movement normalizes diagonals and stops animating when blocked', () => {
   const baron = createBaron();
   const start = {...player};
   updatePlayer(player, baron, {dx: 1, dy: -1}, 0.05);
-  assert.ok(Math.abs(Math.hypot(player.x - start.x, player.y - start.y) - 5.6) < 1e-9);
+  assert.ok(Math.abs(Math.hypot(player.x - start.x, player.y - start.y) - 6.2) < 1e-9);
   assert.equal(player.facing, 3);
   assert.equal(player.walking, true);
   assert.ok(player.stride > 0);
@@ -100,12 +100,12 @@ test('the Baron can follow the player north and south', () => {
     const baron = createBaron();
     const viewY = cameraTop(rug.y);
     updateBaronWalk(baron, rug, 0, 0, 0.05, viewY);
-    updateBaronWalk(baron, rug, 0, 5, 0.05, viewY);
+    updateBaronWalk(baron, rug, 0, 10, 0.05, viewY);
     assert.equal(baron.route.at(-1), rug);
   }
 });
 
-test('the Baron waits five continuous seconds off-screen then walks to the closest side rug', () => {
+test('the Baron waits ten continuous seconds off-screen then walks to the closest side rug', () => {
   const baron = createBaron();
   const player = createPlayer();
   const update = (x, time, dt = 0.05) => {
@@ -114,20 +114,20 @@ test('the Baron waits five continuous seconds off-screen then walks to the close
     updateBaronWalk(baron, player, cameraLeft(x), time, dt);
   };
   update(-500, 0);
-  update(-500, 4.9);
+  update(-500, 9.9);
   assert.equal(baron.walking, false);
-  update(350, 5);
-  update(-500, 6);
-  update(-500, 10.9);
-  assert.equal(baron.walking, false);
+  update(350, 10);
   update(-500, 11);
+  update(-500, 20.9);
+  assert.equal(baron.walking, false);
+  update(-500, 21);
   assert.equal(baron.walking, true);
   assert.equal(baron.route.at(-1), SIDE_RUGS[0]);
   assert.match(baron.speech.text, /What's going on/);
-  assert.equal(speechOpacity(baron, cameraLeft(-500), 11), 0);
+  assert.equal(speechOpacity(baron, cameraLeft(-500), 21), 0);
 
-  let time = 11;
-  while (baron.route.length && time < 22) {
+  let time = 21;
+  while (baron.route.length && time < 32) {
     time += 0.05;
     update(-500, time);
     assert.equal(isBlocked(baron.x, baron.y, 13, {x: 0, y: 0}), false);
@@ -140,7 +140,7 @@ test('the Baron waits five continuous seconds off-screen then walks to the close
   assert.equal(baron.speech, null);
 
   update(1200, time + 5);
-  update(1200, time + 10);
+  update(1200, time + 15);
   assert.equal(baron.route.at(-1), SIDE_RUGS[1]);
   assert.match(baron.speech.text, /drink more milk/);
 });
@@ -149,7 +149,7 @@ test('the Baron can return to the center from either wing', () => {
   const player = {...HALL_CENTER};
   for (const rug of SIDE_RUGS) {
     const baron = {...createBaron(), ...rug};
-    for (let frame = 0; frame <= 14 * 20; frame++) {
+    for (let frame = 0; frame <= 16 * 20; frame++) {
       updateBaronWalk(baron, player, cameraLeft(player.x), frame / 20, 0.05);
       assert.equal(isBlocked(baron.x, baron.y, 13, {x: 0, y: 0}), false);
     }
@@ -165,16 +165,43 @@ test('the player can step away if the Baron walks onto an occupied rug', () => {
   assert.equal(player.x, SIDE_RUGS[0].x + 5);
 });
 
-test('talking to the Baron cycles his dialogue and prompts a grin', () => {
+test('the Baron says an idle remark about every 30 seconds and fades it out', () => {
   const baron = createBaron();
   const player = createPlayer();
-  assert.match(talkToBaron(baron, 29), /WELCOME/);
-  assert.match(talkToBaron(baron, 29), /extremely fair/);
-  updateBaronAttention(baron, player, 29.1, 0.05);
-  const grin = baron.expression;
-  assert.ok(grin > 0);
-  updateBaronAttention(baron, player, 31, 0.05);
-  assert.ok(baron.expression < grin);
+  const cameraY = cameraTop(player.y);
+  updateBaronIdleSpeech(baron, 0, cameraY, 29);
+  assert.equal(baron.speech, null);
+  updateBaronIdleSpeech(baron, 0, cameraY, 30);
+  assert.match(baron.speech.text, /WELCOME|extremely fair|carpet|oversee every game/);
+  assert.ok(baron.nextIdleSpeech >= 57 && baron.nextIdleSpeech < 63);
+  assert.equal(speechOpacity(baron, 0, 33.5, cameraY), 0.5);
+  updateBaronAttention(baron, player, 30.1, 0.05);
+  assert.ok(baron.expression > 0);
+  updateBaronWalk(baron, player, 0, 34, 0.05, cameraY);
+  assert.equal(baron.speech, null);
+});
+
+test('Milo callouts and rug-walk lines take priority over idle remarks', () => {
+  const baron = createBaron();
+  const cameraY = cameraTop(baron.y);
+  callOutMilo(baron, createMilo(), 29);
+  const callout = baron.speech;
+  updateBaronIdleSpeech(baron, 0, cameraY, 30);
+  assert.equal(baron.speech, callout);
+
+  const rugLine = {text: "What's going on over here?", visibleSince: null};
+  baron.speech = rugLine;
+  baron.route = [RUGS[0]];
+  updateBaronIdleSpeech(baron, 0, cameraY, 32);
+  assert.equal(baron.speech, rugLine);
+  baron.route = [];
+  baron.speech = null;
+  updateBaronIdleSpeech(baron, 0, cameraY + 1000, 34);
+  assert.equal(baron.speech, null);
+  updateBaronIdleSpeech(baron, 0, cameraY, 35);
+  assert.equal(baron.speech.visibleSince, 35);
+  callOutMilo(baron, createMilo(), 35);
+  assert.match(baron.speech.text, /^Milo/);
 });
 
 test('Milo rotates through all four far corners and can still be approached', () => {
@@ -225,8 +252,36 @@ test('the Baron spots Milo in the same square and Milo runs to the other side', 
   }
 });
 
+function guardsNearPlayer() {
+  const guards = createGuards(createPlayer(), createBaron(), createMilo());
+  for (const guard of guards) {
+    guard.x = HALL_CENTER.x + guard.side * 98;
+    guard.y = HALL_CENTER.y + 240;
+  }
+  return guards;
+}
+
+test('both guards spawn at random walkable positions with room around other actors', () => {
+  const player = createPlayer();
+  const baron = createBaron();
+  const milo = createMilo();
+  const positions = [];
+  for (const random of [() => 0.2, () => 0.8]) {
+    const guards = createGuards(player, baron, milo, random);
+    assert.equal(guards.length, 2);
+    for (const guard of guards) {
+      assert.equal(isBlocked(guard.x, guard.y, guard.radius, baron), false);
+      for (const actor of [player, baron, milo, ...guards.filter(other => other !== guard)]) {
+        assert.ok(Math.hypot(guard.x - actor.x, guard.y - actor.y) >= 80);
+      }
+    }
+    positions.push(guards.map(({x, y}) => [x, y]));
+  }
+  assert.notDeepEqual(positions[0], positions[1]);
+});
+
 test('the player can approach a guard and the guard holds position', () => {
-  const guards = createGuards();
+  const guards = guardsNearPlayer();
   const player = createPlayer();
   const baron = createBaron();
   const milo = createMilo();
@@ -246,7 +301,7 @@ test('the player can approach a guard and the guard holds position', () => {
 });
 
 test('two guards with crossing patrols steer around one another', () => {
-  const guards = createGuards();
+  const guards = guardsNearPlayer();
   const [first, second] = guards;
   const player = {...createPlayer(), x: 1000};
   const baron = createBaron();
@@ -266,7 +321,7 @@ test('either guard triggers an escape in Milo’s square without triggering Baro
   for (const guardIndex of [0, 1]) {
     const milo = createMilo();
     const baron = createBaron();
-    const guards = createGuards();
+    const guards = guardsNearPlayer();
     const guard = guards[guardIndex];
     guard.x = milo.x + 100;
     guard.y = milo.y + ROOM_HEIGHT;
