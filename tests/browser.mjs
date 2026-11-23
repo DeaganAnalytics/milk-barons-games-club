@@ -482,8 +482,14 @@ try {
   await closeConversation();
 
   await load(1100, 950, false, 'milk-service');
-  const callCount = () => evaluate(`window.spokenLines.filter(({text}) => ${JSON.stringify(milkCalls)}.includes(text)).length`);
-  await frames(3500);
+  const callCount = () => evaluate(`(() => {
+    const byFrame = new Map();
+    for (const {text, timestamp} of window.spokenLines) {
+      byFrame.set(timestamp, [...(byFrame.get(timestamp) ?? []), text]);
+    }
+    return [...byFrame.values()].filter(lines => ${JSON.stringify(milkCalls)}.includes(lines.join(' '))).length;
+  })()`);
+  await frames(2600);
   assert.equal(await callCount(), 0);
   await frames(110);
   assert.ok(await callCount() > 0);

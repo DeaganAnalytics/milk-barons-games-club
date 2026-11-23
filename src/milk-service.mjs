@@ -2,8 +2,16 @@ import {faceStaffMovement} from './staff.mjs';
 import {guardBlocks} from './guards.mjs';
 import {EAST_EDGE, isBlocked, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
-export const milkCalls = ['MILK!', 'More milk!', "WHERE'S MY MILK?!"];
-const interval = 60;
+export const milkCalls = [
+  'MILK!',
+  'More milk!',
+  "WHERE'S MY MILK?!",
+  'MY GLASS IS HALF EMPTY! THIS IS AN OUTRAGE!',
+  'I REQUIRE IMMEDIATE DAIRY ASSISTANCE!',
+  'SOMEONE FETCH THE COW!',
+  'MILK! MILK! MILK! MILK!'
+];
+const interval = 45;
 const durations = {handoff: 0.65, drink: 2, windup: 0.28, toss: 0.65, sweep: 2.4};
 const steering = [0, Math.PI / 5, -Math.PI / 5, Math.PI / 2.6, -Math.PI / 2.6];
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
