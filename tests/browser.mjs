@@ -142,8 +142,12 @@ try {
         [window.mapScrollX, window.mapScrollY] = args;
         window.guardDraws = 0;
         window.mapFrames = (window.mapFrames ?? 0) + 1;
+        window.guardSteps = [];
       }
-      if (source.src?.endsWith('/guards/concealed.webp')) window.guardDraws++;
+      if (source.src?.endsWith('/guards/concealed.webp')) {
+        if (args[1] === 0) window.guardDraws++;
+        if (args[1] === 142) window.guardSteps.push([this.getTransform().c, args[7]]);
+      }
       return drawImage.call(this, source, ...args);
     };
     const fillText = CanvasRenderingContext2D.prototype.fillText;
@@ -210,9 +214,19 @@ try {
   await activate('The Milk Baron');
   await closeConversation();
 
+  await load(1100, 950, false, 'guard-walk');
+  assert.equal(await evaluate('window.guardSteps.length'), 0);
+  await frames(180);
+  const steps = await evaluate('window.guardSteps');
+  assert.equal(steps.length, 4);
+  for (let i = 0; i < steps.length; i += 2) assert.ok(steps[i][0] * steps[i + 1][0] < 0);
+  await frames(9);
+  assert.notDeepEqual(await evaluate('window.guardSteps'), steps);
+
   await load(1100, 950, false, 'guards-start');
   assert.equal(await evaluate('window.guardDraws'), 2);
   await hold('ArrowRight', 85);
+  assert.equal(await evaluate('window.guardSteps.length'), 0);
   const approachedGuard = await evaluate('window.mapScrollX - 345');
   assert.ok(approachedGuard >= 415 && approachedGuard <= 420);
   await frames(150);
