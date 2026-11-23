@@ -95,6 +95,13 @@ export function createDialogue(baron) {
   let greetingIndex = 0;
 
   function setPortrait(element, character, mood) {
+    if (!portraits[character]) {
+      element.classList.add('standalone-portrait');
+      element.style.setProperty('--portrait-image', `url(${new URL('../assets/waiters/' + character + '-portrait.webp', import.meta.url)})`);
+      element.dataset.expression = mood;
+      return;
+    }
+    element.classList.remove('standalone-portrait');
     const {row, expressions} = portraits[character];
     element.style.setProperty('--portrait-position', `${expressions.indexOf(mood) * 50}% ${row * 100 / 3}%`);
     element.dataset.expression = mood;
@@ -129,7 +136,8 @@ export function createDialogue(baron) {
   });
 
   function open(target) {
-    const opening = target.id === 'guard' ? {text: guardOpening, replies: guardReplies, mood: 'deadpan'}
+    const opening = !portraits[target.id] ? {text: target.message, mood: 'attentive'}
+      : target.id === 'guard' ? {text: guardOpening, replies: guardReplies, mood: 'deadpan'}
       : target.id === 'milo' ? {text: target.message, replies: miloReplies, mood: 'worried'}
         : {...baronGreetings[greetingIndex++ % baronGreetings.length], replies: availableBaronReplies(baron)};
     speaker.textContent = title.textContent = target.title;

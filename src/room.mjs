@@ -58,11 +58,11 @@ export function isBlocked(x, y, radius, baron, from) {
       <= Math.hypot(from.x - baronObstacle.x, from.y - baronObstacle.y);
 }
 
-export function nearestInteraction(player, baron, milo, guards = []) {
+export function nearestInteraction(player, baron, milo, guards = [], guests = []) {
   const baronTarget = {
     id: 'baron', x: baron.x, y: baron.y, radius: 39, title: 'The Milk Baron'
   };
-  const targets = [baronTarget, ...guards.map(guard => ({
+  const targets = [...guests, baronTarget, ...guards.map(guard => ({
     id: 'guard', x: guard.x, y: guard.y, radius: guard.radius, title: 'Bull Guard'
   }))];
   if (milo) {

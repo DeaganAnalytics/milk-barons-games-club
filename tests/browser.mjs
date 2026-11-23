@@ -1,3 +1,4 @@
+import {waiterIds} from '../src/waiters.mjs';
 import assert from 'node:assert/strict';
 import {writeFile} from 'node:fs/promises';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -96,7 +97,7 @@ async function load(width, height, mobile, name, url = site) {
   await send('Emulation.setTouchEmulationEnabled', {enabled: mobile});
   await send('Page.navigate', {url});
   await waitFor('window.hasGameFrame && document.readyState === "complete"');
-  const assetCount = await evaluate(`(async () => {
+  const assets = await evaluate(`(async () => {
     const assets = new Set(performance.getEntriesByType('resource')
       .map(entry => entry.name)
       .filter(url => /[.](png|webp)$/.test(url)));
@@ -105,9 +106,11 @@ async function load(width, height, mobile, name, url = site) {
       image.src = url;
       return image.decode();
     }));
-    return assets.size;
+    return [...assets];
   })()`, true);
-  assert.equal(assetCount, 22);
+  for (const id of waiterIds) {
+    assert.ok(assets.some(url => url.endsWith('/waiters/' + id + '-walk.webp')));
+  }
   await frames(1);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
@@ -123,6 +126,8 @@ try {
     // Place guards near the player so the dialogue trip is reproducible.
     const spawnRolls = [(443 + 615) / 1920, (582.5 + 1140) / 3101,
       (247 + 615) / 1920, (582.5 + 1140) / 3101];
+    // On the waiter interaction route, place the first waiter just north of Pip.
+    if (new URLSearchParams(location.search).has('waiter-test')) spawnRolls.push(0.5);
     let randomState = 42;
     Math.random = () => {
       if (spawnRolls.length) return spawnRolls.shift();
@@ -137,12 +142,16 @@ try {
       return 1;
     };
     const drawImage = CanvasRenderingContext2D.prototype.drawImage;
+    window.waiterFrames = new Set();
     CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
       if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 3425) {
         [window.mapScrollX, window.mapScrollY] = args;
         window.guardDraws = 0;
         window.mapFrames = (window.mapFrames ?? 0) + 1;
         window.guardSteps = [];
+      }
+      if (source.src?.endsWith('-walk.webp') && source.src.includes('/waiters/')) {
+        window.waiterFrames.add(source.src + ':' + args[1] / args[3] + ':' + args[0] / args[2]);
       }
       if (source.src?.endsWith('/guards/concealed.webp')) {
         if (args[1] === 0) window.guardDraws++;
@@ -326,6 +335,31 @@ try {
   await evaluate('window.testBaron.watchedDirections.add(5); window.openTestBaronDialogue()');
   await reply('Why do you keep watching me?', 'What are you talking about young Pip?');
   await reply('Your eyes never leave me.', 'Pip my boy, I am merely supervising the business.');
+  await closeConversation();
+
+  await load(1100, 950, false, 'waiter-roster');
+  await frames(480);
+  for (const id of waiterIds) {
+    for (const row of [0, 1]) {
+      assert.ok(await evaluate(`[...window.waiterFrames].filter(frame =>
+        frame.includes('/${id}-walk.webp:${row}:')).length >= 2`), id + ' animation row ' + row);
+    }
+    assert.ok(await evaluate(`(async () => {
+      const image = new Image();
+      image.src = new URL('./assets/waiters/${id}-portrait.webp', location.href);
+      await image.decode();
+      return image.naturalWidth > 0;
+    })()`, true), id);
+  }
+
+  const waiterUrl = new URL(site);
+  waiterUrl.searchParams.set('waiter-test', '1');
+  await load(1100, 950, false, 'waiter-interaction', waiterUrl.href);
+  await hold('ArrowUp', 20);
+  await activate('Waiter');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Not now, busy busy busy');
+  assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
+    .backgroundImage.includes('/waiters/male-waiter-portrait.webp')`));
   await closeConversation();
 
   const plankUrl = new URL(site);
