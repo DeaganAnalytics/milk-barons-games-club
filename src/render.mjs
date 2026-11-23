@@ -210,16 +210,48 @@ function drawMilo(ctx, sprite, milo, elapsed) {
   ctx.restore();
 }
 
+function drawGuardStep(ctx, sprite, sourceX, sourceWidth, hipY, swing, sideView) {
+  const scaleX = 42 / 100;
+  const scaleY = 86 / 200;
+  const legHeight = (200 - 142) * scaleY;
+  const reach = swing * (sideView ? 7 : 2.5);
+  const lift = Math.max(0, swing) * 3.5;
+
+  ctx.save();
+  ctx.translate(sourceX % 100 * scaleX - 21, hipY);
+  // The hip stays attached to the jacket as the foot swings and lifts.
+  ctx.transform(1, 0, reach / legHeight, 1, 0, 0);
+  ctx.drawImage(sprite, sourceX, 142, sourceWidth, 58, 0, 0, sourceWidth * scaleX, legHeight - lift);
+  ctx.restore();
+}
+
 function drawGuard(ctx, sprite, guard) {
   if (!isReady(sprite)) return;
-  const lift = guard.walking ? Math.abs(Math.sin(guard.stride)) * 2.5 : 0;
+  const frameX = guard.facing * 100;
   ctx.save();
   ctx.translate(guard.x, guard.y + 22);
   ctx.fillStyle = '#25202a80';
   ctx.beginPath();
   ctx.ellipse(0, 0, 13, 3, 0, 0, TURN);
   ctx.fill();
-  ctx.drawImage(sprite, guard.facing * 100, 0, 100, 200, -21, -84 - lift, 42, 86);
+
+  if (!guard.walking) {
+    ctx.drawImage(sprite, frameX, 0, 100, 200, -21, -84, 42, 86);
+  } else {
+    const step = Math.sin(guard.stride);
+    const sideView = guard.facing % 2 === 1;
+    const top = -84 - Math.abs(step) * 1.3;
+    const hipY = top + 142 * (86 / 200);
+    if (sideView) {
+      // The side-on idle art has one leg silhouette. Draw it twice in opposite phases.
+      drawGuardStep(ctx, sprite, frameX, 100, hipY, -step, true);
+      drawGuardStep(ctx, sprite, frameX, 100, hipY, step, true);
+    } else {
+      drawGuardStep(ctx, sprite, frameX, 50, hipY, step, false);
+      drawGuardStep(ctx, sprite, frameX + 50, 50, hipY, -step, false);
+    }
+    ctx.drawImage(sprite, frameX, 0, 100, 142, -21, top, 42, hipY - top);
+  }
   ctx.restore();
 }
 
