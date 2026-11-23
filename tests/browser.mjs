@@ -154,7 +154,7 @@ try {
     window.staffFrames = new Set();
     window.creameryDraws = new Set();
     window.creameryIdle = {};
-    window.milkTrace = {baron: null, empty: new Set(), shards: false, glass: false};
+    window.milkTrace = {baron: null, empty: new Set(), shards: false, glass: false, armPose: false, duplicatePose: false, poseFrame: -1};
     CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
       if (source.src?.endsWith('/guards/rifle.webp') || source.src?.includes('/hall/creamery-')) {
         window.creameryDraws.add(source.src);
@@ -172,7 +172,14 @@ try {
         window.mapFrames = (window.mapFrames ?? 0) + 1;
         window.guardSteps = [];
       }
+      if (source.src?.includes('/assets/baron-milk-') && args.length === 4) {
+        window.milkTrace.duplicatePose ||= window.milkTrace.poseFrame === timestamp;
+        window.milkTrace.poseFrame = timestamp;
+        window.milkTrace.armPose = true;
+      }
       if (source.src?.includes('/assets/baron-') && source.src?.endsWith('.png') && args.length === 4) {
+        window.milkTrace.duplicatePose ||= window.milkTrace.poseFrame === timestamp;
+        window.milkTrace.poseFrame = timestamp;
         window.milkTrace.baron = [source.src.split('/').pop(), args[0], args[1] + args[3]];
       }
       if (source.src?.endsWith('-empty.webp')) window.milkTrace.empty.add(source.src);
@@ -476,14 +483,16 @@ try {
   assert.equal(await evaluate('window.mapFrames'), pausedAt);
   await closeConversation();
   if (process.env.SCREENSHOT_PREFIX) {
-    for (const [flag, label] of [['glass', 'delivery'], ['shards', 'broken-glass']]) {
+    for (const [flag, label] of [['armPose', 'drinking'], ['shards', 'broken-glass']]) {
       for (let i = 0; i < 60 && !(await evaluate('window.milkTrace.' + flag)); i++) await frames(24);
+      if (flag === 'armPose') await frames(55);
       const shot = await send('Page.captureScreenshot', {format: 'png'});
       await writeFile(`${process.env.SCREENSHOT_PREFIX}-${label}.png`, Buffer.from(shot.data, 'base64'));
     }
   }
   await frames(1800);
   assert.ok(await evaluate('window.milkTrace.glass && window.milkTrace.shards && window.milkTrace.empty.size > 0'));
+  assert.equal(await evaluate('window.milkTrace.armPose && !window.milkTrace.duplicatePose'), true);
   await hold('ArrowRight', 55);
   assert.notEqual(await evaluate('window.milkTrace.baron[0]'), 'baron-0.png');
 

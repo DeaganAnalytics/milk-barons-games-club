@@ -94,11 +94,22 @@ export function drawMilkShards(ctx, scene) {
   ctx.restore();
 }
 
-export function drawMilkAction(ctx, scene, baron) {
+export function usesMilkArm(scene) {
+  if (!scene) return false;
+  if (scene.phase === 'handoff') return milkProgress(scene) >= 0.32;
+  if (scene.phase === 'toss') return milkProgress(scene) < 0.65;
+  return scene.phase === 'drink' || scene.phase === 'windup';
+}
+
+export function drawMilkAction(ctx, scene, baron, animateBaronArm) {
   if (!['handoff', 'drink', 'windup', 'toss'].includes(scene.phase)) return;
   const t = milkProgress(scene);
   const {server, side} = scene;
   const martini = server.id === 'martini-waiter';
+  const restingX = baron.x + side * 22;
+  const restingY = baron.y + 3;
+  const shoulderX = baron.x + side * 16;
+  const shoulderY = baron.y - 13;
   const handX = baron.x + side * 26;
   const handY = baron.y + 1;
   const sipX = baron.x + side * 13;
@@ -133,11 +144,22 @@ export function drawMilkAction(ctx, scene, baron) {
     y = mix(releaseY, scene.spill.y + 20, t) - Math.sin(t * Math.PI) * 43;
     angle = side * (0.5 + t * TURN);
     milk = 0;
-    if (t < 0.24) reach(ctx, baron.x + side * 21, baron.y - 14, releaseX + side * t * 33, releaseY, '#201814', '#201814');
+
   }
 
-  if (scene.phase !== 'toss' && (scene.phase !== 'handoff' || t > 0.42)) {
-    reach(ctx, baron.x + side * 21, baron.y - 14, x, y - 2, '#201814', '#201814');
+  if (animateBaronArm) {
+    let armX = x;
+    let armY = y - 2;
+    if (scene.phase === 'handoff') {
+      const reachProgress = ease(Math.min(1, (t - 0.32) / 0.38));
+      armX = mix(restingX, armX, reachProgress);
+      armY = mix(restingY, armY, reachProgress);
+    } else if (scene.phase === 'toss') {
+      const finish = Math.min(1, t / 0.65);
+      armX = mix(handX + side * 8, restingX, ease(finish)) + side * Math.sin(finish * Math.PI) * 8;
+      armY = mix(handY - 16, restingY, ease(finish));
+    }
+    reach(ctx, shoulderX, shoulderY, armX, armY, '#302119', '#201814');
   }
   glass(ctx, x, y, angle, milk, martini);
 }
