@@ -72,10 +72,10 @@ async function activate(heading, withButton = false) {
   assert.equal(await evaluate('document.getElementById("heading").textContent'), heading);
 }
 
-async function load(width, height, mobile, name) {
+async function load(width, height, mobile, name, url = site) {
   await send('Emulation.setDeviceMetricsOverride', {width, height, deviceScaleFactor: 1, mobile});
   await send('Emulation.setTouchEmulationEnabled', {enabled: mobile});
-  await send('Page.navigate', {url: site});
+  await send('Page.navigate', {url});
   await waitFor('window.hasGameFrame && document.readyState === "complete"');
   const assetCount = await evaluate(`(async () => {
     const assets = new Set(performance.getEntriesByType('resource')
@@ -88,7 +88,7 @@ async function load(width, height, mobile, name) {
     }));
     return assets.size;
   })()`, true);
-  assert.equal(assetCount, 14);
+  assert.equal(assetCount, 22);
   await frames(1);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
@@ -129,11 +129,6 @@ try {
   await activate('The Milk Baron');
   await activate('The Milk Baron', true);
   assert.match(await evaluate('document.getElementById("info").textContent'), /extremely fair/);
-  await hold('ArrowLeft', 96);
-  await activate('Card table');
-  await hold('ArrowRight', 195);
-  await activate('Dice table');
-
   await load(390, 844, true, 'mobile');
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth && document.querySelector(".controls").getBoundingClientRect().bottom <= innerHeight'), true);
   const point = await evaluate(`(() => {
@@ -147,10 +142,6 @@ try {
   assert.equal(await evaluate('document.querySelector(".pressed") === null'), true);
   await activate('The Milk Baron');
 
-  await load(1100, 950, false, 'cashier');
-  await hold('ArrowUp', 62);
-  await hold('ArrowLeft', 96);
-  await activate('Cashier');
   for (const direction of ['ArrowLeft', 'ArrowRight']) {
     await load(1100, 950, false, direction);
     await hold('ArrowUp', 72);
@@ -181,6 +172,10 @@ try {
   await hold('ArrowLeft', 495);
   await hold('ArrowUp', 100);
   await activate('Milo Milksworth');
+  const plankUrl = new URL(site);
+  plankUrl.searchParams.set('floor', 'planks');
+  await load(1100, 950, false, 'wide-plank', plankUrl.href);
+  assert.equal(await evaluate('performance.getEntriesByType("resource").some(entry => entry.name.endsWith("/wide-plank.webp"))'), true);
   assert.deepEqual(errors, [], JSON.stringify(errors));
   console.log('Passed desktop and mobile layout, sprite loading, keyboard and touch movement, all interactions, both wings, return to center, and fading Baron speech.');
 } finally {

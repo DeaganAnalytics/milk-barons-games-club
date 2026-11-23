@@ -1,6 +1,7 @@
 import {FACING_STEP, TURN} from './directions.mjs';
 import {speechOpacity} from './baron.mjs';
-import {EAST_EDGE, ROOM_WIDTH, ROOM_HEIGHT, SIDE_RUGS, WEST_EDGE} from './room.mjs';
+import {ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
+import {composeHall, loadHallArt} from './hall-art.mjs';
 
 function loadSprite(name, extension = "png") {
   const image = new Image();
@@ -162,91 +163,6 @@ function drawPlayer(ctx, figure, player, elapsed) {
   ctx.restore();
 }
 
-// Foreground outlines in club.png keep the original furnishings over the new floor.
-const clubForeground = [
-  [[30, 18], [254, 18], [254, 4], [437, 4], [437, 18], [660, 18], [660, 176],
-    [548, 176], [535, 195], [530, 207], [506, 210], [491, 203], [480, 177], [429, 177],
-    [426, 185], [254, 185], [254, 177], [204, 177], [199, 198], [182, 210],
-    [167, 209], [153, 198], [146, 177], [30, 177]],
-  [[82, 276], [98, 248], [123, 245], [140, 275], [155, 283], [176, 283], [188, 272], [193, 248],
-    [221, 249], [239, 269], [238, 300], [231, 315], [230, 352], [246, 367],
-    [242, 403], [230, 433], [217, 437], [203, 424], [198, 390], [143, 389],
-    [129, 421], [106, 439], [91, 430], [79, 408], [79, 378], [89, 359], [84, 330]],
-  [[457, 270], [472, 249], [490, 243], [513, 271], [525, 280], [553, 280], [565, 270], [571, 245],
-    [593, 247], [605, 265], [608, 290], [599, 314], [601, 350], [612, 365],
-    [608, 397], [597, 422], [578, 434], [564, 424], [561, 391], [514, 389],
-    [508, 416], [491, 434], [476, 435], [465, 418], [451, 406], [444, 383],
-    [448, 367], [456, 352], [449, 322]],
-  [[52, 505], [58, 492], [68, 488], [72, 462], [80, 453], [119, 453],
-    [126, 472], [126, 498], [153, 498], [157, 478], [173, 471], [201, 473],
-    [207, 486], [207, 498], [278, 498], [296, 510], [296, 546], [287, 574],
-    [272, 585], [263, 608], [247, 627], [224, 627], [212, 609], [211, 594],
-    [197, 595], [189, 614], [178, 628], [151, 628], [140, 614], [138, 595],
-    [125, 595], [119, 617], [101, 630], [79, 624], [70, 602], [54, 589], [50, 563]],
-  [[33, 632], [256, 632], [256, 621], [290, 621], [290, 645], [400, 645],
-    [400, 621], [435, 621], [435, 632], [657, 632], [657, 685], [33, 685]]
-];
-
-function drawClubForeground(ctx, room) {
-  ctx.save();
-  ctx.beginPath();
-  for (const [first, ...points] of clubForeground) {
-    ctx.moveTo(...first);
-    for (const point of points) ctx.lineTo(...point);
-    ctx.closePath();
-  }
-  ctx.clip();
-  ctx.drawImage(room, 0, 0);
-  ctx.restore();
-}
-
-function drawWingTrim(ctx, room, x) {
-  ctx.fillStyle = '#c9aa7d';
-  ctx.fillRect(x, 18, ROOM_WIDTH, 156);
-  ctx.fillStyle = '#ead6ac';
-  ctx.fillRect(x, 24, ROOM_WIDTH, 13);
-  ctx.fillStyle = '#816444';
-  ctx.fillRect(x, 38, ROOM_WIDTH, 4);
-  for (let panelX = x + 26; panelX < x + ROOM_WIDTH - 130; panelX += 160) {
-    ctx.fillStyle = '#a28154';
-    ctx.fillRect(panelX, 48, 144, 108);
-    ctx.fillStyle = '#e1c69c';
-    ctx.fillRect(panelX + 4, 52, 136, 100);
-    ctx.fillStyle = '#ecd5aa';
-    ctx.fillRect(panelX + 13, 61, 118, 82);
-  }
-  ctx.fillStyle = '#e6cda5';
-  ctx.fillRect(x, 160, ROOM_WIDTH, 10);
-  ctx.fillStyle = '#8a653e';
-  ctx.fillRect(x, 170, ROOM_WIDTH, 7);
-  ctx.drawImage(room, 44, 632, 209, 42, x, 632, ROOM_WIDTH, 42);
-}
-
-function composeMap(room, parquet, wingRug) {
-  const world = document.createElement('canvas');
-  world.width = ROOM_WIDTH * 3;
-  world.height = ROOM_HEIGHT;
-  const ctx = world.getContext('2d');
-  ctx.fillStyle = '#3e3740';
-  ctx.fillRect(0, 0, world.width, world.height);
-  ctx.fillStyle = ctx.createPattern(parquet, 'repeat');
-  ctx.fillRect(0, 160, world.width, 486);
-  ctx.translate(-WEST_EDGE, 0);
-
-  drawWingTrim(ctx, room, WEST_EDGE);
-  drawWingTrim(ctx, room, ROOM_WIDTH);
-  drawWingTrim(ctx, room, 0);
-  drawClubForeground(ctx, room);
-  ctx.drawImage(room, 0, 18, 32, 667, WEST_EDGE, 18, 32, 667);
-  ctx.drawImage(room, 658, 18, 32, 667, EAST_EDGE - 32, 18, 32, 667);
-
-  ctx.drawImage(room, 274, 256, 143, 224, 274, 256, 143, 224);
-  for (const rug of SIDE_RUGS) {
-    ctx.drawImage(wingRug, 289, 199, 961, 624, rug.x - 72, rug.y - 47, 144, 94);
-  }
-  return world;
-}
-
 function drawSpeech(ctx, baron, cameraX, elapsed) {
   const opacity = speechOpacity(baron, cameraX, elapsed);
   if (opacity <= 0) return;
@@ -299,9 +215,8 @@ export function createRenderer(canvas) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.setTransform(canvas.width / ROOM_WIDTH, 0, 0, canvas.height / ROOM_HEIGHT, 0, 0);
-  const room = loadSprite('club');
-  const parquet = loadSprite('parquet');
-  const wingRug = loadSprite('wing-rug', 'webp');
+  const hallArt = loadHallArt();
+  const hallImages = Object.values(hallArt);
   const miloSprite = loadSprite('milo', 'webp');
   const figure = loadSprite('player');
   const fallback = loadSprite('baron');
@@ -310,8 +225,8 @@ export function createRenderer(canvas) {
   let world;
   return (player, baron, milo, cameraX, elapsed) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
-    if ([room, parquet, wingRug].every(isReady)) {
-      world ??= composeMap(room, parquet, wingRug);
+    if (world || hallImages.every(isReady)) {
+      world ??= composeHall(hallArt);
       ctx.drawImage(world, cameraX - WEST_EDGE, 0, ROOM_WIDTH, ROOM_HEIGHT,
         0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     } else {

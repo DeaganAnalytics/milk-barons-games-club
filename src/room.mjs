@@ -19,30 +19,6 @@ export function cameraLeft(playerX) {
   return Math.max(WEST_EDGE, Math.min(EAST_EDGE - ROOM_WIDTH, playerX - ROOM_WIDTH / 2));
 }
 
-const stations = [
-  {
-    x: 171, y: 319, radius: 85, title: 'Card table',
-    message: 'The cards are ready. The game itself is still being prepared.',
-    obstacle: {x: 171, y: 319, halfWidth: 89, halfHeight: 69}
-  },
-  {
-    x: 535, y: 319, radius: 85, title: 'Dice table',
-    message: 'Three dice. A suspiciously confident house.',
-    obstacle: {x: 535, y: 319, halfWidth: 89, halfHeight: 69}
-  },
-  {
-    x: 170, y: 560, radius: 80, title: 'Cashier',
-    message: 'The cashier is preparing the chip counter.',
-    obstacle: {x: 170, y: 553, halfWidth: 107, halfHeight: 56}
-  }
-];
-
-const obstacles = [
-  ...stations.map(station => station.obstacle),
-  {x: 165, y: 215, halfWidth: 42, halfHeight: 37},
-  {x: 520, y: 215, halfWidth: 42, halfHeight: 37}
-];
-
 function overlaps(x, y, radius, obstacle) {
   return Math.abs(x - obstacle.x) < obstacle.halfWidth + radius
     && Math.abs(y - obstacle.y) < obstacle.halfHeight + radius;
@@ -50,9 +26,10 @@ function overlaps(x, y, radius, obstacle) {
 
 export function isBlocked(x, y, radius, baron, from) {
   if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < 160 || y > 617) return true;
-  if (y < 190 && x > 295 && x < 395) return true;
+  // Closed doors stand proud of the back wall.
+  if (y < 190 && Math.abs(x - CENTER_RUG.x) < 75 + radius) return true;
+  if (y < 172 && Math.abs(x - SIDE_RUGS[0].x) < 31 + radius) return true;
   const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};
-  if (obstacles.some(obstacle => overlaps(x, y, radius, obstacle))) return true;
   if (!overlaps(x, y, radius, baronObstacle)) return false;
   // The Baron can walk up to an occupied rug. Let a player he overlaps step away.
   return !from || !overlaps(from.x, from.y, radius, baronObstacle)
@@ -64,7 +41,7 @@ export function nearestInteraction(player, baron, milo) {
   const baronTarget = {
     id: 'baron', x: baron.x, y: baron.y, radius: 39, title: 'The Milk Baron'
   };
-  const targets = [baronTarget, ...stations];
+  const targets = [baronTarget];
   if (milo) {
     targets.push({
       x: milo.x, y: milo.y, radius: 24, title: 'Milo Milksworth',

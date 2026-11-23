@@ -3,7 +3,7 @@ A retro RPG-style browser game featuring the Milk Baron, developed as an experim
 
 ## Play
 
-Move with WASD, the arrow keys, or the on-screen directional buttons. Press E, Space, or Interact near the Baron, the tables, or the cashier. The tables and cashier currently offer dialogue. Walk across the open hall to explore the two wings. If the Baron stays out of view for five seconds, he heads for the rug nearest you, including the center rug. Milo Milksworth moves between corners and tries to keep clear of the Baron.
+Move with WASD, the arrow keys, or the on-screen directional buttons. Press E, Space, or Interact near the Baron or Milo. Walk across the open hall to explore the two wings. If the Baron stays out of view for five seconds, he heads for the rug nearest you, including the center rug. Milo Milksworth moves between corners and tries to keep clear of the Baron.
 
 ## Run locally
 
@@ -14,8 +14,9 @@ From the repository root, run `python3 -m http.server 8000` and open `http://loc
 - `index.html` and `style.css` define the page and responsive controls.
 - `src/main.mjs` creates the game state, connects the controls and dialogue panel, and runs the frame loop.
 - `src/input.mjs`, `src/player.mjs`, and `src/directions.mjs` handle keyboard and touch input, movement, and facing.
-- `src/room.mjs` holds the map dimensions, camera bounds, station dialogue, and collision geometry. `src/baron.mjs` controls the Baron's rug walks, dialogue, and expressions.
+- `src/room.mjs` holds the map dimensions, camera bounds, interactions, and collision geometry. `src/baron.mjs` controls the Baron's rug walks, dialogue, and expressions.
 - `src/milo.mjs` controls Milo’s hiding spots and movement.
+- `src/hall-art.mjs` assembles the approved sprites in `assets/hall/`. Add `?floor=planks` to the URL to preview the wide-plank floor.
 - `src/render.mjs` draws the room and animates its characters using the images in `assets/`, including the repeating parquet texture.
 
 ## Tests

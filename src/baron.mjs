@@ -38,7 +38,7 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt) {
       if (elapsed - baron.offscreenSince >= OFFSCREEN_DELAY) {
         const rug = closestRug(player.x);
         if (baron.x !== rug.x || baron.y !== rug.y) {
-          // The open aisle runs below the tables and above the cashier.
+          // Cross the hall along the clear aisle between the rugs.
           baron.route = [{x: baron.x, y: CLEAR_AISLE_Y}, {x: rug.x, y: CLEAR_AISLE_Y}, rug];
           baron.speech = {text: rugLines[baron.nextLine], visibleSince: null};
           baron.nextLine = (baron.nextLine + 1) % rugLines.length;
