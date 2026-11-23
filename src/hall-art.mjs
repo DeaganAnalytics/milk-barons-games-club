@@ -1,5 +1,5 @@
 import {bartender, creameryHatch} from './creamery.mjs';
-import {HALL_CENTER, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {HALL_CENTER, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const assetNames = [
   'wall-panel', 'end-column', 'base-trim', 'double-door',
