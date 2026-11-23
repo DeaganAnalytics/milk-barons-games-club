@@ -287,7 +287,9 @@ test('the player can approach a guard and the guard holds position', () => {
   const player = createPlayer();
   const baron = createBaron();
   const milo = createMilo();
-  const [guard] = guards;
+  const [guard, patrollingGuard] = guards;
+  const patrolStart = patrollingGuard.x;
+  patrollingGuard.target = {x: patrolStart - 300, y: patrollingGuard.y};
   for (let i = 0; i < 100; i++) movePlayer(player, baron, 2, 0, guards);
   const separation = Math.hypot(player.x - guard.x, player.y - guard.y);
   assert.ok(separation >= 27 && separation < 30);
@@ -297,7 +299,7 @@ test('the player can approach a guard and the guard holds position', () => {
     updateGuards(guards, player, baron, milo, 3 + frame / 60, 1 / 60);
   }
   assert.deepEqual({x: guard.x, y: guard.y}, start);
-  assert.ok(guards[1].target);
+  assert.ok(patrollingGuard.x < patrolStart);
   movePlayer(player, baron, -5, 0, guards);
   assert.ok(Math.hypot(player.x - guard.x, player.y - guard.y) > separation);
 });
@@ -379,32 +381,36 @@ test('Baron speech stays inside the camera near its top edge', () => {
   assert.equal(speechTop(575, 330, 3), 455);
 });
 
-test('six waiters patrol separate routes, animate, and pause when approached', () => {
-  const waiters = createWaiters();
+test('one of each waiter design spawns in a separate spot and roams the hall', () => {
   const baron = createBaron();
   const player = createPlayer();
-  const [waiter, waitress] = waiters;
+  const milo = createMilo();
+  const guards = createGuards(player, baron, milo, () => 0.35);
+  const waiters = createWaiters(player, baron, milo, guards, () => 0);
+  const otherSpawns = createWaiters(player, baron, milo, guards, () => 0.9);
   assert.equal(waiters.length, 6);
-  for (const server of waiters) {
-    assert.equal(nearestInteraction(server, baron, null, [], waiters).id, server.id);
-    assert.equal(isBlocked(server.start, server.y, server.radius, baron), false);
-    assert.equal(isBlocked(server.end, server.y, server.radius, baron), false);
-  }
   assert.equal(new Set(waiters.map(server => server.id)).size, 6);
   assert.equal(new Set(waiters.map(server => `${server.x},${server.y}`)).size, 6);
-  assert.equal(waiters.filter(server => server.x < HALL_CENTER.x).length, 3);
-  assert.equal(waiters.filter(server => server.x > HALL_CENTER.x).length, 3);
-  assert.ok(waiter.x < HALL_CENTER.x && waitress.x > HALL_CENTER.x);
-  for (let frame = 0; frame < 160; frame++) {
-    updateWaiters(waiters, player, baron, [], 3 + frame * 0.05, 0.05);
+  assert.notDeepEqual(waiters.map(server => [server.x, server.y]), otherSpawns.map(server => [server.x, server.y]));
+  for (const server of waiters) {
+    const interaction = nearestInteraction(server, baron, null, [], waiters);
+    assert.equal(interaction.id, server.id);
+    assert.equal(interaction.message, 'Not now, busy busy busy');
+    assert.equal(isBlocked(server.x, server.y, server.radius, baron), false);
+    assert.ok([player, baron, milo, ...guards].every(actor => Math.hypot(server.x - actor.x, server.y - actor.y) >= 56));
   }
-  assert.equal(waiter.facing, -1);
-  assert.ok(waiter.walkTime > 0);
+
+  const [waiter] = waiters;
+  const start = {x: waiter.x, y: waiter.y};
+  for (let frame = 0; frame < 160; frame++) {
+    updateWaiters(waiters, player, baron, guards, 3 + frame * 0.05, 0.05, () => 0.8);
+  }
+  assert.notEqual(waiter.x, start.x);
+  assert.notEqual(waiter.y, start.y);
   assert.equal(waiterFrame(waiter, 11).row, 0);
   const x = waiter.x;
   const guest = {x, y: waiter.y + 30};
-  updateWaiters(waiters, guest, baron, [], 11, 0.05);
+  updateWaiters(waiters, guest, baron, guards, 11, 0.05, () => 0.2);
   assert.equal(waiter.x, x);
   assert.equal(waiterFrame(waiter, 11).row, 1);
-  assert.equal(nearestInteraction(guest, baron, null, [], waiters).id, 'male-waiter');
 });

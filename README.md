@@ -15,7 +15,7 @@ From the repository root, run `python3 -m http.server 8000` and open `http://loc
 - `src/main.mjs` creates the game state, connects the controls and dialogue panel, and runs the frame loop.
 - `src/input.mjs`, `src/player.mjs`, and `src/directions.mjs` handle keyboard and touch input, movement, and facing.
 - `src/room.mjs` holds the map dimensions, camera bounds, interactions, and collision geometry. `src/baron.mjs` controls the Baron's rug walks, dialogue, and expressions.
-- `src/milo.mjs` controls Milo’s hiding spots and movement. `src/waiters.mjs` controls the six servers in the east and west wings.
+- `src/milo.mjs` controls Milo’s hiding spots and movement. `src/waiters.mjs` controls the six servers who roam the hall.
 - `src/hall-art.mjs` assembles the approved sprites in `assets/hall/`. Add `?floor=planks` to the URL to preview the wide-plank floor.
 - `src/render.mjs` draws the room and animates its characters using the images in `assets/`, including the repeating parquet texture.
 

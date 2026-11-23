@@ -126,6 +126,8 @@ try {
     // Place guards near the player so the dialogue trip is reproducible.
     const spawnRolls = [(443 + 615) / 1920, (582.5 + 1140) / 3101,
       (247 + 615) / 1920, (582.5 + 1140) / 3101];
+    // On the waiter interaction route, place the first waiter just north of Pip.
+    if (new URLSearchParams(location.search).has('waiter-test')) spawnRolls.push(0.5);
     let randomState = 42;
     Math.random = () => {
       if (spawnRolls.length) return spawnRolls.shift();
@@ -140,7 +142,7 @@ try {
       return 1;
     };
     const drawImage = CanvasRenderingContext2D.prototype.drawImage;
-    window.waiterWalkFrames = new Set();
+    window.waiterFrames = new Set();
     CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
       if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 3425) {
         [window.mapScrollX, window.mapScrollY] = args;
@@ -148,8 +150,8 @@ try {
         window.mapFrames = (window.mapFrames ?? 0) + 1;
         window.guardSteps = [];
       }
-      if (source.src?.includes('/waiters/') && args[1] === 0) {
-        window.waiterWalkFrames.add(source.src + ':' + args[0]);
+      if (source.src?.endsWith('-walk.webp') && source.src.includes('/waiters/')) {
+        window.waiterFrames.add(source.src + ':' + args[1] + ':' + args[0]);
       }
       if (source.src?.endsWith('/guards/concealed.webp')) {
         if (args[1] === 0) window.guardDraws++;
@@ -336,10 +338,12 @@ try {
   await closeConversation();
 
   await load(1100, 950, false, 'waiter-roster');
-  await frames(220);
+  await frames(480);
   for (const id of waiterIds) {
-    assert.ok(await evaluate(`[...window.waiterWalkFrames].filter(frame =>
-      frame.includes('/${id}-walk.webp:')).length >= 2`), id);
+    for (const row of [0, 160]) {
+      assert.ok(await evaluate(`[...window.waiterFrames].filter(frame =>
+        frame.includes('/${id}-walk.webp:${row}:')).length >= 2`), id + ' animation row ' + row);
+    }
     assert.ok(await evaluate(`(async () => {
       const image = new Image();
       image.src = new URL('./assets/waiters/${id}-portrait.webp', location.href);
@@ -348,31 +352,15 @@ try {
     })()`, true), id);
   }
 
-  for (const [direction, count, id, heading, line] of [
-    ['ArrowLeft', 294, 'male-waiter', 'Waiter', 'A glass of milk, sir?'],
-    ['ArrowRight', 370, 'female-waiter', 'Waitress', 'Can I tempt you with a glass of milk?']
-  ]) {
-    await load(1100, 950, false, id);
-    await hold('ArrowUp', 60);
-    await hold(direction, count);
-    await hold('ArrowDown', 60);
-    await activate(heading);
-    assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), line);
-    assert.equal(await evaluate(`(async () => {
-      const portrait = document.getElementById('conversation-npc');
-      const background = getComputedStyle(portrait, '::before').backgroundImage;
-      if (!background.includes('/waiters/${id}-portrait.webp')) return false;
-      const image = new Image();
-      image.src = background.slice(5, -2);
-      await image.decode();
-      return image.naturalWidth > 0;
-    })()`, true), true);
-    if (process.env.SCREENSHOT_PREFIX) {
-      const shot = await send('Page.captureScreenshot', {format: 'png'});
-      await writeFile(`${process.env.SCREENSHOT_PREFIX}-${id}-dialogue.png`, Buffer.from(shot.data, 'base64'));
-    }
-    await closeConversation();
-  }
+  const waiterUrl = new URL(site);
+  waiterUrl.searchParams.set('waiter-test', '1');
+  await load(1100, 950, false, 'waiter-interaction', waiterUrl.href);
+  await hold('ArrowUp', 20);
+  await activate('Waiter');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Not now, busy busy busy');
+  assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
+    .backgroundImage.includes('/waiters/male-waiter-portrait.webp')`));
+  await closeConversation();
 
   const plankUrl = new URL(site);
   plankUrl.searchParams.set('floor', 'planks');
