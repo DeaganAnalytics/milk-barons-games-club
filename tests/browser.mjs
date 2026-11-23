@@ -179,6 +179,13 @@ try {
     const portraits = document.querySelector('.conversation-portraits').getBoundingClientRect();
     return [portraits.width, portraits.height];
   })()`), mapSize);
+  assert.equal(await evaluate(`(() => {
+    const reply = document.activeElement;
+    const event = new KeyboardEvent('keydown', {code: 'ArrowDown', bubbles: true, cancelable: true});
+    reply.dispatchEvent(event);
+    return reply.matches('#conversation-replies button') && !event.defaultPrevented
+      && reply.getBoundingClientRect().bottom <= innerHeight;
+  })()`), true);
   await hold('ArrowDown', 1800);
   assert.equal(await evaluate('window.mapFrames'), drawnFrames);
   assert.equal(await evaluate('window.spokenLines.length'), 0);

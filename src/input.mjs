@@ -10,13 +10,13 @@ function movementVector(directions) {
   };
 }
 
-export function bindControls({interact, nudge}) {
+export function bindControls({interact, nudge, isPaused}) {
   const held = new Set();
   const touch = new Map();
   const directionButtons = document.querySelectorAll('[data-dir]');
 
   addEventListener('keydown', event => {
-    if (event.altKey || event.ctrlKey || event.metaKey) return;
+    if (isPaused() || event.altKey || event.ctrlKey || event.metaKey) return;
     const direction = keys[event.code];
     if (direction) {
       held.add(event.code);
@@ -50,7 +50,7 @@ export function bindControls({interact, nudge}) {
       syncPressed();
     };
     button.addEventListener('pointerdown', event => {
-      if (event.button !== 0) return;
+      if (isPaused() || event.button !== 0) return;
       event.preventDefault();
       button.setPointerCapture(event.pointerId);
       touch.set(event.pointerId, direction);
@@ -61,12 +61,15 @@ export function bindControls({interact, nudge}) {
     button.addEventListener('lostpointercapture', release);
     // Enter and Space activate a focused direction button.
     button.addEventListener('click', event => {
-      if (event.detail !== 0) return;
+      if (isPaused() || event.detail !== 0) return;
       const {dx, dy} = movementVector(new Set([direction]));
       nudge(12 * dx, 12 * dy);
     });
   });
   document.getElementById('interact').addEventListener('click', interact);
 
-  return () => movementVector(new Set([...Array.from(held, code => keys[code]), ...touch.values()]));
+  return {
+    clearInput,
+    readMovement: () => movementVector(new Set([...Array.from(held, code => keys[code]), ...touch.values()]))
+  };
 }

@@ -17,13 +17,16 @@ const info = document.getElementById('info');
 let lastFrame = 0;
 let elapsed = 0;
 
-const readMovement = bindControls({
+const {readMovement, clearInput} = bindControls({
+  isPaused: dialogue.isOpen,
   nudge: (dx, dy) => movePlayer(player, baron, dx, dy, guards),
   interact: () => {
     if (dialogue.isOpen()) return;
     const target = nearestInteraction(player, baron, milo, guards);
-    if (target) dialogue.open(target);
-    else info.textContent = 'Nobody is close enough to talk to.';
+    if (target) {
+      clearInput();
+      dialogue.open(target);
+    } else info.textContent = 'Nobody is close enough to talk to.';
   }
 });
 

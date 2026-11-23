@@ -1,3 +1,4 @@
+import {speechTop} from '../src/speech-layout.mjs';
 import {createGuards, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
@@ -370,4 +371,9 @@ test('the Baron records only completed rug trips and distinct looks toward the p
     updateBaronAttention(baron, {x: baron.x + dx, y: baron.y + dy}, 3, 0.05);
   }
   assert.equal(baron.watchedDirections.size, 6);
+});
+
+test('Baron speech stays inside the camera near its top edge', () => {
+  assert.equal(speechTop(342.5, 330, 3), 345);
+  assert.equal(speechTop(575, 330, 3), 455);
 });
