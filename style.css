@@ -172,7 +172,7 @@ canvas {
 .conversation-portrait.standalone-portrait::before {
   width: 91%;
   height: 91%;
-  background: var(--portrait-image) center bottom / contain no-repeat;
+  background: var(--portrait-image) center / contain no-repeat;
 }
 
 .conversation-portraits figcaption {
