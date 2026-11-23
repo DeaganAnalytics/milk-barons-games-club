@@ -137,6 +137,7 @@ try {
       if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 3425) {
         [window.mapScrollX, window.mapScrollY] = args;
         window.guardDraws = 0;
+        window.mapFrames = (window.mapFrames ?? 0) + 1;
       }
       if (source.src?.endsWith('/guards/concealed.webp')) window.guardDraws++;
       return drawImage.call(this, source, ...args);
@@ -159,8 +160,20 @@ try {
   await key('keyUp', 'KeyW', 'w');
   await frames(100);
   await key('keyUp', 'ArrowUp');
+  const mapSize = await evaluate(`(() => {
+    const map = document.getElementById('game').parentElement.getBoundingClientRect();
+    return [map.width, map.height];
+  })()`);
+  const drawnFrames = await evaluate('window.mapFrames');
   await activate('The Milk Baron');
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Welcome, welcome to my establishment!');
+  assert.deepEqual(await evaluate(`(() => {
+    const portraits = document.querySelector('.conversation-portraits').getBoundingClientRect();
+    return [portraits.width, portraits.height];
+  })()`), mapSize);
+  await hold('ArrowDown', 1800);
+  assert.equal(await evaluate('window.mapFrames'), drawnFrames);
+  assert.equal(await evaluate('window.spokenLines.length'), 0);
   await reply('Do you own this place?', 'Of course, I own nearly every place.');
   await expressions('thinking', 'laughing');
   await closeConversation();

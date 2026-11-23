@@ -137,6 +137,7 @@ canvas {
 .conversation-portraits {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: minmax(0, 1fr);
   gap: 2px;
   overflow: hidden;
   border: 3px solid #637961;
@@ -146,14 +147,26 @@ canvas {
 
 .conversation-portraits figure {
   margin: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
   min-width: 0;
   background: #e9d4ad;
 }
 
 .conversation-portrait {
+  position: relative;
+  overflow: hidden;
+}
+
+.conversation-portrait::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 128%;
   aspect-ratio: 1;
-  background: url('./assets/dialogue/portraits.webp') no-repeat;
-  background-size: 300% 400%;
+  transform: translate(-50%, -50%);
+  background: url('./assets/dialogue/portraits.webp') var(--portrait-position, 0% 0%) / 300% 400% no-repeat;
 }
 
 .conversation-portraits figcaption {

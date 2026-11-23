@@ -60,7 +60,7 @@ const portraits = {
 
 export function createDialogue() {
   const panel = document.getElementById('conversation');
-  const map = document.querySelector('.viewport');
+  const map = document.getElementById('game').closest('.viewport');
   const info = document.getElementById('info').closest('.panel');
   const controls = document.querySelector('.controls');
   const interact = document.getElementById('interact');
@@ -74,7 +74,7 @@ export function createDialogue() {
 
   function setPortrait(element, character, mood) {
     const {row, expressions} = portraits[character];
-    element.style.backgroundPosition = `${expressions.indexOf(mood) * 50}% ${row * 100 / 3}%`;
+    element.style.setProperty('--portrait-position', `${expressions.indexOf(mood) * 50}% ${row * 100 / 3}%`);
     element.dataset.expression = mood;
   }
 
