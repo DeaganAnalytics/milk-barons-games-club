@@ -1,5 +1,5 @@
 import {bartender, creameryHatch} from './creamery.mjs';
-import {drawMilkAction, drawMilkShards} from './milk-service-art.mjs';
+import {drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
 import {drawPip} from './pip-art.mjs';
 import {staffFrame, staffIds} from './staff.mjs';
 import {speechTop} from './speech-layout.mjs';
@@ -223,6 +223,11 @@ export function createRenderer(canvas) {
   const fallback = loadSprite('baron');
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
 
+  const baronMilkPoses = {
+    '-1': loadSprite('baron-milk-left', 'webp'),
+    '1': loadSprite('baron-milk-right', 'webp')
+  };
+
   let world;
   return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
@@ -239,9 +244,11 @@ export function createRenderer(canvas) {
     ctx.translate(-cameraX, -cameraY);
     if (world) drawBartender(ctx, bartenderSprite, elapsed);
     if (milkScene) drawMilkShards(ctx, milkScene);
+    const milkPose = usesMilkArm(milkScene) ? baronMilkPoses[milkScene.side] : null;
+    const animateBaronArm = milkPose !== null && isReady(milkPose);
     const actors = [
       {depth: player.y + 22, draw: () => drawPip(ctx, player, elapsed)},
-      {depth: baron.y + 34, draw: () => drawBaron(ctx, baronFrames[baron.facing], fallback, baron, elapsed)},
+      {depth: baron.y + 34, draw: () => drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed)},
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
     for (const guard of guards) {
@@ -253,7 +260,7 @@ export function createRenderer(canvas) {
     }
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
-    if (milkScene) drawMilkAction(ctx, milkScene, baron);
+    if (milkScene) drawMilkAction(ctx, milkScene, baron, animateBaronArm);
     drawSpeech(ctx, baron, cameraX, cameraY, elapsed);
     ctx.restore();
   };
