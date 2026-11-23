@@ -1,4 +1,4 @@
-import {HALL_CENTER, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {HALL_CENTER, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const assetNames = [
   'wall-panel', 'end-column', 'base-trim', 'double-door',
@@ -91,8 +91,14 @@ export function composeHall(art) {
   drawEndColumn(ctx, column, EAST_EDGE, -1, NORTH_EDGE + 18, SOUTH_TRIM_Y - 1);
 
   for (const rug of RUGS) {
-    if (rug.horizontal) {
-      ctx.drawImage(art.wingRug, 289, 199, 961, 624, rug.x - 72, rug.y - 47, 144, 94);
+    const endCenter = rug.x === HALL_CENTER.x
+      && (rug.y === NORTH_EDGE + ROOM_HEIGHT / 2 || rug.y === SOUTH_EDGE - ROOM_HEIGHT / 2);
+    if (rug.horizontal || endCenter) {
+      ctx.save();
+      ctx.translate(rug.x, rug.y);
+      if (endCenter) ctx.rotate(Math.PI / 2);
+      ctx.drawImage(art.wingRug, 289, 199, 961, 624, -72, -47, 144, 94);
+      ctx.restore();
     } else {
       ctx.drawImage(art.centerRug, 274, 256, 143, 224, rug.x - 143 / 2, rug.y - 112, 143, 224);
     }
