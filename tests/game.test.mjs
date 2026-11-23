@@ -1,4 +1,4 @@
-import {createWaiters, updateWaiters, waiterFrame} from '../src/waiters.mjs';
+import {createStaff, updateStaff, staffFrame} from '../src/staff.mjs';
 import {speechTop} from '../src/speech-layout.mjs';
 import {createGuards, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
@@ -381,16 +381,16 @@ test('Baron speech stays inside the camera near its top edge', () => {
   assert.equal(speechTop(575, 330, 3), 455);
 });
 
-test('one of each waiter design spawns in a separate spot and roams the hall', () => {
+test('each staff member spawns in a separate spot and roams the hall', () => {
   const baron = createBaron();
   const player = createPlayer();
   const milo = createMilo();
   const guards = createGuards(player, baron, milo, () => 0.35);
-  const waiters = createWaiters(player, baron, milo, guards, () => 0);
-  const otherSpawns = createWaiters(player, baron, milo, guards, () => 0.9);
-  assert.equal(waiters.length, 6);
-  assert.equal(new Set(waiters.map(server => server.id)).size, 6);
-  assert.equal(new Set(waiters.map(server => `${server.x},${server.y}`)).size, 6);
+  const waiters = createStaff(player, baron, milo, guards, () => 0);
+  const otherSpawns = createStaff(player, baron, milo, guards, () => 0.9);
+  assert.equal(waiters.length, 7);
+  assert.equal(new Set(waiters.map(server => server.id)).size, 7);
+  assert.equal(new Set(waiters.map(server => `${server.x},${server.y}`)).size, 7);
   assert.notDeepEqual(waiters.map(server => [server.x, server.y]), otherSpawns.map(server => [server.x, server.y]));
   for (const server of waiters) {
     const interaction = nearestInteraction(server, baron, null, [], waiters);
@@ -400,17 +400,22 @@ test('one of each waiter design spawns in a separate spot and roams the hall', (
     assert.ok([player, baron, milo, ...guards].every(actor => Math.hypot(server.x - actor.x, server.y - actor.y) >= 56));
   }
 
+  const cleaner = waiters.find(server => server.id === 'edmund-vale');
+  assert.equal(cleaner.title, 'Edmund Vale');
+  assert.deepEqual(staffFrame(cleaner, 0.25), {column: 2, row: 1});
+  assert.deepEqual(staffFrame(cleaner, 0.5), {column: 4, row: 1});
+
   const [waiter] = waiters;
   const start = {x: waiter.x, y: waiter.y};
   for (let frame = 0; frame < 160; frame++) {
-    updateWaiters(waiters, player, baron, guards, 3 + frame * 0.05, 0.05, () => 0.8);
+    updateStaff(waiters, player, baron, guards, 3 + frame * 0.05, 0.05, () => 0.8);
   }
   assert.notEqual(waiter.x, start.x);
   assert.notEqual(waiter.y, start.y);
-  assert.equal(waiterFrame(waiter, 11).row, 0);
+  assert.equal(staffFrame(waiter, 11).row, 0);
   const x = waiter.x;
   const guest = {x, y: waiter.y + 30};
-  updateWaiters(waiters, guest, baron, guards, 11, 0.05, () => 0.2);
+  updateStaff(waiters, guest, baron, guards, 11, 0.05, () => 0.2);
   assert.equal(waiter.x, x);
-  assert.equal(waiterFrame(waiter, 11).row, 1);
+  assert.equal(staffFrame(waiter, 11).row, 1);
 });

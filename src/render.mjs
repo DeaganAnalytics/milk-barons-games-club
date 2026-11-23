@@ -1,4 +1,4 @@
-import {waiterFrame, waiterIds} from './waiters.mjs';
+import {staffFrame, staffIds} from './staff.mjs';
 import {speechTop} from './speech-layout.mjs';
 import {FACING_STEP, TURN} from './directions.mjs';
 import {speechOpacity} from './baron.mjs';
@@ -258,12 +258,12 @@ function drawGuard(ctx, sprite, guard) {
   ctx.restore();
 }
 
-function drawWaiter(ctx, sprite, waiter, elapsed) {
+function drawStaff(ctx, sprite, member, elapsed) {
   if (!isReady(sprite)) return;
-  const {column, row} = waiterFrame(waiter, elapsed);
+  const {column, row} = staffFrame(member, elapsed);
   ctx.save();
-  ctx.translate(waiter.x, waiter.y + 20);
-  ctx.scale(waiter.facing, 1);
+  ctx.translate(member.x, member.y + 20);
+  ctx.scale(member.facing, 1);
   const frameWidth = sprite.naturalWidth / 6;
   const frameHeight = sprite.naturalHeight / 2;
   ctx.drawImage(sprite, column * frameWidth, row * frameHeight, frameWidth, frameHeight,
@@ -279,14 +279,14 @@ export function createRenderer(canvas) {
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
   const guardSprite = loadSprite('guards/concealed', 'webp');
-  const waiterSprites = Object.fromEntries(waiterIds.map(id => [id, loadSprite('waiters/' + id + '-walk', 'webp')]));
+  const staffSprites = Object.fromEntries(staffIds.map(id => [id, loadSprite('waiters/' + id + '-walk', 'webp')]));
   const miloSprite = loadSprite('milo', 'webp');
   const figure = loadSprite('player');
   const fallback = loadSprite('baron');
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
 
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, waiters = []) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = []) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -307,8 +307,8 @@ export function createRenderer(canvas) {
     for (const guard of guards) {
       actors.push({depth: guard.y + 22, draw: () => drawGuard(ctx, guardSprite, guard)});
     }
-    for (const waiter of waiters) {
-      actors.push({depth: waiter.y + 20, draw: () => drawWaiter(ctx, waiterSprites[waiter.id], waiter, elapsed)});
+    for (const member of staff) {
+      actors.push({depth: member.y + 20, draw: () => drawStaff(ctx, staffSprites[member.id], member, elapsed)});
     }
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();

@@ -1,4 +1,4 @@
-import {waiterIds} from '../src/waiters.mjs';
+import {staffIds} from '../src/staff.mjs';
 import assert from 'node:assert/strict';
 import {writeFile} from 'node:fs/promises';
 import {setTimeout as delay} from 'node:timers/promises';
@@ -108,7 +108,7 @@ async function load(width, height, mobile, name, url = site) {
     }));
     return [...assets];
   })()`, true);
-  for (const id of waiterIds) {
+  for (const id of staffIds) {
     assert.ok(assets.some(url => url.endsWith('/waiters/' + id + '-walk.webp')));
   }
   await frames(1);
@@ -127,7 +127,9 @@ try {
     const spawnRolls = [(443 + 615) / 1920, (582.5 + 1140) / 3101,
       (247 + 615) / 1920, (582.5 + 1140) / 3101];
     // On the waiter interaction route, place the first waiter just north of Pip.
-    if (new URLSearchParams(location.search).has('waiter-test')) spawnRolls.push(0.5);
+    const scenario = new URLSearchParams(location.search);
+    if (scenario.has('waiter-test')) spawnRolls.push(0.5);
+    if (scenario.has('cleaner-test')) spawnRolls.push(0, 0, 0, 0, 0, 0, 0.15);
     let randomState = 42;
     Math.random = () => {
       if (spawnRolls.length) return spawnRolls.shift();
@@ -142,7 +144,7 @@ try {
       return 1;
     };
     const drawImage = CanvasRenderingContext2D.prototype.drawImage;
-    window.waiterFrames = new Set();
+    window.staffFrames = new Set();
     CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
       if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 3425) {
         [window.mapScrollX, window.mapScrollY] = args;
@@ -151,7 +153,7 @@ try {
         window.guardSteps = [];
       }
       if (source.src?.endsWith('-walk.webp') && source.src.includes('/waiters/')) {
-        window.waiterFrames.add(source.src + ':' + args[1] / args[3] + ':' + args[0] / args[2]);
+        window.staffFrames.add(source.src + ':' + args[1] / args[3] + ':' + args[0] / args[2]);
       }
       if (source.src?.endsWith('/guards/concealed.webp')) {
         if (args[1] === 0) window.guardDraws++;
@@ -339,9 +341,9 @@ try {
 
   await load(1100, 950, false, 'waiter-roster');
   await frames(480);
-  for (const id of waiterIds) {
+  for (const id of staffIds) {
     for (const row of [0, 1]) {
-      assert.ok(await evaluate(`[...window.waiterFrames].filter(frame =>
+      assert.ok(await evaluate(`[...window.staffFrames].filter(frame =>
         frame.includes('/${id}-walk.webp:${row}:')).length >= 2`), id + ' animation row ' + row);
     }
     assert.ok(await evaluate(`(async () => {
@@ -360,6 +362,20 @@ try {
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Not now, busy busy busy');
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
     .backgroundImage.includes('/waiters/male-waiter-portrait.webp')`));
+  await closeConversation();
+
+  const cleanerUrl = new URL(site);
+  cleanerUrl.searchParams.set('cleaner-test', '1');
+  await load(1100, 950, false, 'cleaner', cleanerUrl.href);
+  await hold('ArrowUp', 20);
+  await activate('Edmund Vale');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Not now, busy busy busy');
+  assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
+    .backgroundImage.includes('/waiters/edmund-vale-portrait.webp')`));
+  if (process.env.SCREENSHOT_PREFIX) {
+    const shot = await send('Page.captureScreenshot', {format: 'png'});
+    await writeFile(`${process.env.SCREENSHOT_PREFIX}-cleaner-dialogue.png`, Buffer.from(shot.data, 'base64'));
+  }
   await closeConversation();
 
   const plankUrl = new URL(site);
