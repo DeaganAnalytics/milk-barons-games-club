@@ -117,7 +117,7 @@ export function createDialogue(baron) {
       button.addEventListener('click', () => show(reply.next, character, reply.playerMood));
       return button;
     }));
-    (replyList.firstElementChild ?? document.getElementById('conversation-close')).focus({preventScroll: true});
+    (replyList.firstElementChild ?? document.getElementById('conversation-close')).focus();
   }
 
   document.getElementById('conversation-close').addEventListener('click', close);

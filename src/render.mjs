@@ -1,3 +1,4 @@
+import {speechTop} from './speech-layout.mjs';
 import {FACING_STEP, TURN} from './directions.mjs';
 import {speechOpacity} from './baron.mjs';
 import {NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
@@ -185,8 +186,9 @@ function drawSpeech(ctx, baron, cameraX, cameraY, elapsed) {
   }
   const halfWidth = Math.max(...lines.map(line => ctx.measureText(line).width)) / 2 + 12;
   const x = Math.max(cameraX + halfWidth, Math.min(cameraX + ROOM_WIDTH - halfWidth, baron.x));
+  const top = speechTop(baron.y, cameraY, lines.length);
   lines.forEach((line, i) => {
-    const y = baron.y - 70 - (lines.length - 1 - i) * 25;
+    const y = top + i * 25;
     ctx.strokeText(line, x, y);
     ctx.fillText(line, x, y);
   });
