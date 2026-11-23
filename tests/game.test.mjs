@@ -352,3 +352,22 @@ test('Baron callouts use all three phrases per round without consecutive repeats
     assert.deepEqual(new Set(spoken.slice(i, i + 3)), new Set(miloCallouts));
   }
 });
+
+test('the Baron records only completed rug trips and distinct looks toward the player', () => {
+  const baron = createBaron();
+  const player = createPlayer();
+  baron.route = [{x: baron.x + 8, y: baron.y}];
+  updateBaronWalk(baron, player, 0, 1, 0.025);
+  assert.equal(baron.completedRugTrips, 0);
+  updateBaronAttention(baron, player, 1, 0.025);
+  assert.equal(baron.watchedDirections.size, 0);
+  updateBaronWalk(baron, player, 0, 2, 0.05);
+  assert.equal(baron.completedRugTrips, 1);
+  updateBaronWalk(baron, player, 0, 2.1, 0.05);
+  assert.equal(baron.completedRugTrips, 1);
+
+  for (const [dx, dy] of [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [0, 1]]) {
+    updateBaronAttention(baron, {x: baron.x + dx, y: baron.y + dy}, 3, 0.05);
+  }
+  assert.equal(baron.watchedDirections.size, 6);
+});

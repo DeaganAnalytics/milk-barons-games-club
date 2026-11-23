@@ -25,6 +25,7 @@ const idleLines = [
 export function createBaron() {
   return {
     ...HALL_CENTER, walking: false, facing: 0, stride: 0,
+    completedRugTrips: 0, watchedDirections: new Set(),
     expression: 0, nextSmile: 2.5, smileUntil: 0, nextIdleSpeech: 30,
     offscreenSince: null, route: [], speech: null, nextLine: 0, remainingMiloLines: [], lastMiloLine: null
   };
@@ -74,6 +75,7 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
       baron.x = target.x;
       baron.y = target.y;
       baron.route.shift();
+      if (!baron.route.length && step > 0) baron.completedRugTrips++;
     } else {
       baron.x += dx * step / distance;
       baron.y += dy * step / distance;
@@ -116,6 +118,7 @@ export function speechOpacity(baron, cameraX, elapsed, cameraY = 0) {
 export function updateBaronAttention(baron, player, elapsed, dt) {
   if (!baron.walking) {
     baron.facing = facingIndex(player.x - baron.x, player.y - baron.y);
+    baron.watchedDirections.add(baron.facing);
   }
   if (elapsed >= baron.nextSmile) {
     baron.smileUntil = elapsed + 0.8 + Math.random() * 0.7;
