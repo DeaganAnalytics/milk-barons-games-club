@@ -41,19 +41,25 @@ function selectRoute(milo, baron, distance) {
   return [];
 }
 
-function startEscape(milo, baron, elapsed) {
-  if (milo.fleeing || elapsed < milo.nextSpot || !sameSquare(milo, baron)) return false;
+function startEscape(milo, baron, guards, elapsed) {
+  if (milo.fleeing || elapsed < milo.nextSpot) return false;
+  const spottedByBaron = sameSquare(milo, baron);
+  const threat = spottedByBaron ? baron : guards.find(guard => sameSquare(milo, guard));
+  if (!threat) return false;
 
-  const goEast = baron.x < CENTER_RUG.x;
+  const goEast = threat.x < CENTER_RUG.x;
   const goNorth = milo.y < CENTER_RUG.y;
-  milo.corner = goEast ? (goNorth ? 3 : 2) : (goNorth ? 0 : 1);
+  const preferred = goEast ? (goNorth ? 3 : 2) : (goNorth ? 0 : 1);
+  const alternate = preferred ^ 1;
+  const preferredOccupied = [baron, ...guards].some(actor => sameSquare(actor, CORNERS[preferred]));
+  milo.corner = preferredOccupied ? alternate : preferred;
   milo.route = [CORNERS[milo.corner]];
   milo.fleeing = true;
-  return true;
+  return spottedByBaron;
 }
 
 export function updateMilo(milo, baron, elapsed, dt, guards = []) {
-  const spotted = startEscape(milo, baron, elapsed);
+  const spotted = startEscape(milo, baron, guards, elapsed);
   const distance = Math.hypot(milo.x - baron.x, milo.y - baron.y);
   if (!milo.route.length && (elapsed >= milo.nextMove || distance < THREAT_DISTANCE)) {
     milo.route = selectRoute(milo, baron, distance);

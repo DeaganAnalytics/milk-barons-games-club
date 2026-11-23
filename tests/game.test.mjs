@@ -187,6 +187,12 @@ test('Milo rotates through all four far corners and can still be approached', ()
   assert.equal(nearestInteraction(milo, baron, milo)?.title, 'Milo Milksworth');
 });
 
+const miloCallouts = [
+  'Milo, I see you!',
+  'Milo, Milo, Milo. Always causing trouble.',
+  'Milo my good friend. Why do you always run away?'
+];
+
 test('the Baron spots Milo in the same square and Milo runs to the other side', () => {
   for (const x of [-574, 1264]) {
     for (const y of [NORTH_EDGE + 224, SOUTH_TRIM_Y - 83]) {
@@ -197,7 +203,7 @@ test('the Baron spots Milo in the same square and Milo runs to the other side', 
       baron.y = y;
       assert.equal(updateMilo(milo, baron, 2, 0.05), true);
       callOutMilo(baron, milo, 2);
-      assert.equal(baron.speech.text, 'Milo, I see you!');
+      assert.ok(miloCallouts.includes(baron.speech.text));
       assert.equal(speechOpacity(baron, cameraLeft(baron.x), 5.5, cameraTop(baron.y)), 0.5);
       assert.equal(milo.fleeing, true);
 
@@ -247,4 +253,40 @@ test('two guards with crossing patrols steer around one another', () => {
     assert.equal(isBlocked(second.x, second.y, second.radius, baron), false);
   }
   assert.ok(first.x < second.x);
+});
+
+test('either guard triggers an escape in Milo’s square without triggering Baron dialogue', () => {
+  for (const guardIndex of [0, 1]) {
+    const milo = createMilo();
+    const baron = createBaron();
+    const guards = createGuards();
+    const guard = guards[guardIndex];
+    guard.x = milo.x + 100;
+    guard.y = milo.y + ROOM_HEIGHT;
+    assert.equal(updateMilo(milo, baron, 1, 0.05, guards), false);
+    assert.equal(milo.fleeing, false);
+
+    guard.x = milo.x - 50;
+    guard.y = milo.y;
+    const startX = milo.x;
+    assert.equal(updateMilo(milo, baron, 2, 0.05, guards), false);
+    assert.equal(milo.fleeing, true);
+    assert.ok(milo.x > startX);
+    assert.ok(milo.route[0].x > CENTER_RUG.x);
+    assert.equal(baron.speech, null);
+  }
+});
+
+test('Baron callouts use all three phrases per round without consecutive repeats', () => {
+  const baron = createBaron();
+  const milo = createMilo();
+  const spoken = [];
+  for (let i = 0; i < 12; i++) {
+    callOutMilo(baron, milo, i);
+    assert.notEqual(baron.speech.text, spoken.at(-1));
+    spoken.push(baron.speech.text);
+  }
+  for (let i = 0; i < spoken.length; i += 3) {
+    assert.deepEqual(new Set(spoken.slice(i, i + 3)), new Set(miloCallouts));
+  }
 });

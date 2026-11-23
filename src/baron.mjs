@@ -10,6 +10,11 @@ const rugLines = [
   "I'm gonna have to drink more milk after all this exercise!",
   'The Milk Baron is always watching!'
 ];
+const miloLines = [
+  'Milo, I see you!',
+  'Milo, Milo, Milo. Always causing trouble.',
+  'Milo my good friend. Why do you always run away?'
+];
 const dialogue = [
   'WELCOME! This club is the finest establishment I personally own.',
   'You may find our games extremely fair. To me.',
@@ -21,7 +26,7 @@ export function createBaron() {
   return {
     ...CENTER_RUG, walking: false, facing: 0, stride: 0,
     expression: 0, nextSmile: 2.5, smileUntil: 0, chats: 0,
-    offscreenSince: null, route: [], speech: null, nextLine: 0
+    offscreenSince: null, route: [], speech: null, nextLine: 0, remainingMiloLines: [], lastMiloLine: null
   };
 }
 
@@ -88,7 +93,18 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
 }
 
 export function callOutMilo(baron, milo, elapsed) {
-  baron.speech = {text: 'Milo, I see you!', visibleSince: elapsed};
+  const lines = baron.remainingMiloLines;
+  if (lines.length === 0) {
+    lines.push(...miloLines.filter(line => line !== baron.lastMiloLine));
+    const index = Math.floor(Math.random() * lines.length);
+    const [first] = lines.splice(index, 1);
+    if (baron.lastMiloLine) lines.push(baron.lastMiloLine);
+    baron.lastMiloLine = first;
+  } else {
+    const index = Math.floor(Math.random() * lines.length);
+    [baron.lastMiloLine] = lines.splice(index, 1);
+  }
+  baron.speech = {text: baron.lastMiloLine, visibleSince: elapsed};
   if (!baron.walking) baron.facing = facingIndex(milo.x - baron.x, milo.y - baron.y);
 }
 
