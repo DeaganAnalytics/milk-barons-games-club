@@ -2,24 +2,34 @@ import {guardBlocks} from './guards.mjs';
 import {facingIndex, TURN} from './directions.mjs';
 import {HALL_CENTER, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 
-const OFFSCREEN_DELAY = 10;
+const OFFSCREEN_DELAY = 5;
 const WALK_SPEED = 146;
 const SPEECH_DURATION = 4;
 const rugLines = [
   "What's going on over here?",
   "I'm gonna have to drink more milk after all this exercise!",
-  'The Milk Baron is always watching!'
+  'The Milk Baron is always watching!',
+  "All this walking! I'll need an extra gallon of milk!",
+  'The Milk Baron sees all! Especially profitable opportunities!',
+  'Make way! A very important dairy magnate is approaching!',
+  'Running is for peasants. I prefer a dignified waddle.',
+  'Another rug, another opportunity to expand my fortune!',
+  'Good heavens! This is practically manual labour!'
 ];
 const miloLines = [
   'Milo, I see you!',
   'Milo, Milo, Milo. Always causing trouble.',
-  'Milo my good friend. Why do you always run away?'
+  'Milo my good friend. Why do you always run away?',
+  'MILO! Have you been drinking my milk again?!',
+  'Come here, Milo! I merely wish to discuss your behaviour!',
+  'Milo! You cannot hide from the dairy aristocracy!',
+  'That boy is going to curdle my milk!'
 ];
 const idleLines = [
   'WELCOME! This club is the finest establishment I personally own.',
   'You may find our games extremely fair. To me.',
   'Do you like the carpet? It cost several fortunes. Not mine, naturally.',
-  'I oversee every game personally. From this exact spot.'
+  'I oversee every game personally'
 ];
 
 export function createBaron() {

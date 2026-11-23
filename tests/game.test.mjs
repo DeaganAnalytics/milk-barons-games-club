@@ -105,12 +105,12 @@ test('the Baron can follow the player north and south', () => {
     const baron = createBaron();
     const viewY = cameraTop(rug.y);
     updateBaronWalk(baron, rug, 0, 0, 0.05, viewY);
-    updateBaronWalk(baron, rug, 0, 10, 0.05, viewY);
+    updateBaronWalk(baron, rug, 0, 5, 0.05, viewY);
     assert.equal(baron.route.at(-1), rug);
   }
 });
 
-test('the Baron waits ten continuous seconds off-screen then walks to the closest side rug', () => {
+test('the Baron waits five continuous seconds off-screen then walks to the closest side rug', () => {
   const baron = createBaron();
   const player = createPlayer();
   const update = (x, time, dt = 0.05) => {
@@ -119,20 +119,21 @@ test('the Baron waits ten continuous seconds off-screen then walks to the closes
     updateBaronWalk(baron, player, cameraLeft(x), time, dt);
   };
   update(-500, 0);
-  update(-500, 9.9);
+  update(-500, 4.9);
   assert.equal(baron.walking, false);
-  update(350, 10);
+  update(350, 5);
+  update(-500, 6);
+  update(-500, 10.9);
+  assert.equal(baron.walking, false);
   update(-500, 11);
-  update(-500, 20.9);
-  assert.equal(baron.walking, false);
-  update(-500, 21);
   assert.equal(baron.walking, true);
+  assert.ok(Math.abs(baron.x - (HALL_CENTER.x - 146 * 0.05)) < 1e-9);
   assert.equal(baron.route.at(-1), SIDE_RUGS[0]);
   assert.match(baron.speech.text, /What's going on/);
-  assert.equal(speechOpacity(baron, cameraLeft(-500), 21), 0);
+  assert.equal(speechOpacity(baron, cameraLeft(-500), 11), 0);
 
-  let time = 21;
-  while (baron.route.length && time < 32) {
+  let time = 11;
+  while (baron.route.length && time < 22) {
     time += 0.05;
     update(-500, time);
     assert.equal(isBlocked(baron.x, baron.y, 13, {x: 0, y: 0}), false);
@@ -145,7 +146,7 @@ test('the Baron waits ten continuous seconds off-screen then walks to the closes
   assert.equal(baron.speech, null);
 
   update(1200, time + 5);
-  update(1200, time + 15);
+  update(1200, time + 10);
   assert.equal(baron.route.at(-1), SIDE_RUGS[1]);
   assert.match(baron.speech.text, /drink more milk/);
 });
@@ -206,7 +207,7 @@ test('Milo callouts and rug-walk lines take priority over idle remarks', () => {
   updateBaronIdleSpeech(baron, 0, cameraY, 35);
   assert.equal(baron.speech.visibleSince, 35);
   callOutMilo(baron, createMilo(), 35);
-  assert.match(baron.speech.text, /^Milo/);
+  assert.ok(miloCallouts.includes(baron.speech.text));
 });
 
 test('Milo rotates through all four far corners and can still be approached', () => {
@@ -229,7 +230,11 @@ test('Milo rotates through all four far corners and can still be approached', ()
 const miloCallouts = [
   'Milo, I see you!',
   'Milo, Milo, Milo. Always causing trouble.',
-  'Milo my good friend. Why do you always run away?'
+  'Milo my good friend. Why do you always run away?',
+  'MILO! Have you been drinking my milk again?!',
+  'Come here, Milo! I merely wish to discuss your behaviour!',
+  'Milo! You cannot hide from the dairy aristocracy!',
+  'That boy is going to curdle my milk!'
 ];
 
 test('the Baron spots Milo in the same square and Milo runs to the other side', () => {
@@ -346,17 +351,17 @@ test('either guard triggers an escape in Milo’s square without triggering Baro
   }
 });
 
-test('Baron callouts use all three phrases per round without consecutive repeats', () => {
+test('Baron callouts use all phrases per round without consecutive repeats', () => {
   const baron = createBaron();
   const milo = createMilo();
   const spoken = [];
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < miloCallouts.length * 4; i++) {
     callOutMilo(baron, milo, i);
     assert.notEqual(baron.speech.text, spoken.at(-1));
     spoken.push(baron.speech.text);
   }
-  for (let i = 0; i < spoken.length; i += 3) {
-    assert.deepEqual(new Set(spoken.slice(i, i + 3)), new Set(miloCallouts));
+  for (let i = 0; i < spoken.length; i += miloCallouts.length) {
+    assert.deepEqual(new Set(spoken.slice(i, i + miloCallouts.length)), new Set(miloCallouts));
   }
 });
 
@@ -437,18 +442,18 @@ test('milk service waits for eligible time and calls the closest server with mil
     {x: baron.x + 5, y: baron.y, sweeps: true, radius: 14}
   ];
   const camera = {x: 0, y: 0};
-  updateMilkService(service, baron, staff, [], camera, 59, 59, false);
-  updateMilkService(service, baron, staff, [], camera, 79, 20, true);
+  updateMilkService(service, baron, staff, [], camera, 44, 44, false);
+  updateMilkService(service, baron, staff, [], camera, 64, 20, true);
   assert.equal(service.remaining, 1);
   baron.route.push({x: 600, y: 500});
-  updateMilkService(service, baron, staff, [], camera, 80, 1, false);
+  updateMilkService(service, baron, staff, [], camera, 65, 1, false);
   assert.equal(service.remaining, 1);
   baron.route.length = 0;
   baron.facing = 7;
-  updateMilkService(service, baron, staff, [], camera, 81, 1, false, () => 0.99);
+  updateMilkService(service, baron, staff, [], camera, 66, 1, false, () => 0.99);
   assert.equal(service.scene.server, staff[1]);
   assert.equal(baron.facing, 0);
-  assert.equal(baron.speech.text, milkCalls[2]);
+  assert.equal(baron.speech.text, milkCalls.at(-1));
 });
 
 test('server delivers and refills offscreen, then Skim clears the glass and restarts the clock', () => {
@@ -469,7 +474,7 @@ test('server delivers and refills offscreen, then Skim clears the glass and rest
   }
   assert.deepEqual([...seen], ['delivery', 'handoff', 'drink', 'windup', 'toss', 'cleanup-run', 'sweep']);
   assert.equal(service.scene, null);
-  assert.equal(service.remaining, 60);
+  assert.equal(service.remaining, 45);
   assert.equal(cleaner.serviceDuty, false);
   assert.equal(server.withoutMilk, true);
   updateMilkService(service, baron, staff, [], {x: 1000, y: 0}, 25, 0.05, false);
