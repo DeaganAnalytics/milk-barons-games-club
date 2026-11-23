@@ -260,7 +260,7 @@ try {
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'),
     'Shh! I’m trying to stay out of the Baron’s way.');
   await reply("Hey, don't I know you?", "No. Don't talk to me.");
-  await reply('Are you Milo, the milk activist.', 'Please leave me alone.');
+  await reply('Are you Milo, the milk activist.', 'Please leave me alone. Please go away, your presence attracts the Baron.');
   await expressions('thinking', 'sad');
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
   await closeConversation();

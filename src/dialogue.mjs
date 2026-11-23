@@ -28,7 +28,7 @@ const miloReplies = [
   {
     label: "Hey, don't I know you?", playerMood: 'thinking',
     next: {text: "No. Don't talk to me.", mood: 'worried', replies: [
-      {label: 'Are you Milo, the milk activist.', playerMood: 'thinking', next: {text: 'Please leave me alone.', mood: 'sad'}}
+      {label: 'Are you Milo, the milk activist.', playerMood: 'thinking', next: {text: 'Please leave me alone. Please go away, your presence attracts the Baron.', mood: 'sad'}}
     ]}
   }
 ];
