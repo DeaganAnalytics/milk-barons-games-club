@@ -96,10 +96,11 @@ export function createDialogue(baron) {
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
 
-  function setPortrait(element, character, mood) {
+  function setPortrait(element, character, mood, withoutMilk) {
     if (!portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.style.setProperty('--portrait-image', `url(${new URL('../assets/waiters/' + character + '-portrait.webp', import.meta.url)})`);
+      const art = character + (withoutMilk ? '-empty-portrait.webp' : '-portrait.webp');
+      element.style.setProperty('--portrait-image', `url(${new URL('../assets/waiters/' + art, import.meta.url)})`);
       element.dataset.expression = mood;
       return;
     }
@@ -115,18 +116,18 @@ export function createDialogue(baron) {
     interact.focus({preventScroll: true});
   }
 
-  function show(node, character, playerMood) {
+  function show(node, character, playerMood, withoutMilk) {
     line.textContent = node.text;
     if (playerPortrait.dataset.expression !== playerMood) {
       drawPipPortrait(playerArt, playerMood);
       playerPortrait.dataset.expression = playerMood;
     }
-    setPortrait(npcPortrait, character, node.mood);
+    setPortrait(npcPortrait, character, node.mood, withoutMilk);
     replyList.replaceChildren(...(node.replies ?? []).map(reply => {
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = reply.label;
-      button.addEventListener('click', () => show(reply.next, character, reply.playerMood));
+      button.addEventListener('click', () => show(reply.next, character, reply.playerMood, withoutMilk));
       return button;
     }));
     (replyList.firstElementChild ?? document.getElementById('conversation-close')).focus();
@@ -148,7 +149,7 @@ export function createDialogue(baron) {
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;
-    show(opening, target.id, 'attentive');
+    show(opening, target.id, 'attentive', target.withoutMilk);
   }
 
   return {open, isOpen: () => !panel.hidden};
