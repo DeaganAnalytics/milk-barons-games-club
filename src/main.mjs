@@ -6,13 +6,13 @@ import {bindControls} from './input.mjs';
 import {createPlayer, movePlayer, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
 import {cameraLeft, cameraTop, nearestInteraction} from './room.mjs';
-import {createWaiters, updateWaiters} from './waiters.mjs';
+import {createStaff, updateStaff} from './staff.mjs';
 
 const player = createPlayer();
 const baron = createBaron();
 const milo = createMilo();
 const guards = createGuards(player, baron, milo);
-const waiters = createWaiters(player, baron, milo, guards);
+const staff = createStaff(player, baron, milo, guards);
 const render = createRenderer(document.getElementById('game'));
 const dialogue = createDialogue(baron);
 const info = document.getElementById('info');
@@ -24,7 +24,7 @@ const {readMovement, clearInput} = bindControls({
   nudge: (dx, dy) => movePlayer(player, baron, dx, dy, guards),
   interact: () => {
     if (dialogue.isOpen()) return;
-    const target = nearestInteraction(player, baron, milo, guards, waiters);
+    const target = nearestInteraction(player, baron, milo, guards, staff);
     if (target) {
       clearInput();
       dialogue.open(target);
@@ -49,8 +49,8 @@ function frame(timestamp) {
   if (updateMilo(milo, baron, elapsed, dt, guards)) callOutMilo(baron, milo, elapsed);
   updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed);
   updateGuards(guards, player, baron, milo, elapsed, dt);
-  updateWaiters(waiters, player, baron, guards, elapsed, dt);
-  render(player, baron, milo, guards, cameraX, cameraY, elapsed, waiters);
+  updateStaff(staff, player, baron, guards, elapsed, dt);
+  render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff);
   requestAnimationFrame(frame);
 }
 
