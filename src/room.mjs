@@ -41,21 +41,11 @@ export function cameraTop(playerY) {
   return Math.max(NORTH_EDGE, Math.min(SOUTH_EDGE - ROOM_HEIGHT, playerY - ROOM_HEIGHT / 2));
 }
 
-function overlaps(x, y, radius, obstacle) {
-  return Math.abs(x - obstacle.x) < obstacle.halfWidth + radius
-    && Math.abs(y - obstacle.y) < obstacle.halfHeight + radius;
-}
-
-export function isBlocked(x, y, radius, baron, from) {
+export function hitsHall(x, y, radius) {
   if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < NORTH_EDGE + 160 || y > SOUTH_TRIM_Y - 16) return true;
   // The closed center door stands proud of the back wall.
   if (y < NORTH_EDGE + 190 && Math.abs(x - HALL_CENTER.x) < 75 + radius) return true;
-  const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};
-  if (!overlaps(x, y, radius, baronObstacle)) return false;
-  // The Baron can walk up to an occupied rug. Let a player he overlaps step away.
-  return !from || !overlaps(from.x, from.y, radius, baronObstacle)
-    || Math.hypot(x - baronObstacle.x, y - baronObstacle.y)
-      <= Math.hypot(from.x - baronObstacle.x, from.y - baronObstacle.y);
+  return false;
 }
 
 export function nearestInteraction(player, baron, milo, guards = []) {

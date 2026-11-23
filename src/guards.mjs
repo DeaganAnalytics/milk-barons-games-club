@@ -1,5 +1,6 @@
+import {approaches, guardBlocks, isBlocked} from './collision.mjs';
 import {facingIndex, TURN} from './directions.mjs';
-import {EAST_EDGE, isBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {EAST_EDGE, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const RADIUS = 14;
 const SPEED = 71;
@@ -32,26 +33,11 @@ export function createGuards(player, baron, milo, random = Math.random) {
   return guards;
 }
 
-// An actor already overlapping a guard can step away without being trapped.
-export function guardBlocks(x, y, actor, guards, radius = actor.radius) {
-  return guards.some(guard => {
-    if (actor === guard) return false;
-    const distance = Math.hypot(x - guard.x, y - guard.y);
-    return distance < guard.radius + radius
-      && distance <= Math.hypot(actor.x - guard.x, actor.y - guard.y);
-  });
-}
-
 function patrolTarget(random = Math.random) {
   return {
     x: WEST_EDGE + PATROL_INSET + random() * (EAST_EDGE - WEST_EDGE - PATROL_INSET * 2),
     y: NORTH_EDGE + 230 + random() * (SOUTH_TRIM_Y - 42 - NORTH_EDGE - 230)
   };
-}
-
-function approaches(x, y, guard, actor, distance) {
-  const next = Math.hypot(x - actor.x, y - actor.y);
-  return next < distance && next <= Math.hypot(guard.x - actor.x, guard.y - actor.y);
 }
 
 export function updateGuards(guards, player, baron, milo, elapsed, dt) {

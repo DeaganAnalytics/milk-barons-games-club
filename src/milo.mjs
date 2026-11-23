@@ -1,5 +1,6 @@
+import {stepToward} from './movement.mjs';
 import {HALL_CENTER, EAST_EDGE, NORTH_EDGE, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
-import {guardBlocks} from './guards.mjs';
+import {guardBlocks} from './collision.mjs';
 import {TURN} from './directions.mjs';
 
 const CORNERS = [
@@ -15,7 +16,7 @@ const RUN_SPEED = 235;
 const SPOT_COOLDOWN = 4;
 
 export function createMilo() {
-  return {...CORNERS[0], corner: 0, route: [], nextMove: HIDE_INTERVAL, stride: 0, facingLeft: false, fleeing: false, nextSpot: 0};
+  return {...CORNERS[0], corner: 0, destination: null, nextMove: HIDE_INTERVAL, stride: 0, facingLeft: false, fleeing: false, nextSpot: 0};
 }
 
 function distanceToSegment(point, start, end) {
@@ -28,17 +29,17 @@ function distanceToSegment(point, start, end) {
   return Math.hypot(point.x - start.x - projection * dx, point.y - start.y - projection * dy);
 }
 
-function selectRoute(milo, baron, distance) {
+function selectDestination(milo, baron, distance) {
   for (let offset = 1; offset < CORNERS.length; offset++) {
     const index = (milo.corner + offset) % CORNERS.length;
     const corner = CORNERS[index];
     if (Math.hypot(corner.x - baron.x, corner.y - baron.y) < THREAT_DISTANCE) continue;
     if (distanceToSegment(baron, milo, corner) >= Math.min(125, distance) - 0.01) {
       milo.corner = index;
-      return [corner];
+      return corner;
     }
   }
-  return [];
+  return null
 }
 
 function startEscape(milo, baron, guards, elapsed) {
@@ -50,10 +51,11 @@ function startEscape(milo, baron, guards, elapsed) {
   const goEast = threat.x < HALL_CENTER.x;
   const goNorth = milo.y < HALL_CENTER.y;
   const preferred = goEast ? (goNorth ? 3 : 2) : (goNorth ? 0 : 1);
-  const alternate = preferred ^ 1;
-  const preferredOccupied = [baron, ...guards].some(actor => sameSquare(actor, CORNERS[preferred]));
-  milo.corner = preferredOccupied ? alternate : preferred;
-  milo.route = [CORNERS[milo.corner]];
+  const threats = [baron, ...guards];
+  const otherSide = [preferred, preferred ^ 1];
+  const openCorner = index => threats.every(actor => !sameSquare(actor, CORNERS[index]));
+  milo.corner = otherSide.find(openCorner) ?? CORNERS.findIndex((_, index) => openCorner(index));
+  milo.destination = CORNERS[milo.corner];
   milo.fleeing = true;
   return spottedByBaron;
 }
@@ -61,43 +63,34 @@ function startEscape(milo, baron, guards, elapsed) {
 export function updateMilo(milo, baron, elapsed, dt, guards = []) {
   const spotted = startEscape(milo, baron, guards, elapsed);
   const distance = Math.hypot(milo.x - baron.x, milo.y - baron.y);
-  if (!milo.route.length && (elapsed >= milo.nextMove || distance < THREAT_DISTANCE)) {
-    milo.route = selectRoute(milo, baron, distance);
+  if (!milo.destination && (elapsed >= milo.nextMove || distance < THREAT_DISTANCE)) {
+    milo.destination = selectDestination(milo, baron, distance);
     milo.nextMove = elapsed + HIDE_INTERVAL;
   }
-  const target = milo.route[0];
+  const target = milo.destination;
   if (!target) {
     milo.stride = 0;
     return spotted;
   }
 
-  const dx = target.x - milo.x;
-  const dy = target.y - milo.y;
-  const remaining = Math.hypot(dx, dy);
-  const step = Math.min((milo.fleeing ? RUN_SPEED : WALK_SPEED) * dt, remaining);
-  const x = remaining ? milo.x + dx * step / remaining : milo.x;
-  const y = remaining ? milo.y + dy * step / remaining : milo.y;
+  const speed = milo.fleeing ? RUN_SPEED : WALK_SPEED;
+  const {x, y, dx, step, arrived} = stepToward(milo, target, speed * dt);
   if (guardBlocks(x, y, milo, guards, 12)) return spotted;
   if (!milo.fleeing && distance < 125 && Math.hypot(x - baron.x, y - baron.y) < distance - 0.01) {
     // A Baron who has started moving can cut across Milo's previous route.
-    milo.route = selectRoute(milo, baron, distance);
+    milo.destination = selectDestination(milo, baron, distance);
     return spotted;
   }
 
   if (dx) milo.facingLeft = dx < 0;
   milo.stride = (milo.stride + step * TURN / 22) % TURN;
-  if (step === remaining) {
-    milo.x = target.x;
-    milo.y = target.y;
-    milo.route.shift();
-    if (!milo.route.length) {
-      milo.nextMove = elapsed + HIDE_INTERVAL;
-      if (milo.fleeing) milo.nextSpot = elapsed + SPOT_COOLDOWN;
-      milo.fleeing = false;
-    }
-  } else {
-    milo.x = x;
-    milo.y = y;
+  milo.x = x;
+  milo.y = y;
+  if (arrived) {
+    milo.destination = null;
+    milo.nextMove = elapsed + HIDE_INTERVAL;
+    if (milo.fleeing) milo.nextSpot = elapsed + SPOT_COOLDOWN;
+    milo.fleeing = false;
   }
   return spotted;
 }

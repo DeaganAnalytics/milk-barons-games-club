@@ -165,7 +165,7 @@ function drawPlayer(ctx, figure, player, elapsed) {
 }
 
 function drawSpeech(ctx, baron, cameraX, cameraY, elapsed) {
-  const opacity = speechOpacity(baron, cameraX, elapsed, cameraY);
+  const opacity = speechOpacity(baron, {x: cameraX, y: cameraY}, elapsed);
   if (opacity <= 0) return;
   ctx.save();
   ctx.globalAlpha = opacity;
@@ -197,8 +197,8 @@ function drawSpeech(ctx, baron, cameraX, cameraY, elapsed) {
 
 function drawMilo(ctx, sprite, milo, elapsed) {
   if (!isReady(sprite)) return;
-  const motion = milo.route.length ? Math.sin(milo.stride) : 0;
-  const lift = milo.route.length ? Math.abs(motion) * (milo.fleeing ? 4 : 2) : Math.sin(elapsed * 2.4) * 0.5;
+  const motion = milo.destination ? Math.sin(milo.stride) : 0;
+  const lift = milo.destination ? Math.abs(motion) * (milo.fleeing ? 4 : 2) : Math.sin(elapsed * 2.4) * 0.5;
   ctx.save();
   ctx.translate(milo.x, milo.y + 20);
   ctx.fillStyle = '#25202a80';
@@ -271,7 +271,7 @@ export function createRenderer(canvas) {
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
 
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed) => {
+  return ({player, baron, milo, guards, camera: {x: cameraX, y: cameraY}, elapsed}) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
