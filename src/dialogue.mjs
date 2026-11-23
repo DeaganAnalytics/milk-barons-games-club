@@ -77,7 +77,7 @@ function availableBaronReplies(baron) {
 }
 
 const portraits = {
-  baron: {row: 1, expressions: ['pleased', 'laughing', 'displeased']},
+  baron: {expressions: ['pleased', 'laughing', 'displeased']},
   milo: {row: 2, expressions: ['worried', 'sad', 'relieved']},
   guard: {row: 3, expressions: ['deadpan', 'suspicious', 'speaking']}
 };
@@ -91,7 +91,10 @@ function staffPortraitUrl(id, withoutMilk = false) {
 
 function warmPortraits() {
   if (portraitCache.size) return;
-  const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url)];
+  const urls = [
+    new URL('../assets/dialogue/portraits.webp', import.meta.url),
+    new URL('../assets/dialogue/baron-portraits.svg', import.meta.url)
+  ];
   for (const id of staffIds) {
     urls.push(staffPortraitUrl(id));
     if (id !== 'edmund-vale') urls.push(staffPortraitUrl(id, true));
@@ -123,6 +126,7 @@ export function createDialogue(baron) {
   let greetingIndex = 0;
 
   function setPortrait(element, character, mood, withoutMilk) {
+    element.classList.toggle('baron-portrait', character === 'baron');
     if (!portraits[character]) {
       element.classList.add('standalone-portrait');
       element.style.setProperty('--portrait-image', `url(${staffPortraitUrl(character, withoutMilk)})`);
@@ -131,7 +135,7 @@ export function createDialogue(baron) {
     }
     element.classList.remove('standalone-portrait');
     const {row, expressions} = portraits[character];
-    element.style.setProperty('--portrait-position', `${expressions.indexOf(mood) * 50}% ${row * 100 / 3}%`);
+    element.style.setProperty('--portrait-position', `${expressions.indexOf(mood) * 50}% ${(row ?? 0) * 100 / 3}%`);
     element.dataset.expression = mood;
   }
 

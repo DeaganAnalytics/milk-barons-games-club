@@ -94,6 +94,22 @@ async function expressions(player, npc) {
   })()`));
 }
 
+async function checkBaronPortrait(mood) {
+  const column = ['pleased', 'laughing', 'displeased'].indexOf(mood);
+  assert.ok(await evaluate(`(() => {
+    const portrait = document.getElementById('conversation-npc');
+    const style = getComputedStyle(portrait, '::before');
+    return portrait.dataset.expression === '${mood}'
+      && style.backgroundImage.includes('/assets/dialogue/baron-portraits.svg')
+      && style.backgroundPosition === '${column * 50}% 0%'
+      && style.backgroundSize === '300% 100%';
+  })()`));
+  if (process.env.SCREENSHOT_PREFIX) {
+    const shot = await send('Page.captureScreenshot', {format: 'png'});
+    await writeFile(`${process.env.SCREENSHOT_PREFIX}-baron-${mood}.png`, Buffer.from(shot.data, 'base64'));
+  }
+}
+
 async function closeConversation() {
   await evaluate('document.getElementById("conversation-close").click()');
   assert.equal(await evaluate('document.getElementById("conversation").hidden'), true);
@@ -204,6 +220,7 @@ try {
   const drawnFrames = await evaluate('window.mapFrames');
   await activate('The Milk Baron');
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Welcome, welcome to my establishment!');
+  await checkBaronPortrait('pleased');
   assert.deepEqual(await evaluate(`(() => {
     const portraits = document.querySelector('.conversation-portraits').getBoundingClientRect();
     return [portraits.width, portraits.height];
@@ -220,12 +237,14 @@ try {
   assert.equal(await evaluate('window.spokenLines.length'), 0);
   await reply('Do you own this place?', 'Of course, I own nearly every place.');
   await expressions('thinking', 'laughing');
+  await checkBaronPortrait('laughing');
   await closeConversation();
   await activate('The Milk Baron', true);
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Pip! Good to see you!');
   await reply('Why do you have cows for guards?', 'What do you mean?');
   await reply('The guards are cows.', 'I have guards.');
   await expressions('attentive', 'displeased');
+  await checkBaronPortrait('displeased');
   await reply('But the horns?', 'I have guards.');
   await closeConversation();
   await activate('The Milk Baron');
@@ -358,7 +377,7 @@ try {
   await closeConversation();
 
   await load(1100, 950, false, 'waiter-roster');
-  const portraits = ['assets/dialogue/portraits.webp', ...staffIds.flatMap(id => {
+  const portraits = ['assets/dialogue/portraits.webp', 'assets/dialogue/baron-portraits.svg', ...staffIds.flatMap(id => {
     const stem = 'assets/waiters/' + id;
     return id === 'edmund-vale'
       ? [stem + '-portrait.webp']

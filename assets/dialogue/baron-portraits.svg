@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="240" viewBox="0 0 720 240">
+  <defs>
+    <linearGradient id="skin" x1="15%" y1="5%" x2="90%" y2="98%">
+      <stop stop-color="#ffecd0"/>
+      <stop offset="1" stop-color="#e8bc95"/>
+    </linearGradient>
+    <linearGradient id="vest" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#70452f"/>
+      <stop offset="1" stop-color="#45291f"/>
+    </linearGradient>
+    <linearGradient id="scarf" x1="10%" y1="0" x2="75%" y2="100%">
+      <stop stop-color="#fff1d7"/>
+      <stop offset="1" stop-color="#ebcdaa"/>
+    </linearGradient>
+    <path id="bib" d="M50 136q25-20 69-19 41-1 65 16l-80 56z"/>
+    <clipPath id="bib-edge"><use href="#bib"/></clipPath>
+    <g id="baron">
+      <path d="M28 212c1-35 18-62 44-76 22-12 57-15 81-8 36 10 57 39 59 84z" fill="url(#vest)" stroke="#17110e" stroke-width="8" stroke-linejoin="round"/>
+      <path d="M53 211c2-29 15-56 37-76 18-5 40-6 61 1 21 19 35 46 38 75z" fill="url(#skin)" stroke="#17110e" stroke-width="6" stroke-linejoin="round"/>
+      <path d="M170 139q22-23 32-14 8 8-15 22 23 2 17 13-8 10-32-9z" fill="url(#scarf)" stroke="#17110e" stroke-width="6" stroke-linejoin="round"/>
+      <use href="#bib" fill="url(#scarf)" stroke="#17110e" stroke-width="7" stroke-linejoin="round"/>
+      <g clip-path="url(#bib-edge)" fill="#78503c">
+        <ellipse cx="60" cy="139" rx="7" ry="6"/>
+        <ellipse cx="78" cy="148" rx="12" ry="10" transform="rotate(20 78 148)"/>
+        <ellipse cx="106" cy="139" rx="8" ry="7"/>
+        <ellipse cx="128" cy="150" rx="9" ry="7"/>
+        <ellipse cx="101" cy="170" rx="12" ry="11" transform="rotate(-15 101 170)"/>
+        <ellipse cx="147" cy="135" rx="12" ry="9"/>
+        <circle cx="156" cy="151" r="4"/>
+        <circle cx="121" cy="166" r="4"/>
+        <circle cx="82" cy="169" r="4"/>
+      </g>
+      <path d="M57 83c0-34 31-59 67-59 38 0 64 25 64 57 0 34-27 60-67 60-38 0-64-23-64-58z" fill="url(#skin)" stroke="#17110e" stroke-width="9"/>
+      <path d="M166 49c10 10 15 20 15 32 0 29-24 52-59 53-11 0-21-2-29-5 30 5 76-14 77-49 1-11-1-22-4-31z" fill="#a6765c" opacity=".20"/>
+    </g>
+    <g id="pleased" fill="none" stroke="#251711" stroke-width="5.5" stroke-linecap="round">
+      <path d="M83 61q8-10 18-7m18-3q12-4 20 7"/>
+      <path d="M82 83q9-12 19-1m16-3q10-12 21 0"/>
+      <path d="M96 108q22 12 40-9" stroke-width="6"/>
+    </g>
+    <g id="laughing" stroke="#251711" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M82 59q8-10 18-7m19-2q12-4 20 8M80 82q10-14 21-2m16-2q10-13 23-1" fill="none" stroke-width="5.5"/>
+      <path d="M89 100q27 11 53-5c-5 20-15 31-29 32-12 0-22-10-24-27z" fill="#301a18" stroke-width="5"/>
+      <path d="M102 120q12-10 25-2-6 6-14 6-6 0-11-4z" fill="#d67e72" stroke="none"/>
+    </g>
+    <g id="displeased" fill="none" stroke="#251711" stroke-width="5.5" stroke-linecap="round">
+      <path d="M80 57q6 11 20 13m17-1q14-2 26-12M79 81l22 2m15 0 22-4"/>
+      <path d="M89 85v6m34-7v6" stroke-width="7.5"/>
+      <path d="M94 111q16-16 32-2" stroke-width="6"/>
+    </g>
+  </defs>
+  <g><use href="#baron"/><use href="#pleased"/></g>
+  <g transform="translate(240 0)"><use href="#baron"/><use href="#laughing"/></g>
+  <g transform="translate(480 0)"><use href="#baron"/><use href="#displeased"/></g>
+</svg>
