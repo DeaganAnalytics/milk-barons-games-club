@@ -1,22 +1,35 @@
 export const ROOM_WIDTH = 690;
 export const ROOM_HEIGHT = 685;
-export const MAP_HEIGHT = ROOM_HEIGHT * 3;
-export const FRONT_TRIM_Y = ROOM_HEIGHT - 52;
-export const SOUTH_TRIM_Y = MAP_HEIGHT - 52;
-const FRONT_WALK_LIMIT = FRONT_TRIM_Y - 16;
+export const NORTH_EDGE = -ROOM_HEIGHT;
+export const SOUTH_EDGE = ROOM_HEIGHT * 3;
+export const MAP_HEIGHT = SOUTH_EDGE - NORTH_EDGE;
+export const SOUTH_TRIM_Y = SOUTH_EDGE - 52;
 export const WEST_EDGE = -ROOM_WIDTH;
 export const EAST_EDGE = ROOM_WIDTH * 2;
-export const CLEAR_AISLE_Y = 451;
-export const CENTER_RUG = {x: ROOM_WIDTH / 2, y: 357};
+export const CENTER_RUG = {x: ROOM_WIDTH / 2, y: (NORTH_EDGE + SOUTH_EDGE) / 2};
 export const SIDE_RUGS = [
   {x: -ROOM_WIDTH / 2, y: 357},
   {x: ROOM_WIDTH * 1.5, y: 357}
 ];
-const RUGS = [SIDE_RUGS[0], CENTER_RUG, SIDE_RUGS[1]];
+export const RUGS = Array.from({length: MAP_HEIGHT / ROOM_HEIGHT}, (_, row) =>
+  Array.from({length: (EAST_EDGE - WEST_EDGE) / ROOM_WIDTH}, (_, column) => {
+    if (row === 1 && column !== 1) return SIDE_RUGS[column / 2];
+    // The main rug sits on the north edge of the third row, at the hall midpoint.
+    if (row === 2 && column === 1) return CENTER_RUG;
+    return {
+      x: WEST_EDGE + (column + 0.5) * ROOM_WIDTH,
+      y: NORTH_EDGE + row * ROOM_HEIGHT + ROOM_HEIGHT / 2
+    };
+  })).flat();
 
-export function closestRug(playerX) {
-  return RUGS.reduce((closest, rug) =>
-    Math.abs(rug.x - playerX) < Math.abs(closest.x - playerX) ? rug : closest, CENTER_RUG);
+export function closestRug(player) {
+  const distance = rug => Math.hypot(rug.x - player.x, rug.y - player.y);
+  return RUGS.reduce((closest, rug) => distance(rug) < distance(closest) ? rug : closest, CENTER_RUG);
+}
+
+export function sameSquare(first, second) {
+  return Math.floor((first.x - WEST_EDGE) / ROOM_WIDTH) === Math.floor((second.x - WEST_EDGE) / ROOM_WIDTH)
+    && Math.floor((first.y - NORTH_EDGE) / ROOM_HEIGHT) === Math.floor((second.y - NORTH_EDGE) / ROOM_HEIGHT);
 }
 
 export function cameraLeft(playerX) {
@@ -24,9 +37,7 @@ export function cameraLeft(playerX) {
 }
 
 export function cameraTop(playerY) {
-  // Keep the original hall framing until the player heads into the south wing.
-  return Math.max(0, Math.min(MAP_HEIGHT - ROOM_HEIGHT,
-    (playerY - FRONT_WALK_LIMIT) * 2, playerY - ROOM_HEIGHT / 2));
+  return Math.max(NORTH_EDGE, Math.min(SOUTH_EDGE - ROOM_HEIGHT, playerY - ROOM_HEIGHT / 2));
 }
 
 function overlaps(x, y, radius, obstacle) {
@@ -35,10 +46,9 @@ function overlaps(x, y, radius, obstacle) {
 }
 
 export function isBlocked(x, y, radius, baron, from) {
-  if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < 160 || y > SOUTH_TRIM_Y - 16) return true;
-  if (y > FRONT_WALK_LIMIT && (x < 38 || x > ROOM_WIDTH - 39)) return true;
+  if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < NORTH_EDGE + 160 || y > SOUTH_TRIM_Y - 16) return true;
   // The closed center door stands proud of the back wall.
-  if (y < 190 && Math.abs(x - CENTER_RUG.x) < 75 + radius) return true;
+  if (y < NORTH_EDGE + 190 && Math.abs(x - CENTER_RUG.x) < 75 + radius) return true;
   const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};
   if (!overlaps(x, y, radius, baronObstacle)) return false;
   // The Baron can walk up to an occupied rug. Let a player he overlaps step away.

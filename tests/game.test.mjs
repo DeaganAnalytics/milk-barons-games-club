@@ -4,7 +4,7 @@ import {test} from 'node:test';
 import {callOutMilo, createBaron, speechOpacity, talkToBaron, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {cameraLeft, cameraTop, CENTER_RUG, isBlocked, nearestInteraction, CLEAR_AISLE_Y, MAP_HEIGHT, ROOM_HEIGHT, SIDE_RUGS, SOUTH_TRIM_Y} from '../src/room.mjs';
+import {cameraLeft, cameraTop, CENTER_RUG, isBlocked, nearestInteraction, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -19,8 +19,9 @@ test('both characters use the same eight facing directions', () => {
 test('movement normalizes diagonals and stops animating when blocked', () => {
   const player = createPlayer();
   const baron = createBaron();
+  const start = {...player};
   updatePlayer(player, baron, {dx: 1, dy: -1}, 0.05);
-  assert.ok(Math.abs(Math.hypot(player.x - 350, player.y - 585) - 5.6) < 1e-9);
+  assert.ok(Math.abs(Math.hypot(player.x - start.x, player.y - start.y) - 5.6) < 1e-9);
   assert.equal(player.facing, 3);
   assert.equal(player.walking, true);
   assert.ok(player.stride > 0);
@@ -35,20 +36,20 @@ test('movement normalizes diagonals and stops animating when blocked', () => {
 
 test('the closed center door and the Baron block movement while old furniture positions are open', () => {
   const baron = createBaron();
-  for (const [x, y] of [[350, 175], [385, 363]]) {
+  for (const [x, y] of [[350, NORTH_EDGE + 175], [385, CENTER_RUG.y + 6]]) {
     assert.equal(isBlocked(x, y, 13, baron), true);
   }
   for (const [x, y] of [[-345, 165], [171, 319], [535, 319], [170, 553], [165, 215], [520, 215]]) {
     assert.equal(isBlocked(x, y, 13, baron), false);
   }
   baron.x -= 20;
-  assert.equal(isBlocked(385, 363, 13, baron), false);
+  assert.equal(isBlocked(385, CENTER_RUG.y + 6, 13, baron), false);
 });
 
 test('the empty hall retains character interactions', () => {
   const baron = createBaron();
   assert.equal(nearestInteraction(createPlayer(), baron), undefined);
-  assert.equal(nearestInteraction({x: 350, y: 411}, baron)?.title, 'The Milk Baron');
+  assert.equal(nearestInteraction({x: 350, y: CENTER_RUG.y + 54}, baron)?.title, 'The Milk Baron');
   assert.equal(nearestInteraction({x: 171, y: 319}, baron), undefined);
 });
 
@@ -59,23 +60,42 @@ test('the camera clamps at the outer walls and the floor is open between the end
   assert.equal(cameraLeft(1300), 690);
   for (const x of [0, 690]) {
     assert.equal(isBlocked(x, 380, 13, baron), false);
-    assert.equal(isBlocked(x, CLEAR_AISLE_Y, 13, baron), false);
+    assert.equal(isBlocked(x, 451, 13, baron), false);
   }
-  assert.equal(isBlocked(-653, CLEAR_AISLE_Y, 13, baron), true);
-  assert.equal(isBlocked(1342, CLEAR_AISLE_Y, 13, baron), true);
+  assert.equal(isBlocked(-653, 451, 13, baron), true);
+  assert.equal(isBlocked(1342, 451, 13, baron), true);
 });
 
-test('only the center opens into the two southern squares', () => {
+test('the 3×4 rectangle has twelve reachable rugs and only perimeter walls', () => {
   const baron = createBaron();
-  for (const y of [618, ROOM_HEIGHT, ROOM_HEIGHT * 2, SOUTH_TRIM_Y - 16]) {
-    assert.equal(isBlocked(345, y, 13, baron), false);
-    assert.equal(isBlocked(-345, y, 13, baron), true);
-    assert.equal(isBlocked(1035, y, 13, baron), true);
+  assert.equal(RUGS.length, 12);
+  const occupiedSquares = new Set(RUGS.map(({x, y}) =>
+    Math.floor(x / ROOM_WIDTH) + ',' + Math.floor((y - NORTH_EDGE) / ROOM_HEIGHT)));
+  assert.equal(occupiedSquares.size, 12);
+  assert.equal(baron.y, (NORTH_EDGE + SOUTH_EDGE) / 2);
+  for (const rug of RUGS) {
+    assert.equal(closestRug(rug), rug);
+    assert.equal(isBlocked(rug.x, rug.y, 13, {x: 0, y: 0}), false);
   }
-  assert.equal(isBlocked(345, SOUTH_TRIM_Y - 15, 13, baron), true);
-  assert.equal(cameraTop(617), 0);
-  assert.ok(cameraTop(900) > 0);
-  assert.equal(cameraTop(SOUTH_TRIM_Y - 16), MAP_HEIGHT - ROOM_HEIGHT);
+  for (const x of [-345, 345, 1035]) {
+    for (const y of [NORTH_EDGE + 200, 618, ROOM_HEIGHT * 2, SOUTH_TRIM_Y - 16]) {
+      assert.equal(isBlocked(x, y, 13, {x: 0, y: 0}), false);
+    }
+    assert.equal(isBlocked(x, NORTH_EDGE + 159, 13, baron), true);
+    assert.equal(isBlocked(x, SOUTH_TRIM_Y - 15, 13, baron), true);
+  }
+  assert.equal(cameraTop(NORTH_EDGE + 160), NORTH_EDGE);
+  assert.equal(cameraTop(SOUTH_TRIM_Y - 16), SOUTH_EDGE - ROOM_HEIGHT);
+});
+
+test('the Baron can follow the player north and south', () => {
+  for (const rug of [RUGS[1], RUGS.at(-2)]) {
+    const baron = createBaron();
+    const viewY = cameraTop(rug.y);
+    updateBaronWalk(baron, rug, 0, 0, 0.05, viewY);
+    updateBaronWalk(baron, rug, 0, 5, 0.05, viewY);
+    assert.equal(baron.route.at(-1), rug);
+  }
 });
 
 test('the Baron waits five continuous seconds off-screen then walks to the closest side rug', () => {
@@ -83,6 +103,7 @@ test('the Baron waits five continuous seconds off-screen then walks to the close
   const player = createPlayer();
   const update = (x, time, dt = 0.05) => {
     player.x = x;
+    player.y = SIDE_RUGS[0].y;
     updateBaronWalk(baron, player, cameraLeft(x), time, dt);
   };
   update(-500, 0);
@@ -118,7 +139,7 @@ test('the Baron waits five continuous seconds off-screen then walks to the close
 });
 
 test('the Baron can return to the center from either wing', () => {
-  const player = {...createPlayer(), x: CENTER_RUG.x};
+  const player = {...CENTER_RUG};
   for (const rug of SIDE_RUGS) {
     const baron = {...createBaron(), ...rug};
     for (let frame = 0; frame <= 14 * 20; frame++) {
@@ -148,43 +169,44 @@ test('talking to the Baron cycles his dialogue and prompts a grin', () => {
   assert.ok(baron.expression < grin);
 });
 
-test('Milo rotates between corners and moves early if the Baron approaches', () => {
+test('Milo rotates through all four far corners and can still be approached', () => {
   const milo = createMilo();
   const baron = createBaron();
   updateMilo(milo, baron, 11, 0.05);
   assert.equal(milo.route.length, 0);
-  for (let frame = 240; frame < 320; frame++) updateMilo(milo, baron, frame / 20, 0.05);
-  assert.equal(milo.y, 550);
-  assert.equal(milo.route.length, 0);
+  const corners = new Set();
+  for (let frame = 240; frame < 155 * 20; frame++) {
+    updateMilo(milo, baron, frame / 20, 0.05);
+    if (!milo.route.length) corners.add(milo.x + ',' + milo.y);
+  }
+  assert.deepEqual(corners, new Set([
+    '-574,' + (NORTH_EDGE + 224), '-574,' + (SOUTH_TRIM_Y - 83),
+    '1264,' + (SOUTH_TRIM_Y - 83), '1264,' + (NORTH_EDGE + 224)
+  ]));
   assert.equal(nearestInteraction(milo, baron, milo)?.title, 'Milo Milksworth');
-
-  // Stay in a different room to exercise the existing proximity avoidance.
-  milo.x = -60;
-  baron.x = 70;
-  baron.y = milo.y;
-  updateMilo(milo, baron, 16, 0.05);
-  assert.ok(milo.route.length);
-  assert.equal(milo.fleeing, false);
 });
 
-test('the Baron spots Milo once on entering the same room and Milo runs to the opposite wing', () => {
+test('the Baron spots Milo in the same square and Milo runs to the other side', () => {
   for (const x of [-574, 1264]) {
-    const milo = {...createMilo(), x};
-    const baron = createBaron();
-    assert.equal(updateMilo(milo, baron, 1, 0.05), false);
+    for (const y of [NORTH_EDGE + 224, SOUTH_TRIM_Y - 83]) {
+      const milo = {...createMilo(), x, y};
+      const baron = {...createBaron(), x: x < 0 ? -345 : 1035};
+      assert.equal(updateMilo(milo, baron, 1, 0.05), false);
 
-    baron.x = x < 0 ? -345 : 1035;
-    assert.equal(updateMilo(milo, baron, 2, 0.05), true);
-    callOutMilo(baron, milo, 2);
-    assert.equal(baron.speech.text, 'Milo, I see you!');
-    assert.equal(speechOpacity(baron, cameraLeft(baron.x), 5.5), 0.5);
-    assert.equal(milo.fleeing, true);
+      baron.y = y;
+      assert.equal(updateMilo(milo, baron, 2, 0.05), true);
+      callOutMilo(baron, milo, 2);
+      assert.equal(baron.speech.text, 'Milo, I see you!');
+      assert.equal(speechOpacity(baron, cameraLeft(baron.x), 5.5, cameraTop(baron.y)), 0.5);
+      assert.equal(milo.fleeing, true);
 
-    for (let frame = 41; frame < 280; frame++) {
-      assert.equal(updateMilo(milo, baron, frame / 20, 0.05), false);
-      assert.equal(isBlocked(milo.x, milo.y, 13, {x: 0, y: 0}), false);
+      for (let frame = 41; frame < 280; frame++) {
+        assert.equal(updateMilo(milo, baron, frame / 20, 0.05), false);
+        assert.equal(isBlocked(milo.x, milo.y, 13, {x: 0, y: 0}), false);
+      }
+      assert.equal(milo.x, x < 0 ? 1264 : -574);
+      assert.equal(milo.y, y);
+      assert.equal(milo.fleeing, false);
     }
-    assert.equal(milo.x, x < 0 ? 1264 : -574);
-    assert.equal(milo.fleeing, false);
   }
 });

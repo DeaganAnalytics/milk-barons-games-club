@@ -1,6 +1,6 @@
 import {FACING_STEP, TURN} from './directions.mjs';
 import {speechOpacity} from './baron.mjs';
-import {ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
+import {NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
 import {composeHall, loadHallArt} from './hall-art.mjs';
 
 function loadSprite(name, extension = "png") {
@@ -227,7 +227,7 @@ export function createRenderer(canvas) {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
-      ctx.drawImage(world, cameraX - WEST_EDGE, cameraY, ROOM_WIDTH, ROOM_HEIGHT,
+      ctx.drawImage(world, cameraX - WEST_EDGE, cameraY - NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT,
         0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     } else {
       ctx.fillStyle = '#ae744c';

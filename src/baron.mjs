@@ -1,5 +1,5 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {CENTER_RUG, CLEAR_AISLE_Y, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {CENTER_RUG, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 
 const OFFSCREEN_DELAY = 5;
 const WALK_SPEED = 146;
@@ -37,10 +37,9 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
     } else {
       baron.offscreenSince ??= elapsed;
       if (elapsed - baron.offscreenSince >= OFFSCREEN_DELAY) {
-        const rug = closestRug(player.x);
+        const rug = closestRug(player);
         if (baron.x !== rug.x || baron.y !== rug.y) {
-          // Cross the hall along the clear aisle between the rugs.
-          baron.route = [{x: baron.x, y: CLEAR_AISLE_Y}, {x: rug.x, y: CLEAR_AISLE_Y}, rug];
+          baron.route = [rug];
           baron.speech = {text: rugLines[baron.nextLine], visibleSince: null};
           baron.nextLine = (baron.nextLine + 1) % rugLines.length;
         }

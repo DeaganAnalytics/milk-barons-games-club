@@ -1,4 +1,4 @@
-import {CENTER_RUG, EAST_EDGE, FRONT_TRIM_Y, MAP_HEIGHT, ROOM_WIDTH, SIDE_RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {CENTER_RUG, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const assetNames = [
   'wall-panel', 'end-column', 'base-trim', 'double-door',
@@ -45,23 +45,22 @@ export function composeHall(art) {
   hall.width = EAST_EDGE - WEST_EDGE;
   hall.height = MAP_HEIGHT;
   const ctx = hall.getContext('2d');
-  ctx.translate(-WEST_EDGE, 0);
+  ctx.translate(-WEST_EDGE, -NORTH_EDGE);
   ctx.fillStyle = '#302720';
-  ctx.fillRect(WEST_EDGE, 0, hall.width, hall.height);
+  ctx.fillRect(WEST_EDGE, NORTH_EDGE, hall.width, hall.height);
 
   // Stop the interior halfway under each column so no floor shows on its outer side.
   const wallInset = 20;
   ctx.save();
   ctx.beginPath();
-  ctx.rect(WEST_EDGE + wallInset, 0, hall.width - wallInset * 2, FRONT_TRIM_Y + 14);
-  ctx.rect(wallInset, FRONT_TRIM_Y, ROOM_WIDTH - wallInset * 2, SOUTH_TRIM_Y - FRONT_TRIM_Y + 14);
+  ctx.rect(WEST_EDGE + wallInset, NORTH_EDGE, hall.width - wallInset * 2, hall.height);
   ctx.clip();
 
   const floor = ctx.createPattern(art.floor, 'repeat');
   const floorScale = art.floor.src.endsWith('/wide-plank.webp') ? 0.66 : 0.53;
   floor.setTransform(new DOMMatrix().scale(floorScale));
   ctx.fillStyle = floor;
-  ctx.fillRect(WEST_EDGE, 154, hall.width, SOUTH_TRIM_Y + 14 - 154);
+  ctx.fillRect(WEST_EDGE, NORTH_EDGE + 154, hall.width, SOUTH_TRIM_Y + 14 - NORTH_EDGE - 154);
 
   const wallPanel = art['wall-panel'];
   const baseTrim = art['base-trim'];
@@ -72,44 +71,28 @@ export function composeHall(art) {
   const trimInset = 12;
   for (let x = WEST_EDGE; x < EAST_EDGE; x += panelWidth) {
     ctx.drawImage(wallPanel, leftInset, 0, wallPanel.naturalWidth - leftInset - rightInset,
-      wallPanel.naturalHeight, x, 18, panelWidth, 160);
+      wallPanel.naturalHeight, x, NORTH_EDGE + 18, panelWidth, 160);
+    ctx.drawImage(baseTrim, trimInset, 0, baseTrim.naturalWidth - trimInset * 2,
+      baseTrim.naturalHeight, x, SOUTH_TRIM_Y, panelWidth, 43);
   }
 
   const drawCentered = (name, centerX, top, width, height) => {
     ctx.drawImage(art[name], centerX - width / 2, top, width, height);
   };
 
-  drawCentered('double-door', CENTER_RUG.x, 15, 176, 176);
-  drawCentered('burgundy-banner', CENTER_RUG.x - 170, 43, 62, 93);
-  drawCentered('red-banner', CENTER_RUG.x + 170, 43, 62, 93);
-  for (const rug of SIDE_RUGS) drawCentered('tapestry', rug.x, 28, 112, 130);
+  drawCentered('double-door', CENTER_RUG.x, NORTH_EDGE + 15, 176, 176);
+  drawCentered('burgundy-banner', CENTER_RUG.x - 170, NORTH_EDGE + 43, 62, 93);
+  drawCentered('red-banner', CENTER_RUG.x + 170, NORTH_EDGE + 43, 62, 93);
+  for (const rug of SIDE_RUGS) drawCentered('tapestry', rug.x, NORTH_EDGE + 28, 112, 130);
 
   ctx.restore();
-  const drawTrim = (left, right, y) => {
-    ctx.save();
-    ctx.beginPath();
-    const start = left === WEST_EDGE || y === SOUTH_TRIM_Y ? wallInset : 0;
-    const end = right === EAST_EDGE || y === SOUTH_TRIM_Y ? wallInset : 0;
-    ctx.rect(left + start, y, right - left - start - end, 43);
-    ctx.clip();
-    for (let x = left; x < right; x += panelWidth) {
-      ctx.drawImage(baseTrim, trimInset, 0, baseTrim.naturalWidth - trimInset * 2,
-        baseTrim.naturalHeight, x, y, panelWidth, 43);
-    }
-    ctx.restore();
-  };
-  drawTrim(WEST_EDGE, 0, FRONT_TRIM_Y);
-  drawTrim(ROOM_WIDTH, EAST_EDGE, FRONT_TRIM_Y);
-  drawTrim(0, ROOM_WIDTH, SOUTH_TRIM_Y);
-
   const column = art['end-column'];
-  drawEndColumn(ctx, column, WEST_EDGE, 1, 18, FRONT_TRIM_Y - 1);
-  drawEndColumn(ctx, column, EAST_EDGE, -1, 18, FRONT_TRIM_Y - 1);
-  drawEndColumn(ctx, column, 0, 1, FRONT_TRIM_Y - 1, SOUTH_TRIM_Y - 1);
-  drawEndColumn(ctx, column, ROOM_WIDTH, -1, FRONT_TRIM_Y - 1, SOUTH_TRIM_Y - 1);
+  drawEndColumn(ctx, column, WEST_EDGE, 1, NORTH_EDGE + 18, SOUTH_TRIM_Y - 1);
+  drawEndColumn(ctx, column, EAST_EDGE, -1, NORTH_EDGE + 18, SOUTH_TRIM_Y - 1);
 
-  ctx.drawImage(art.centerRug, 274, 256, 143, 224, 274, 256, 143, 224);
-  for (const rug of SIDE_RUGS) {
+  ctx.drawImage(art.centerRug, 274, 256, 143, 224, CENTER_RUG.x - 71, CENTER_RUG.y - 101, 143, 224);
+  for (const rug of RUGS) {
+    if (rug === CENTER_RUG) continue;
     ctx.drawImage(art.wingRug, 289, 199, 961, 624, rug.x - 72, rug.y - 47, 144, 94);
   }
   return hall;
