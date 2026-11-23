@@ -33,29 +33,23 @@ test('movement normalizes diagonals and stops animating when blocked', () => {
   assert.equal(player.stride, 0);
 });
 
-test('the doorway, tables, cashier, plants and moving Baron block movement', () => {
+test('the closed center door and the Baron block movement while old furniture positions are open', () => {
   const baron = createBaron();
-  for (const [x, y] of [[350, 175], [171, 319], [535, 319], [170, 553], [165, 215], [520, 215]]) {
+  for (const [x, y] of [[350, 175], [385, 363]]) {
     assert.equal(isBlocked(x, y, 13, baron), true);
   }
-  assert.equal(isBlocked(350, 585, 13, baron), false);
-  assert.equal(isBlocked(385, 363, 13, baron), true);
+  for (const [x, y] of [[-345, 165], [171, 319], [535, 319], [170, 553], [165, 215], [520, 215]]) {
+    assert.equal(isBlocked(x, y, 13, baron), false);
+  }
   baron.x -= 20;
   assert.equal(isBlocked(385, 363, 13, baron), false);
 });
 
-test('stations and the Baron respond within their existing reach', () => {
+test('the empty hall retains character interactions', () => {
   const baron = createBaron();
   assert.equal(nearestInteraction(createPlayer(), baron), undefined);
-  for (const [x, y, title] of [
-    [350, 411, 'The Milk Baron'],
-    [171, 411, 'Card table'],
-    [535, 411, 'Dice table'],
-    [292, 560, undefined],
-    [170, 478, 'Cashier']
-  ]) {
-    assert.equal(nearestInteraction({x, y}, baron)?.title, title);
-  }
+  assert.equal(nearestInteraction({x: 350, y: 411}, baron)?.title, 'The Milk Baron');
+  assert.equal(nearestInteraction({x: 171, y: 319}, baron), undefined);
 });
 
 test('the camera clamps at the outer walls and the floor is open between the end walls', () => {

@@ -20,7 +20,7 @@ const readMovement = bindControls({
     const target = nearestInteraction(player, baron, milo);
     heading.textContent = target?.title ?? 'The club';
     if (!target) {
-      info.textContent = 'Nothing to interact with here. Try a table, the cashier, or the Baron.';
+      info.textContent = 'Nothing to interact with here. Try talking to the Baron or Milo.';
     } else {
       info.textContent = target.id === 'baron' ? talkToBaron(baron, elapsed) : target.message;
     }
