@@ -1,23 +1,35 @@
+import {loadImage} from './assets.mjs';
 import {HALL_CENTER, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
-const assetNames = [
-  'wall-panel', 'end-column', 'base-trim', 'double-door',
-  'burgundy-banner', 'red-banner', 'tapestry'
-];
+const structure = {
+  'wall-panel': 'hall/wall-panel.webp',
+  'end-column': 'hall/end-column.webp',
+  'base-trim': 'hall/base-trim.webp',
+  'double-door': 'hall/double-door.webp',
+  centerRug: 'hall/center-rug.png',
+  wingRug: 'wing-rug.webp'
+};
+const decorations = {
+  'burgundy-banner': 'hall/burgundy-banner.webp',
+  'red-banner': 'hall/red-banner.webp',
+  tapestry: 'hall/tapestry.webp'
+};
 
 export function loadHallArt() {
-  const floor = new URLSearchParams(location.search).get('floor') === 'planks'
-    ? 'wide-plank' : 'herringbone';
-  const art = Object.fromEntries([...assetNames, floor].map(name => {
-    const image = new Image();
-    image.src = new URL('../assets/hall/' + name + '.webp', import.meta.url);
-    return [name === floor ? 'floor' : name, image];
-  }));
-  art.centerRug = new Image();
-  art.centerRug.src = new URL('../assets/club.png', import.meta.url);
-  art.wingRug = new Image();
-  art.wingRug.src = new URL('../assets/wing-rug.webp', import.meta.url);
-  return art;
+  const planks = new URLSearchParams(location.search).get('floor') === 'planks';
+  const floor = planks ? 'wide-plank' : 'herringbone';
+  const required = {...structure, floor: 'hall/' + floor + '.webp'};
+  const art = {floorScale: planks ? 0.66 : 0.53};
+  const images = Object.entries({...required, ...decorations}).map(([name, path]) => {
+    const image = loadImage(path);
+    return image.decode().then(() => {
+      art[name] = image;
+    }).catch(error => {
+      if (Object.hasOwn(required, name)) throw new Error('Unable to load hall asset: ' + path, {cause: error});
+      console.warn('Skipping missing hall decoration:', path);
+    });
+  });
+  return Promise.all(images).then(() => art);
 }
 
 function drawEndColumn(ctx, column, x, facing, top, baseTop) {
@@ -57,8 +69,7 @@ export function composeHall(art) {
   ctx.clip();
 
   const floor = ctx.createPattern(art.floor, 'repeat');
-  const floorScale = art.floor.src.endsWith('/wide-plank.webp') ? 0.66 : 0.53;
-  floor.setTransform(new DOMMatrix().scale(floorScale));
+  floor.setTransform(new DOMMatrix().scale(art.floorScale));
   ctx.fillStyle = floor;
   ctx.fillRect(WEST_EDGE, NORTH_EDGE + 154, hall.width, SOUTH_TRIM_Y + 14 - NORTH_EDGE - 154);
 
@@ -77,7 +88,7 @@ export function composeHall(art) {
   }
 
   const drawCentered = (name, centerX, top, width, height) => {
-    ctx.drawImage(art[name], centerX - width / 2, top, width, height);
+    if (art[name]) ctx.drawImage(art[name], centerX - width / 2, top, width, height);
   };
 
   drawCentered('double-door', HALL_CENTER.x, NORTH_EDGE + 15, 176, 176);
@@ -100,7 +111,8 @@ export function composeHall(art) {
       ctx.drawImage(art.wingRug, 289, 199, 961, 624, -72, -47, 144, 94);
       ctx.restore();
     } else {
-      ctx.drawImage(art.centerRug, 274, 256, 143, 224, rug.x - 143 / 2, rug.y - 112, 143, 224);
+      // Keep the source rect inset so filtering at its edges matches the original sheet.
+      ctx.drawImage(art.centerRug, 8, 8, 143, 224, rug.x - 143 / 2, rug.y - 112, 143, 224);
     }
   }
   return hall;

@@ -91,24 +91,40 @@ async function closeConversation() {
   assert.equal(await evaluate('document.getElementById("conversation").hidden'), true);
 }
 
-async function load(width, height, mobile, name, url = site) {
+async function load(width, height, mobile, name, url = site, missingDecoration = null) {
   await send('Emulation.setDeviceMetricsOverride', {width, height, deviceScaleFactor: 1, mobile});
   await send('Emulation.setTouchEmulationEnabled', {enabled: mobile});
   await send('Page.navigate', {url});
   await waitFor('window.hasGameFrame && document.readyState === "complete"');
-  const assetCount = await evaluate(`(async () => {
-    const assets = new Set(performance.getEntriesByType('resource')
-      .map(entry => entry.name)
-      .filter(url => /[.](png|webp)$/.test(url)));
-    await Promise.all([...assets].map(url => {
+  const required = [
+    'hall/wall-panel.webp', 'hall/base-trim.webp', 'hall/end-column.webp',
+    'hall/double-door.webp', 'hall/center-rug.png', 'wing-rug.webp',
+    new URL(url).searchParams.get('floor') === 'planks' ? 'hall/wide-plank.webp' : 'hall/herringbone.webp',
+    'player.png', 'milo.webp', 'guards/concealed.webp', 'dialogue/portraits.webp'
+  ];
+  await evaluate(`(async () => {
+    const root = new URL('./assets/', location.href);
+    for (const path of ${JSON.stringify(required)}) {
+      const url = new URL(path, root).href;
+      if (path !== 'dialogue/portraits.webp' && !performance.getEntriesByName(url).length) {
+        throw new Error('The game did not request ' + path);
+      }
       const image = new Image();
       image.src = url;
-      return image.decode();
-    }));
-    return assets.size;
+      await image.decode();
+    }
   })()`, true);
-  assert.equal(assetCount, 22);
+  if (missingDecoration) {
+    assert.equal(await evaluate(`(async () => {
+      const image = new Image();
+      image.src = new URL('./assets/hall/${missingDecoration}.webp', location.href);
+      return image.decode().then(() => false, () => true);
+    })()`, true), true);
+  }
+  await waitFor('window.hallComposed');
   await frames(1);
+  assert.ok(await evaluate('window.mapFrames > 0'),
+    missingDecoration ? 'Hall should draw without ' + missingDecoration : 'Hall should draw after assets load');
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-${name}.png`, Buffer.from(shot.data, 'base64'));
@@ -138,12 +154,13 @@ try {
     };
     const drawImage = CanvasRenderingContext2D.prototype.drawImage;
     CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
-      if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 3425) {
+      if (this.canvas.id === 'game' && source instanceof HTMLCanvasElement) {
         [window.mapScrollX, window.mapScrollY] = args;
         window.guardDraws = 0;
         window.mapFrames = (window.mapFrames ?? 0) + 1;
         window.guardSteps = [];
       }
+      if (this.canvas.id !== 'game' && source.src?.endsWith('/hall/center-rug.png')) window.hallComposed = true;
       if (source.src?.endsWith('/guards/concealed.webp')) {
         if (args[1] === 0) window.guardDraws++;
         if (args[1] === 142) window.guardSteps.push([this.getTransform().c, args[7]]);
@@ -173,6 +190,7 @@ try {
     return [map.width, map.height];
   })()`);
   const drawnFrames = await evaluate('window.mapFrames');
+  await send('Emulation.setDeviceMetricsOverride', {width: 1100, height: 600, deviceScaleFactor: 1, mobile: false});
   await activate('The Milk Baron');
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Welcome, welcome to my establishment!');
   assert.deepEqual(await evaluate(`(() => {
@@ -186,6 +204,7 @@ try {
     return reply.matches('#conversation-replies button') && !event.defaultPrevented
       && reply.getBoundingClientRect().bottom <= innerHeight;
   })()`), true);
+  await send('Emulation.setDeviceMetricsOverride', {width: 1100, height: 950, deviceScaleFactor: 1, mobile: false});
   await hold('ArrowDown', 1800);
   assert.equal(await evaluate('window.mapFrames'), drawnFrames);
   assert.equal(await evaluate('window.spokenLines.length'), 0);
@@ -268,20 +287,23 @@ try {
   await closeConversation();
 
   await load(1100, 950, false, 'expanded-center');
+  const [maxX, maxY] = await evaluate(`import('./src/room.mjs').then(room => [
+    room.EAST_EDGE - room.WEST_EDGE - room.ROOM_WIDTH, room.MAP_HEIGHT - room.ROOM_HEIGHT
+  ])`, true);
   await hold('ArrowDown', 50);
   await hold('ArrowLeft', 600);
   await hold('ArrowUp', 1200);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 0]);
   await hold('ArrowDown', 1900);
-  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2740]);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, maxY]);
   await hold('ArrowRight', 1200);
-  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 2740]);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [maxX, maxY]);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-southeast.png`, Buffer.from(shot.data, 'base64'));
   }
   await hold('ArrowUp', 1900);
-  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 0]);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [maxX, 0]);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-northeast.png`, Buffer.from(shot.data, 'base64'));
@@ -310,7 +332,8 @@ try {
       ['./src/dialogue.mjs', './src/baron.mjs'].map(path => import(path)));
     const baron = createBaron();
     window.testBaron = baron;
-    window.openTestBaronDialogue = () => createDialogue(baron).open({id: 'baron', title: 'The Milk Baron'});
+    const dialogue = createDialogue(baron);
+    window.openTestBaronDialogue = () => dialogue.open({id: 'baron', title: 'The Milk Baron'});
     baron.completedRugTrips = 2;
     baron.watchedDirections = new Set([0, 1, 2, 3, 4]);
     window.openTestBaronDialogue();
@@ -332,6 +355,10 @@ try {
   plankUrl.searchParams.set('floor', 'planks');
   await load(1100, 950, false, 'wide-plank', plankUrl.href);
   assert.equal(await evaluate('performance.getEntriesByType("resource").some(entry => entry.name.endsWith("/wide-plank.webp"))'), true);
+  await send('Network.enable');
+  await send('Network.setBlockedURLs', {urls: ['*/hall/tapestry.webp']});
+  await load(1100, 950, false, 'missing-tapestry', site, 'tapestry');
+  await send('Network.setBlockedURLs', {urls: []});
   assert.deepEqual(errors, [], JSON.stringify(errors));
   console.log('Passed desktop and mobile layout, sprite loading, keyboard and touch movement, Baron interaction, movement to all four map corners, and fading Baron speech.');
 } finally {

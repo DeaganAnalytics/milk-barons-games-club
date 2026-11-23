@@ -12,16 +12,16 @@ From the repository root, run `python3 -m http.server 8000` and open `http://loc
 ## Project structure
 
 - `index.html` and `style.css` define the page and responsive controls.
-- `src/main.mjs` creates the game state, connects the controls and dialogue panel, and runs the frame loop.
-- `src/input.mjs`, `src/player.mjs`, and `src/directions.mjs` handle keyboard and touch input, movement, and facing.
-- `src/room.mjs` holds the map dimensions, camera bounds, interactions, and collision geometry. `src/baron.mjs` controls the Baron's rug walks, dialogue, and expressions.
-- `src/milo.mjs` controls Milo’s hiding spots and movement.
-- `src/hall-art.mjs` assembles the approved sprites in `assets/hall/`. Add `?floor=planks` to the URL to preview the wide-plank floor.
-- `src/render.mjs` draws the room and animates its characters using the images in `assets/`, including the repeating parquet texture.
+- `src/main.mjs` connects the page and runs the frame loop. `src/game.mjs` creates the world and advances it one step at a time.
+- `src/input.mjs` handles keyboard and touch controls. `src/player.mjs`, `src/baron.mjs`, `src/milo.mjs`, and `src/guards.mjs` own each character's behavior.
+- `src/room.mjs` defines the 3×5 hall, rugs, camera bounds, and interaction ranges. `src/collision.mjs`, `src/movement.mjs`, and `src/directions.mjs` handle shared movement rules.
+- `src/dialogue-content.mjs` contains the conversations and unlock rules. `src/dialogue.mjs` connects them to the reply buttons and portrait atlas.
+- `src/hall-art.mjs` assembles the approved hall assets. Add `?floor=planks` to preview the wide-plank floor.
+- `src/render.mjs` draws the hall and animates its characters. `src/speech-layout.mjs` keeps overhead dialogue inside the viewport.
 
 ## Tests
 
-Run `node --test tests/game.test.mjs` for the movement, collision, interaction, and patrol tests.
+Run `node --test tests/game.test.mjs` for the movement, collision, dialogue, and patrol tests. GitHub Actions runs this suite on pull requests.
 
 The browser smoke test uses Node 22 or newer and a local Chromium or Chrome instance. With the HTTP server running, start Chromium with `chromium --headless --remote-debugging-port=9227 --user-data-dir="$(mktemp -d)" about:blank`, then run `node tests/browser.mjs`. Set `GAME_URL` to test a different URL. Set `SCREENSHOT_PREFIX` to save desktop and mobile screenshots.
 
