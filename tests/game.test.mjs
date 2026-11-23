@@ -252,8 +252,36 @@ test('the Baron spots Milo in the same square and Milo runs to the other side', 
   }
 });
 
+function guardsNearPlayer() {
+  const guards = createGuards(createPlayer(), createBaron(), createMilo());
+  for (const guard of guards) {
+    guard.x = HALL_CENTER.x + guard.side * 98;
+    guard.y = HALL_CENTER.y + 240;
+  }
+  return guards;
+}
+
+test('both guards spawn at random walkable positions with room around other actors', () => {
+  const player = createPlayer();
+  const baron = createBaron();
+  const milo = createMilo();
+  const positions = [];
+  for (const random of [() => 0.2, () => 0.8]) {
+    const guards = createGuards(player, baron, milo, random);
+    assert.equal(guards.length, 2);
+    for (const guard of guards) {
+      assert.equal(isBlocked(guard.x, guard.y, guard.radius, baron), false);
+      for (const actor of [player, baron, milo, ...guards.filter(other => other !== guard)]) {
+        assert.ok(Math.hypot(guard.x - actor.x, guard.y - actor.y) >= 80);
+      }
+    }
+    positions.push(guards.map(({x, y}) => [x, y]));
+  }
+  assert.notDeepEqual(positions[0], positions[1]);
+});
+
 test('the player can approach a guard and the guard holds position', () => {
-  const guards = createGuards();
+  const guards = guardsNearPlayer();
   const player = createPlayer();
   const baron = createBaron();
   const milo = createMilo();
@@ -273,7 +301,7 @@ test('the player can approach a guard and the guard holds position', () => {
 });
 
 test('two guards with crossing patrols steer around one another', () => {
-  const guards = createGuards();
+  const guards = guardsNearPlayer();
   const [first, second] = guards;
   const player = {...createPlayer(), x: 1000};
   const baron = createBaron();
@@ -293,7 +321,7 @@ test('either guard triggers an escape in Milo’s square without triggering Baro
   for (const guardIndex of [0, 1]) {
     const milo = createMilo();
     const baron = createBaron();
-    const guards = createGuards();
+    const guards = guardsNearPlayer();
     const guard = guards[guardIndex];
     guard.x = milo.x + 100;
     guard.y = milo.y + ROOM_HEIGHT;

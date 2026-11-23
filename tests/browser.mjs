@@ -120,8 +120,12 @@ try {
   await send('Runtime.enable');
   // Drive the same game loop at 60 Hz without depending on key hold durations.
   await send('Page.addScriptToEvaluateOnNewDocument', {source: `
+    // Place guards near the player so the dialogue trip is reproducible.
+    const spawnRolls = [(443 + 615) / 1920, (582.5 + 1140) / 3101,
+      (247 + 615) / 1920, (582.5 + 1140) / 3101];
     let randomState = 42;
     Math.random = () => {
+      if (spawnRolls.length) return spawnRolls.shift();
       randomState = (Math.imul(randomState, 1664525) + 1013904223) >>> 0;
       return randomState / 4294967296;
     };

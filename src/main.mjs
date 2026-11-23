@@ -10,7 +10,7 @@ import {cameraLeft, cameraTop, nearestInteraction} from './room.mjs';
 const player = createPlayer();
 const baron = createBaron();
 const milo = createMilo();
-const guards = createGuards();
+const guards = createGuards(player, baron, milo);
 const render = createRenderer(document.getElementById('game'));
 const dialogue = createDialogue();
 const info = document.getElementById('info');
