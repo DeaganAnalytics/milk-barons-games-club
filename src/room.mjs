@@ -1,6 +1,6 @@
 export const ROOM_WIDTH = 690;
 export const ROOM_HEIGHT = 685;
-export const NORTH_EDGE = -ROOM_HEIGHT;
+export const NORTH_EDGE = -ROOM_HEIGHT * 2;
 export const SOUTH_EDGE = ROOM_HEIGHT * 3;
 export const MAP_HEIGHT = SOUTH_EDGE - NORTH_EDGE;
 export const SOUTH_TRIM_Y = SOUTH_EDGE - 52;
@@ -20,7 +20,8 @@ export const RUGS = Array.from({length: columns * rows}, (_, index) => {
   };
 });
 
-export const SIDE_RUGS = [RUGS[columns], RUGS[columns * 2 - 1]];
+const middleRowStart = Math.floor(rows / 2) * columns;
+export const SIDE_RUGS = [RUGS[middleRowStart], RUGS[middleRowStart + columns - 1]];
 
 export function closestRug(player) {
   const distance = rug => Math.hypot(rug.x - player.x, rug.y - player.y);

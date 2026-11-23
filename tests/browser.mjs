@@ -115,7 +115,7 @@ try {
     };
     const drawImage = CanvasRenderingContext2D.prototype.drawImage;
     CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
-      if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 2740) {
+      if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 3425) {
         [window.mapScrollX, window.mapScrollY] = args;
         window.guardDraws = 0;
       }
@@ -172,18 +172,18 @@ try {
   await load(1100, 950, false, 'expanded-center');
   await hold('ArrowDown', 50);
   await hold('ArrowLeft', 600);
-  await hold('ArrowUp', 850);
+  await hold('ArrowUp', 1200);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 0]);
-  await hold('ArrowDown', 1500);
-  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2055]);
+  await hold('ArrowDown', 1900);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2740]);
   await hold('ArrowRight', 1200);
-  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 2055]);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 2740]);
   assert.equal(await evaluate('window.spokenLines.some(line => line.opacity > 0 && line.opacity < 1)'), true);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-southeast.png`, Buffer.from(shot.data, 'base64'));
   }
-  await hold('ArrowUp', 1500);
+  await hold('ArrowUp', 1900);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 0]);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});

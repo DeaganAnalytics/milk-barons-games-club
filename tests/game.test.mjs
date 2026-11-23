@@ -67,18 +67,20 @@ test('the camera clamps at the outer walls and the floor is open between the end
   assert.equal(isBlocked(1342, 451, 13, baron), true);
 });
 
-test('the 3×4 rectangle has twelve reachable rugs and only perimeter walls', () => {
+test('the 3×5 rectangle has fifteen reachable rugs and only perimeter walls', () => {
   const baron = createBaron();
-  assert.equal(RUGS.length, 12);
+  assert.equal(RUGS.length, 15);
   const occupiedSquares = new Set(RUGS.map(({x, y}) =>
     Math.floor(x / ROOM_WIDTH) + ',' + Math.floor((y - NORTH_EDGE) / ROOM_HEIGHT)));
-  assert.equal(occupiedSquares.size, 12);
+  assert.equal(occupiedSquares.size, 15);
   assert.equal(baron.y, (NORTH_EDGE + SOUTH_EDGE) / 2);
+  const spawnRug = closestRug(baron);
+  assert.deepEqual(spawnRug, {...HALL_CENTER, horizontal: false});
   for (const rug of RUGS) {
     const column = (rug.x - WEST_EDGE) / ROOM_WIDTH - 0.5;
     const row = (rug.y - NORTH_EDGE) / ROOM_HEIGHT - 0.5;
     assert.ok(Number.isInteger(column) && Number.isInteger(row));
-    assert.equal(rug.horizontal, (row === 0 || row === 3) && (column === 0 || column === 2));
+    assert.equal(rug.horizontal, (row === 0 || row === 4) && (column === 0 || column === 2));
     assert.equal(closestRug(rug), rug);
     assert.equal(isBlocked(rug.x, rug.y, 13, {x: 0, y: 0}), false);
   }
