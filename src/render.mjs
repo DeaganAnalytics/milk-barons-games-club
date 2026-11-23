@@ -4,7 +4,7 @@ import {partySpeech, refillProgress} from './party-chatter.mjs';
 import {drawGuestRefill, drawPartyGuest, partyGuests} from './party-guests.mjs';
 import {drawPip} from './pip-art.mjs';
 import {staffFrame, staffIds} from './staff.mjs';
-import {speechTop} from './speech-layout.mjs';
+import {speechBubbleLayout} from './speech-layout.mjs';
 import {TURN} from './directions.mjs';
 import {speechOpacity} from './baron.mjs';
 import {NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
@@ -79,33 +79,38 @@ function drawBaron(ctx, pose, fallback, baron, elapsed) {
   ctx.restore();
 }
 
-function drawSpeech(ctx, actor, text, opacity, cameraX, cameraY) {
+function drawSpeech(ctx, text, opacity, x, headY, feetY, cameraX, cameraY) {
   if (opacity <= 0) return;
   ctx.save();
   ctx.globalAlpha = opacity;
   ctx.font = '600 21px system-ui, sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = 5;
-  ctx.strokeStyle = '#20170f';
-  ctx.fillStyle = '#fff4d8';
 
   const lines = [''];
   for (const word of text.split(' ')) {
     const last = lines.length - 1;
     const candidate = lines[last] ? lines[last] + ' ' + word : word;
-    if (ctx.measureText(candidate).width > 260 && lines[last]) lines.push(word);
+    if (ctx.measureText(candidate).width > 290 && lines[last]) lines.push(word);
     else lines[last] = candidate;
   }
-  const halfWidth = Math.max(...lines.map(line => ctx.measureText(line).width)) / 2 + 12;
-  const x = Math.max(cameraX + halfWidth, Math.min(cameraX + ROOM_WIDTH - halfWidth, actor.x));
-  const top = speechTop(actor.y, cameraY, lines.length);
-  lines.forEach((line, i) => {
-    const y = top + i * 25;
-    ctx.strokeText(line, x, y);
-    ctx.fillText(line, x, y);
-  });
+  const width = Math.max(...lines.map(line => ctx.measureText(line).width)) + 24;
+  const height = (lines.length - 1) * 25 + 40;
+  const {left, top, tailX, tailTipX, tailTipY, above} =
+    speechBubbleLayout(x, headY, feetY, width, height, cameraX, cameraY);
+  const tailBaseY = above ? top + height - 2 : top + 2;
+  const tailHalfWidth = above ? 8 : -8;
+
+  ctx.fillStyle = '#20170f';
+  ctx.beginPath();
+  ctx.roundRect(left, top, width, height, 9);
+  ctx.moveTo(tailX + tailHalfWidth, tailBaseY);
+  ctx.lineTo(tailTipX, tailTipY);
+  ctx.lineTo(tailX - tailHalfWidth, tailBaseY);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#fff4d8';
+  lines.forEach((line, i) => ctx.fillText(line, left + width / 2, top + 20 + i * 25));
   ctx.restore();
 }
 
@@ -277,10 +282,12 @@ export function createRenderer(canvas) {
     if (milkScene) drawMilkAction(ctx, milkScene, baron, animateBaronArm);
     if (pouring) drawGuestRefill(ctx, partyGuests[refill.guest], partySprites[refill.guest], refill.server, progress);
     if (baron.speech) {
-      drawSpeech(ctx, baron, baron.speech.text, speechOpacity(baron, cameraX, elapsed, cameraY), cameraX, cameraY);
+      drawSpeech(ctx, baron.speech.text, speechOpacity(baron, cameraX, elapsed, cameraY),
+        baron.x, baron.y - 61, baron.y + 34, cameraX, cameraY);
     }
     const speech = chatter && partySpeech(chatter, {x: cameraX, y: cameraY});
-    if (speech) drawSpeech(ctx, speech.guest, speech.text, speech.opacity, cameraX, cameraY);
+    if (speech) drawSpeech(ctx, speech.text, speech.opacity,
+      speech.guest.x, speech.guest.y - 68, speech.guest.y, cameraX, cameraY);
     ctx.restore();
   };
 }

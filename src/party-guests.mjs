@@ -7,8 +7,8 @@ const mix = (a, b, t) => a + (b - a) * t;
 const ease = t => t * t * (3 - 2 * t);
 
 export const partyGuests = [
-  {id: 'plum', title: 'Guest in plum', radius: 20, x: WEST_EDGE + 82, facing: 1, shoulder: [54, 112], mouth: [89, 67], phase: 0},
-  {id: 'emerald', title: 'Guest in emerald', radius: 20, x: WEST_EDGE + 141, facing: -1, shoulder: [64, 101], mouth: [32, 67], phase: 4.5}
+  {id: 'plum', title: 'Guest in plum', radius: 20, x: WEST_EDGE + 147, facing: 1, shoulder: [54, 112], mouth: [89, 67], phase: 0},
+  {id: 'emerald', title: 'Guest in emerald', radius: 20, x: WEST_EDGE + 206, facing: -1, shoulder: [64, 101], mouth: [32, 67], phase: 4.5}
 ].map(guest => ({...guest, y: SOUTH_TRIM_Y - 30}));
 
 export function drawPartyGuest(ctx, guest, sprite, elapsed, milk = 0.85, holdingStill = false) {
