@@ -188,6 +188,10 @@ canvas {
   background: var(--portrait-image) center / contain no-repeat;
 }
 
+.conversation-portrait.standalone-portrait[data-portrait="creamery-bartender"]::before {
+  width: 79%;
+}
+
 .conversation-portraits figcaption {
   padding: 8px;
   background: #24392c;

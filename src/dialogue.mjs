@@ -128,6 +128,7 @@ export function createDialogue(baron) {
   function setPortrait(element, character, mood, withoutMilk) {
     if (!portraits[character]) {
       element.classList.add('standalone-portrait');
+      element.dataset.portrait = character;
       element.style.setProperty('--portrait-image', `url(${standalonePortraitUrl(character, withoutMilk)})`);
       element.dataset.expression = mood;
       return;
