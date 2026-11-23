@@ -1,4 +1,4 @@
-import {HALL_CENTER, EAST_EDGE, NORTH_EDGE, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {HALL_CENTER, EAST_EDGE, NORTH_EDGE, isBlocked, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 import {guardBlocks} from './guards.mjs';
 import {TURN} from './directions.mjs';
 
@@ -13,6 +13,7 @@ const THREAT_DISTANCE = 200;
 const WALK_SPEED = 102;
 const RUN_SPEED = 235;
 const SPOT_COOLDOWN = 4;
+const AVOIDANCE_TURNS = [Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];
 
 export function createMilo() {
   return {...CORNERS[0], corner: 0, route: [], nextMove: HIDE_INTERVAL, stride: 0, facingLeft: false, fleeing: false, nextSpot: 0};
@@ -44,14 +45,14 @@ function selectRoute(milo, baron, distance) {
 function startEscape(milo, baron, guards, elapsed) {
   if (milo.fleeing || elapsed < milo.nextSpot) return false;
   const spottedByBaron = sameSquare(milo, baron);
-  const threat = spottedByBaron ? baron : guards.find(guard => sameSquare(milo, guard));
+  const threat = spottedByBaron ? baron : guards.find(guard => !guard.posted && sameSquare(milo, guard));
   if (!threat) return false;
 
   const goEast = threat.x < HALL_CENTER.x;
   const goNorth = milo.y < HALL_CENTER.y;
   const preferred = goEast ? (goNorth ? 3 : 2) : (goNorth ? 0 : 1);
   const alternate = preferred ^ 1;
-  const preferredOccupied = [baron, ...guards].some(actor => sameSquare(actor, CORNERS[preferred]));
+  const preferredOccupied = [baron, ...guards].some(actor => !actor.posted && sameSquare(actor, CORNERS[preferred]));
   milo.corner = preferredOccupied ? alternate : preferred;
   milo.route = [CORNERS[milo.corner]];
   milo.fleeing = true;
@@ -75,18 +76,33 @@ export function updateMilo(milo, baron, elapsed, dt, guards = []) {
   const dy = target.y - milo.y;
   const remaining = Math.hypot(dx, dy);
   const step = Math.min((milo.fleeing ? RUN_SPEED : WALK_SPEED) * dt, remaining);
-  const x = remaining ? milo.x + dx * step / remaining : milo.x;
-  const y = remaining ? milo.y + dy * step / remaining : milo.y;
-  if (guardBlocks(x, y, milo, guards, 12)) return spotted;
+  let x = remaining ? milo.x + dx * step / remaining : milo.x;
+  let y = remaining ? milo.y + dy * step / remaining : milo.y;
+  let arrived = step === remaining;
+  if (guardBlocks(x, y, milo, guards, 12)) {
+    const heading = Math.atan2(dy, dx);
+    const turn = AVOIDANCE_TURNS.find(offset => {
+      const nextX = milo.x + Math.cos(heading + offset) * step;
+      const nextY = milo.y + Math.sin(heading + offset) * step;
+      return !isBlocked(nextX, nextY, 12, baron, milo) && !guardBlocks(nextX, nextY, milo, guards, 12);
+    });
+    if (turn === undefined) {
+      milo.stride = 0;
+      return spotted;
+    }
+    x = milo.x + Math.cos(heading + turn) * step;
+    y = milo.y + Math.sin(heading + turn) * step;
+    arrived = false;
+  }
   if (!milo.fleeing && distance < 125 && Math.hypot(x - baron.x, y - baron.y) < distance - 0.01) {
     // A Baron who has started moving can cut across Milo's previous route.
     milo.route = selectRoute(milo, baron, distance);
     return spotted;
   }
 
-  if (dx) milo.facingLeft = dx < 0;
+  if (x !== milo.x) milo.facingLeft = x < milo.x;
   milo.stride = (milo.stride + step * TURN / 22) % TURN;
-  if (step === remaining) {
+  if (arrived) {
     milo.x = target.x;
     milo.y = target.y;
     milo.route.shift();

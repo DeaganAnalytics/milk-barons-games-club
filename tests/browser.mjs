@@ -323,7 +323,7 @@ try {
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-bartender.png`, Buffer.from(shot.data, 'base64'));
   }
   await closeConversation();
-  await hold('ArrowRight', 53);
+  await hold('ArrowRight', 36);
   await hold('ArrowDown', 14);
   await activate('Bull Guard');
   const postedGreeting = 'If you have something to report, find one of the roving security officers';

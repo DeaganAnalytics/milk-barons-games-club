@@ -11,8 +11,8 @@ export const bartender = {
 
 export function createCreameryGuard() {
   return {
-    x: bartender.x + 112,
-    y: NORTH_EDGE + 204,
+    x: WEST_EDGE + 263,
+    y: NORTH_EDGE + 180,
     radius: 14,
     facing: 0,
     walking: false,
