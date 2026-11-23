@@ -296,6 +296,31 @@ try {
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
   await closeConversation();
 
+  await load(390, 844, true, 'conditional-baron-dialogue');
+  const choices = () => evaluate('Array.from(document.querySelectorAll("#conversation-replies button"), button => button.textContent)');
+  await evaluate(`(async () => {
+    const [{createDialogue}, {createBaron}] = await Promise.all(
+      ['./src/dialogue.mjs', './src/baron.mjs'].map(path => import(path)));
+    const baron = createBaron();
+    window.testBaron = baron;
+    window.openTestBaronDialogue = () => createDialogue(baron).open({id: 'baron', title: 'The Milk Baron'});
+    baron.completedRugTrips = 2;
+    baron.watchedDirections = new Set([0, 1, 2, 3, 4]);
+    window.openTestBaronDialogue();
+    return true;
+  })()`, true);
+  assert.ok(!(await choices()).includes('Are you following me?'));
+  assert.ok(!(await choices()).includes('Why do you keep watching me?'));
+  await closeConversation();
+  await evaluate('window.testBaron.completedRugTrips++; window.openTestBaronDialogue()');
+  assert.ok(!(await choices()).includes('Why do you keep watching me?'));
+  await reply('Are you following me?', 'Following you? Never! I am merely managing my institution.');
+  await closeConversation();
+  await evaluate('window.testBaron.watchedDirections.add(5); window.openTestBaronDialogue()');
+  await reply('Why do you keep watching me?', 'What are you talking about young Pip?');
+  await reply('Your eyes never leave me.', 'Pip my boy, I am merely supervising the business.');
+  await closeConversation();
+
   const plankUrl = new URL(site);
   plankUrl.searchParams.set('floor', 'planks');
   await load(1100, 950, false, 'wide-plank', plankUrl.href);

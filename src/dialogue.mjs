@@ -51,6 +51,28 @@ const baronReplies = [
   }
 ];
 
+const followingReply = {
+  label: 'Are you following me?', playerMood: 'thinking',
+  next: {text: 'Following you? Never! I am merely managing my institution.', mood: 'displeased'}
+};
+
+const watchingReply = {
+  label: 'Why do you keep watching me?', playerMood: 'thinking',
+  next: {text: 'What are you talking about young Pip?', mood: 'pleased', replies: [
+    {
+      label: 'Your eyes never leave me.', playerMood: 'attentive',
+      next: {text: 'Pip my boy, I am merely supervising the business.', mood: 'pleased'}
+    }
+  ]}
+};
+
+function availableBaronReplies(baron) {
+  const replies = [...baronReplies];
+  if (baron.completedRugTrips >= 3) replies.push(followingReply);
+  if (baron.watchedDirections.size >= 6) replies.push(watchingReply);
+  return replies;
+}
+
 const portraits = {
   player: {row: 0, expressions: ['attentive', 'happy', 'thinking']},
   baron: {row: 1, expressions: ['pleased', 'laughing', 'displeased']},
@@ -58,7 +80,7 @@ const portraits = {
   guard: {row: 3, expressions: ['deadpan', 'suspicious', 'speaking']}
 };
 
-export function createDialogue() {
+export function createDialogue(baron) {
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
   const info = document.getElementById('info').closest('.panel');
@@ -109,7 +131,7 @@ export function createDialogue() {
   function open(target) {
     const opening = target.id === 'guard' ? {text: guardOpening, replies: guardReplies, mood: 'deadpan'}
       : target.id === 'milo' ? {text: target.message, replies: miloReplies, mood: 'worried'}
-        : {...baronGreetings[greetingIndex++ % baronGreetings.length], replies: baronReplies};
+        : {...baronGreetings[greetingIndex++ % baronGreetings.length], replies: availableBaronReplies(baron)};
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;
