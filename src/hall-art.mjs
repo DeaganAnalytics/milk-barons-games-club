@@ -2,17 +2,22 @@ import {CENTER_RUG, EAST_EDGE, ROOM_HEIGHT, ROOM_WIDTH, SIDE_RUGS, WEST_EDGE} fr
 
 const assetNames = [
   'wall-panel', 'end-column', 'base-trim', 'double-door', 'service-door',
-  'center-rug', 'wing-rug', 'burgundy-banner', 'red-banner', 'tapestry'
+  'burgundy-banner', 'red-banner', 'tapestry'
 ];
 
 export function loadHallArt() {
   const floor = new URLSearchParams(location.search).get('floor') === 'planks'
     ? 'wide-plank' : 'herringbone';
-  return Object.fromEntries([...assetNames, floor].map(name => {
+  const art = Object.fromEntries([...assetNames, floor].map(name => {
     const image = new Image();
     image.src = new URL('../assets/hall/' + name + '.webp', import.meta.url);
     return [name === floor ? 'floor' : name, image];
   }));
+  art.centerRug = new Image();
+  art.centerRug.src = new URL('../assets/club.png', import.meta.url);
+  art.wingRug = new Image();
+  art.wingRug.src = new URL('../assets/wing-rug.webp', import.meta.url);
+  return art;
 }
 
 function drawEndColumn(ctx, column, x, facing) {
@@ -46,6 +51,13 @@ export function composeHall(art) {
   ctx.fillStyle = '#302720';
   ctx.fillRect(WEST_EDGE, 0, hall.width, hall.height);
 
+  // Stop the interior halfway under each column so no floor shows on its outer side.
+  const wallInset = 20;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(WEST_EDGE + wallInset, 0, hall.width - wallInset * 2, hall.height);
+  ctx.clip();
+
   const floor = ctx.createPattern(art.floor, 'repeat');
   const floorScale = art.floor.src.endsWith('/wide-plank.webp') ? 0.66 : 0.53;
   floor.setTransform(new DOMMatrix().scale(floorScale));
@@ -76,10 +88,13 @@ export function composeHall(art) {
   drawCentered('red-banner', CENTER_RUG.x + 170, 43, 62, 93);
   drawCentered('tapestry', SIDE_RUGS[1].x, 28, 112, 130);
 
+  ctx.restore();
   drawEndColumn(ctx, art['end-column'], WEST_EDGE, 1);
   drawEndColumn(ctx, art['end-column'], EAST_EDGE, -1);
 
-  drawCentered('center-rug', CENTER_RUG.x, CENTER_RUG.y - 120, 164, 240);
-  for (const rug of SIDE_RUGS) drawCentered('wing-rug', rug.x, rug.y - 37, 180, 74);
+  ctx.drawImage(art.centerRug, 274, 256, 143, 224, 274, 256, 143, 224);
+  for (const rug of SIDE_RUGS) {
+    ctx.drawImage(art.wingRug, 289, 199, 961, 624, rug.x - 72, rug.y - 47, 144, 94);
+  }
   return hall;
 }
