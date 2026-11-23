@@ -44,6 +44,7 @@ function chooseTarget(member, baron, random) {
 
 export function updateStaff(staff, player, baron, guards, elapsed, dt, random = Math.random) {
   for (const member of staff) {
+    if (member.serviceDuty) continue;
     member.walking = false;
     if (dt <= 0 || elapsed < member.pauseUntil || Math.hypot(member.x - player.x, member.y - player.y) < 44) continue;
     member.target ??= chooseTarget(member, baron, random);

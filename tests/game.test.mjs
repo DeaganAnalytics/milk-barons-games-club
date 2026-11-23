@@ -1,3 +1,4 @@
+import {createMilkService, milkCalls, updateMilkService} from '../src/milk-service.mjs';
 import {createStaff, updateStaff, staffFrame} from '../src/staff.mjs';
 import {speechTop} from '../src/speech-layout.mjs';
 import {createGuards, updateGuards} from '../src/guards.mjs';
@@ -418,4 +419,53 @@ test('each staff member spawns in a separate spot and roams the hall', () => {
   updateStaff(waiters, guest, baron, guards, 11, 0.05, () => 0.2);
   assert.equal(waiter.x, x);
   assert.equal(staffFrame(waiter, 11).row, 1);
+});
+
+test('milk service waits for eligible time and calls the closest server with milk', () => {
+  const baron = createBaron();
+  const service = createMilkService();
+  const staff = [
+    {x: baron.x + 15, y: baron.y, withoutMilk: true, radius: 14},
+    {x: baron.x + 100, y: baron.y, radius: 14},
+    {x: baron.x + 200, y: baron.y, radius: 14},
+    {x: baron.x + 5, y: baron.y, sweeps: true, radius: 14}
+  ];
+  const camera = {x: 0, y: 0};
+  updateMilkService(service, baron, staff, [], camera, 59, 59, false);
+  updateMilkService(service, baron, staff, [], camera, 79, 20, true);
+  assert.equal(service.remaining, 1);
+  baron.route.push({x: 600, y: 500});
+  updateMilkService(service, baron, staff, [], camera, 80, 1, false);
+  assert.equal(service.remaining, 1);
+  baron.route.length = 0;
+  baron.facing = 7;
+  updateMilkService(service, baron, staff, [], camera, 81, 1, false, () => 0.99);
+  assert.equal(service.scene.server, staff[1]);
+  assert.equal(baron.facing, 0);
+  assert.equal(baron.speech.text, milkCalls[2]);
+});
+
+test('server delivers and refills offscreen, then Skim clears the glass and restarts the clock', () => {
+  const baron = createBaron();
+  const service = createMilkService();
+  const server = {x: baron.x + 160, y: baron.y + 8, radius: 14, walkTime: 0};
+  const cleaner = {x: baron.x - 145, y: baron.y - 45, radius: 14, walkTime: 0, sweeps: true};
+  const staff = [server, cleaner];
+  const camera = {x: 0, y: 0};
+  service.remaining = 0.05;
+  const seen = new Set();
+  for (let frame = 1; frame < 500; frame++) {
+    updateMilkService(service, baron, staff, [], camera, frame * 0.05, 0.05, false, () => 0);
+    if (!service.scene) break;
+    seen.add(service.scene.phase);
+    if (service.scene.phase === 'drink') assert.equal(server.serviceDuty, false);
+    if (service.scene.phase === 'sweep') assert.equal(cleaner.serviceDuty, true);
+  }
+  assert.deepEqual([...seen], ['delivery', 'handoff', 'drink', 'windup', 'toss', 'cleanup-run', 'sweep']);
+  assert.equal(service.scene, null);
+  assert.equal(service.remaining, 60);
+  assert.equal(cleaner.serviceDuty, false);
+  assert.equal(server.withoutMilk, true);
+  updateMilkService(service, baron, staff, [], {x: 1000, y: 0}, 25, 0.05, false);
+  assert.equal(server.withoutMilk, false);
 });

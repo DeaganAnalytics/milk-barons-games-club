@@ -5,6 +5,9 @@ A retro RPG-style browser game featuring the Milk Baron, developed as an experim
 
 Move with WASD, the arrow keys, or the on-screen directional buttons. Press E, Space, or Interact near the Baron, Milo, a guard, one of the milk servers, or Edmund Skim to talk. Listen for the Baron’s overhead remarks as you explore the hall. If the Baron stays out of view for ten seconds, he heads for the rug nearest you, including the center rug. Milo Milksworth moves between corners and tries to keep clear of the Baron.
 
+
+Every minute of active time outside dialogue and rug travel, the Baron calls for milk. The closest server with milk delivers it, and Edmund Skim clears the broken glass before the Baron resumes his rounds.
+
 ## Run locally
 
 From the repository root, run `python3 -m http.server 8000` and open `http://localhost:8000`. The site uses native browser modules and runs directly from the static files.

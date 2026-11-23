@@ -1,3 +1,4 @@
+import {milkCalls} from '../src/milk-service.mjs';
 import {staffIds} from '../src/staff.mjs';
 import assert from 'node:assert/strict';
 import {writeFile} from 'node:fs/promises';
@@ -151,6 +152,7 @@ try {
     };
     const drawImage = CanvasRenderingContext2D.prototype.drawImage;
     window.staffFrames = new Set();
+    window.milkTrace = {baron: null, empty: new Set(), shards: false, glass: false};
     CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
       if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 3425) {
         [window.mapScrollX, window.mapScrollY] = args;
@@ -158,6 +160,10 @@ try {
         window.mapFrames = (window.mapFrames ?? 0) + 1;
         window.guardSteps = [];
       }
+      if (source.src?.includes('/assets/baron-') && source.src?.endsWith('.png') && args.length === 4) {
+        window.milkTrace.baron = [source.src.split('/').pop(), args[0], args[1] + args[3]];
+      }
+      if (source.src?.endsWith('-empty.webp')) window.milkTrace.empty.add(source.src);
       if (source.src?.endsWith('-walk.webp') && source.src.includes('/waiters/')) {
         window.staffFrames.add(source.src + ':' + args[1] / args[3] + ':' + args[0] / args[2]);
       }
@@ -166,6 +172,12 @@ try {
         if (args[1] === 142) window.guardSteps.push([this.getTransform().c, args[7]]);
       }
       return drawImage.call(this, source, ...args);
+    };
+    const fill = CanvasRenderingContext2D.prototype.fill;
+    CanvasRenderingContext2D.prototype.fill = function (...args) {
+      if (this.fillStyle === '#a7c1c5') window.milkTrace.shards = true;
+      if (this.fillStyle === '#c4d0cf') window.milkTrace.glass = true;
+      return fill.call(this, ...args);
     };
     const fillText = CanvasRenderingContext2D.prototype.fillText;
     window.spokenLines = [];
@@ -384,12 +396,43 @@ try {
   }
   await closeConversation();
 
+  await load(1100, 950, false, 'milk-service');
+  const callCount = () => evaluate(`window.spokenLines.filter(({text}) => ${JSON.stringify(milkCalls)}.includes(text)).length`);
+  await frames(3500);
+  assert.equal(await callCount(), 0);
+  await frames(110);
+  assert.ok(await callCount() > 0);
+  const lockedPose = await evaluate('window.milkTrace.baron');
+  assert.equal(lockedPose[0], 'baron-0.png');
+  await hold('ArrowUp', 84);
+  const pose = await evaluate('window.milkTrace.baron');
+  assert.deepEqual(pose.map(value => typeof value === 'number' ? Math.round(value) : value),
+    lockedPose.map(value => typeof value === 'number' ? Math.round(value) : value));
+  await key('keyDown', 'KeyE', 'e');
+  await key('keyUp', 'KeyE', 'e');
+  assert.equal(await evaluate("document.getElementById('conversation').hidden"), false);
+  const pausedAt = await evaluate('window.mapFrames');
+  await frames(180);
+  assert.equal(await evaluate('window.mapFrames'), pausedAt);
+  await closeConversation();
+  if (process.env.SCREENSHOT_PREFIX) {
+    for (const [flag, label] of [['glass', 'delivery'], ['shards', 'broken-glass']]) {
+      for (let i = 0; i < 60 && !(await evaluate('window.milkTrace.' + flag)); i++) await frames(24);
+      const shot = await send('Page.captureScreenshot', {format: 'png'});
+      await writeFile(`${process.env.SCREENSHOT_PREFIX}-${label}.png`, Buffer.from(shot.data, 'base64'));
+    }
+  }
+  await frames(1800);
+  assert.ok(await evaluate('window.milkTrace.glass && window.milkTrace.shards && window.milkTrace.empty.size > 0'));
+  await hold('ArrowRight', 55);
+  assert.notEqual(await evaluate('window.milkTrace.baron[0]'), 'baron-0.png');
+
   const plankUrl = new URL(site);
   plankUrl.searchParams.set('floor', 'planks');
   await load(1100, 950, false, 'wide-plank', plankUrl.href);
   assert.equal(await evaluate('performance.getEntriesByType("resource").some(entry => entry.name.endsWith("/wide-plank.webp"))'), true);
   assert.deepEqual(errors, [], JSON.stringify(errors));
-  console.log('Passed desktop and mobile layout, sprite loading, keyboard and touch movement, Baron interaction, movement to all four map corners, and fading Baron speech.');
+  console.log('Passed desktop and mobile layout, sprite loading, keyboard and touch movement, Baron interaction, movement to all four map corners, fading Baron speech, and the milk service scene.');
 } finally {
   socket.close();
 }

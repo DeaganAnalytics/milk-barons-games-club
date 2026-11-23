@@ -1,3 +1,4 @@
+import {drawMilkAction, drawMilkShards} from './milk-service-art.mjs';
 import {drawPip} from './pip-art.mjs';
 import {staffFrame, staffIds} from './staff.mjs';
 import {speechTop} from './speech-layout.mjs';
@@ -190,12 +191,14 @@ export function createRenderer(canvas) {
   const hallImages = Object.values(hallArt);
   const guardSprite = loadSprite('guards/concealed', 'webp');
   const staffSprites = Object.fromEntries(staffIds.map(id => [id, loadSprite('waiters/' + id + '-walk', 'webp')]));
+  const emptySprites = Object.fromEntries(staffIds.filter(id => id !== 'edmund-vale')
+    .map(id => [id, loadSprite('waiters/' + id + '-empty', 'webp')]));
   const miloSprite = loadSprite('milo', 'webp');
   const fallback = loadSprite('baron');
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
 
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = []) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -208,6 +211,7 @@ export function createRenderer(canvas) {
 
     ctx.save();
     ctx.translate(-cameraX, -cameraY);
+    if (milkScene) drawMilkShards(ctx, milkScene);
     const actors = [
       {depth: player.y + 22, draw: () => drawPip(ctx, player, elapsed)},
       {depth: baron.y + 34, draw: () => drawBaron(ctx, baronFrames[baron.facing], fallback, baron, elapsed)},
@@ -217,10 +221,12 @@ export function createRenderer(canvas) {
       actors.push({depth: guard.y + 22, draw: () => drawGuard(ctx, guardSprite, guard)});
     }
     for (const member of staff) {
-      actors.push({depth: member.y + 20, draw: () => drawStaff(ctx, staffSprites[member.id], member, elapsed)});
+      const sprite = member.withoutMilk ? emptySprites[member.id] : staffSprites[member.id];
+      actors.push({depth: member.y + 20, draw: () => drawStaff(ctx, sprite, member, elapsed)});
     }
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
+    if (milkScene) drawMilkAction(ctx, milkScene, baron);
     drawSpeech(ctx, baron, cameraX, cameraY, elapsed);
     ctx.restore();
   };
