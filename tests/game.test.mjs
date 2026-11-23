@@ -2,7 +2,7 @@ import {createGuards, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {callOutMilo, createBaron, speechOpacity, talkToBaron, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
+import {callOutMilo, createBaron, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
 import {cameraLeft, cameraTop, HALL_CENTER, isBlocked, nearestInteraction, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
@@ -165,16 +165,43 @@ test('the player can step away if the Baron walks onto an occupied rug', () => {
   assert.equal(player.x, SIDE_RUGS[0].x + 5);
 });
 
-test('talking to the Baron cycles his dialogue and prompts a grin', () => {
+test('the Baron says an idle remark about every 30 seconds and fades it out', () => {
   const baron = createBaron();
   const player = createPlayer();
-  assert.match(talkToBaron(baron, 29), /WELCOME/);
-  assert.match(talkToBaron(baron, 29), /extremely fair/);
-  updateBaronAttention(baron, player, 29.1, 0.05);
-  const grin = baron.expression;
-  assert.ok(grin > 0);
-  updateBaronAttention(baron, player, 31, 0.05);
-  assert.ok(baron.expression < grin);
+  const cameraY = cameraTop(player.y);
+  updateBaronIdleSpeech(baron, 0, cameraY, 29);
+  assert.equal(baron.speech, null);
+  updateBaronIdleSpeech(baron, 0, cameraY, 30);
+  assert.match(baron.speech.text, /WELCOME|extremely fair|carpet|oversee every game/);
+  assert.ok(baron.nextIdleSpeech >= 57 && baron.nextIdleSpeech < 63);
+  assert.equal(speechOpacity(baron, 0, 33.5, cameraY), 0.5);
+  updateBaronAttention(baron, player, 30.1, 0.05);
+  assert.ok(baron.expression > 0);
+  updateBaronWalk(baron, player, 0, 34, 0.05, cameraY);
+  assert.equal(baron.speech, null);
+});
+
+test('Milo callouts and rug-walk lines take priority over idle remarks', () => {
+  const baron = createBaron();
+  const cameraY = cameraTop(baron.y);
+  callOutMilo(baron, createMilo(), 29);
+  const callout = baron.speech;
+  updateBaronIdleSpeech(baron, 0, cameraY, 30);
+  assert.equal(baron.speech, callout);
+
+  const rugLine = {text: "What's going on over here?", visibleSince: null};
+  baron.speech = rugLine;
+  baron.route = [RUGS[0]];
+  updateBaronIdleSpeech(baron, 0, cameraY, 32);
+  assert.equal(baron.speech, rugLine);
+  baron.route = [];
+  baron.speech = null;
+  updateBaronIdleSpeech(baron, 0, cameraY + 1000, 34);
+  assert.equal(baron.speech, null);
+  updateBaronIdleSpeech(baron, 0, cameraY, 35);
+  assert.equal(baron.speech.visibleSince, 35);
+  callOutMilo(baron, createMilo(), 35);
+  assert.match(baron.speech.text, /^Milo/);
 });
 
 test('Milo rotates through all four far corners and can still be approached', () => {

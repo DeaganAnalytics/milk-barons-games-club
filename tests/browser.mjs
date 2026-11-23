@@ -142,7 +142,10 @@ try {
   await key('keyUp', 'ArrowUp');
   await activate('The Milk Baron');
   await activate('The Milk Baron', true);
-  assert.match(await evaluate('document.getElementById("info").textContent'), /extremely fair/);
+  assert.equal(await evaluate('document.getElementById("info").textContent'), '');
+  assert.equal(await evaluate('window.spokenLines.length'), 0);
+  await frames(1800);
+  assert.equal(await evaluate('window.spokenLines.some(line => /WELCOME|extremely fair|carpet|oversee every game/.test(line.text))'), true);
   await load(390, 844, true, 'mobile');
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth && document.querySelector(".controls").getBoundingClientRect().bottom <= innerHeight'), true);
   const point = await evaluate(`(() => {

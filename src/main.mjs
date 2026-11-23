@@ -1,4 +1,4 @@
-import {callOutMilo, createBaron, talkToBaron, updateBaronAttention, updateBaronWalk} from './baron.mjs';
+import {callOutMilo, createBaron, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createGuards, updateGuards} from './guards.mjs';
 import {createMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
@@ -24,7 +24,7 @@ const readMovement = bindControls({
     if (!target) {
       info.textContent = 'Nothing to interact with here. Try talking to the Baron or Milo.';
     } else {
-      info.textContent = target.id === 'baron' ? talkToBaron(baron, elapsed) : target.message;
+      info.textContent = target.message ?? '';
     }
   }
 });
@@ -40,6 +40,7 @@ function frame(timestamp) {
   updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY, guards);
   updateBaronAttention(baron, player, elapsed, dt);
   if (updateMilo(milo, baron, elapsed, dt, guards)) callOutMilo(baron, milo, elapsed);
+  updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed);
   updateGuards(guards, player, baron, milo, elapsed, dt);
   render(player, baron, milo, guards, cameraX, cameraY, elapsed);
   requestAnimationFrame(frame);

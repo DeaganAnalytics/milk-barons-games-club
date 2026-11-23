@@ -15,7 +15,7 @@ const miloLines = [
   'Milo, Milo, Milo. Always causing trouble.',
   'Milo my good friend. Why do you always run away?'
 ];
-const dialogue = [
+const idleLines = [
   'WELCOME! This club is the finest establishment I personally own.',
   'You may find our games extremely fair. To me.',
   'Do you like the carpet? It cost several fortunes. Not mine, naturally.',
@@ -25,7 +25,7 @@ const dialogue = [
 export function createBaron() {
   return {
     ...HALL_CENTER, walking: false, facing: 0, stride: 0,
-    expression: 0, nextSmile: 2.5, smileUntil: 0, chats: 0,
+    expression: 0, nextSmile: 2.5, smileUntil: 0, nextIdleSpeech: 30,
     offscreenSince: null, route: [], speech: null, nextLine: 0, remainingMiloLines: [], lastMiloLine: null
   };
 }
@@ -124,8 +124,13 @@ export function updateBaronAttention(baron, player, elapsed, dt) {
   baron.expression += (Number(elapsed < baron.smileUntil) - baron.expression) * Math.min(1, dt * 9);
 }
 
-export function talkToBaron(baron, elapsed) {
+export function updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed) {
+  if (elapsed < baron.nextIdleSpeech || baron.speech || baron.walking || baron.route.length
+      || !isOnscreen(baron, cameraX, cameraY)) return;
+
+  const text = idleLines[Math.floor(Math.random() * idleLines.length)];
+  baron.speech = {text, visibleSince: elapsed};
+  baron.nextIdleSpeech = elapsed + 27 + Math.random() * 6;
   baron.smileUntil = elapsed + 1.8;
   baron.nextSmile = baron.smileUntil + 4;
-  return dialogue[baron.chats++ % dialogue.length];
 }
