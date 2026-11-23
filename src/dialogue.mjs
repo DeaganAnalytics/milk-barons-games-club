@@ -1,6 +1,15 @@
 import {bartender} from './creamery.mjs';
+import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
 import {drawPipPortrait} from './pip-art.mjs';
+
+const partyGuestOpening = {
+  text: "Where's your milk waiter?", mood: 'attentive', replies: [
+    {label: "I'm not a waiter.", playerMood: 'thinking', next: {
+      text: 'Then get away from me! Guards!', mood: 'annoyed', callGuard: true
+    }}
+  ]
+};
 
 const guardOpening = 'Do you have a problem to report? Otherwise get out of my way.';
 const baronGreetings = [
@@ -98,6 +107,9 @@ const portraitCache = new Map();
 
 function standalonePortraitUrl(id, withoutMilk = false) {
   if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
+  if (partyGuests.some(guest => guest.id === id)) {
+    return new URL('../assets/guests/' + id + '-portrait.webp', import.meta.url);
+  }
   const filename = id + (withoutMilk ? '-empty-portrait.webp' : '-portrait.webp');
   return new URL('../assets/waiters/' + filename, import.meta.url);
 }
@@ -109,7 +121,7 @@ function warmPortraits() {
     urls.push(standalonePortraitUrl(id));
     if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
-  urls.push(standalonePortraitUrl(bartender.id));
+  urls.push(standalonePortraitUrl(bartender.id), ...partyGuests.map(guest => standalonePortraitUrl(guest.id)));
   // Keep the decoded images alive while the conversation panel is hidden.
   for (const url of urls) {
     const image = new Image();
@@ -120,7 +132,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron) {
+export function createDialogue(baron, onCallGuard) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -135,6 +147,7 @@ export function createDialogue(baron) {
   const playerArt = playerPortrait.querySelector('canvas');
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
+  let callGuard = false;
 
   function setPortrait(element, character, mood, withoutMilk) {
     if (!portraits[character]) {
@@ -154,9 +167,14 @@ export function createDialogue(baron) {
     panel.hidden = true;
     map.hidden = info.hidden = controls.hidden = false;
     interact.focus({preventScroll: true});
+    if (callGuard) {
+      callGuard = false;
+      onCallGuard?.();
+    }
   }
 
   function show(node, character, playerMood, withoutMilk) {
+    callGuard = Boolean(node.callGuard);
     line.textContent = node.text;
     if (playerPortrait.dataset.expression !== playerMood) {
       drawPipPortrait(playerArt, playerMood);
@@ -182,7 +200,9 @@ export function createDialogue(baron) {
   });
 
   function open(target) {
-    const opening = !portraits[target.id] ? {text: target.message, mood: 'attentive'}
+    const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
+      : target.summoned ? {text: 'Sir I have to ask you to leave.', mood: 'speaking'}
+      : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
       : target.id === 'guard' ? {
           text: target.posted ? postedGuardOpening : guardOpening,
           replies: target.posted ? postedGuardReplies : guardReplies,

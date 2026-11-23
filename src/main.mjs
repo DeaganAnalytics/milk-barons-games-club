@@ -2,9 +2,11 @@ import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
 import {callOutMilo, createBaron, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
-import {createGuards, updateGuards} from './guards.mjs';
+import {createGuards, summonGuard, updateGuards} from './guards.mjs';
 import {createMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
+import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
+import {partyGuests} from './party-guests.mjs';
 import {createPlayer, movePlayer, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
 import {cameraLeft, cameraTop, nearestInteraction} from './room.mjs';
@@ -16,10 +18,13 @@ const milo = createMilo();
 const guards = createGuards(player, baron, milo);
 guards.push(createCreameryGuard());
 const staff = createStaff(player, baron, milo, guards);
-const guests = [...staff, bartender];
+const guests = [...staff, bartender, ...partyGuests.map(guest => ({
+  ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
+}))];
 const milkService = createMilkService();
+const partyChatter = createPartyChatter();
 const render = createRenderer(document.getElementById('game'));
-const dialogue = createDialogue(baron);
+const dialogue = createDialogue(baron, () => summonGuard(guards, player));
 const info = document.getElementById('info');
 let lastFrame = 0;
 let elapsed = 0;
@@ -57,9 +62,16 @@ function frame(timestamp) {
   if (!baronLocked) updateBaronAttention(baron, player, elapsed, dt);
   if (updateMilo(milo, baron, elapsed, dt, guards) && !baronLocked) callOutMilo(baron, milo, elapsed);
   if (!baronLocked) updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed);
-  updateGuards(guards, player, baron, milo, elapsed, dt);
+  const arrivedGuard = updateGuards(guards, player, baron, milo, elapsed, dt);
+  if (arrivedGuard) {
+    clearInput();
+    dialogue.open({id: 'guard', title: 'Bull Guard', summoned: true});
+    requestAnimationFrame(frame);
+    return;
+  }
+  updatePartyChatter(partyChatter, {x: cameraX, y: cameraY}, staff, baron, guards, elapsed, dt);
   updateStaff(staff, player, baron, guards, elapsed, dt);
-  render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene);
+  render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene, partyChatter);
   requestAnimationFrame(frame);
 }
 

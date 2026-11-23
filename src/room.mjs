@@ -76,3 +76,45 @@ export function nearestInteraction(player, baron, milo, guards = [], guests = []
     .filter(target => target.distance < target.radius + 27)
     .sort((a, b) => a.distance - b.distance)[0];
 }
+
+export function routeAroundBaron(member, target, baron) {
+  const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const width = 29 + member.radius + 10;
+  const height = 35 + member.radius + 10;
+  const corners = [-1, 1].flatMap(dx => [-1, 1].map(dy => ({
+    x: baron.x + dx * width, y: baron.y + 6 + dy * height
+  }))).filter(point => !isBlocked(point.x, point.y, member.radius, baron));
+  const nodes = [member, target, ...corners];
+  const costs = nodes.map((_, index) => index === 0 ? 0 : Infinity);
+  const parents = [];
+  const visited = new Set();
+  const clear = (start, end, length) => {
+    const samples = Math.max(1, Math.ceil(length / 8));
+    for (let step = 1; step <= samples; step++) {
+      const x = start.x + (end.x - start.x) * step / samples;
+      const y = start.y + (end.y - start.y) * step / samples;
+      if (isBlocked(x, y, member.radius, baron, start)) return false;
+    }
+    return true;
+  };
+  // Only the Baron's four collision corners can obstruct the direct delivery.
+  while (!visited.has(1)) {
+    let next = -1;
+    for (let index = 0; index < nodes.length; index++) {
+      if (!visited.has(index) && costs[index] < (costs[next] ?? Infinity)) next = index;
+    }
+    if (next === -1) return [target];
+    visited.add(next);
+    for (let index = 1; index < nodes.length; index++) {
+      if (visited.has(index)) continue;
+      const length = distance(nodes[next], nodes[index]);
+      if (costs[next] + length < costs[index] && clear(nodes[next], nodes[index], length)) {
+        costs[index] = costs[next] + length;
+        parents[index] = next;
+      }
+    }
+  }
+  const route = [];
+  for (let index = 1; index !== 0; index = parents[index]) route.unshift(nodes[index]);
+  return route;
+}
