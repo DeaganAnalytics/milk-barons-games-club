@@ -9,6 +9,8 @@ export const bartender = {
   radius: 35
 };
 
+export const creameryHatch = {width: 142, height: 110, top: NORTH_EDGE + 43};
+
 export function createCreameryGuard() {
   return {
     x: WEST_EDGE + 263,

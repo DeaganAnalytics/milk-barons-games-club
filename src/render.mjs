@@ -1,3 +1,4 @@
+import {bartender, creameryHatch} from './creamery.mjs';
 import {drawMilkAction, drawMilkShards} from './milk-service-art.mjs';
 import {drawPip} from './pip-art.mjs';
 import {staffFrame, staffIds} from './staff.mjs';
@@ -139,7 +140,7 @@ function drawGuardStep(ctx, sprite, sourceX, sourceWidth, hipY, swing, sideView)
   ctx.restore();
 }
 
-function drawGuard(ctx, sprite, guard) {
+function drawGuard(ctx, sprite, guard, elapsed) {
   if (!isReady(sprite)) return;
   const frameX = guard.facing * 100;
   ctx.save();
@@ -150,6 +151,14 @@ function drawGuard(ctx, sprite, guard) {
   ctx.fill();
 
   if (!guard.walking) {
+    if (guard.posted) {
+      // Anchor the shoes while the shoulders sway and rise slightly.
+      const sway = Math.sin(elapsed * 1.05) * 0.022;
+      const breath = Math.sin(elapsed * 1.85) * 0.012;
+      ctx.translate(0, 2);
+      ctx.transform(1, 0, sway, 1 + breath, 0, 0);
+      ctx.translate(0, -2);
+    }
     ctx.drawImage(sprite, frameX, 0, 100, 200, -21, -84, 42, 86);
   } else {
     const step = Math.sin(guard.stride);
@@ -186,6 +195,16 @@ function drawStaff(ctx, sprite, member, elapsed, verticalSprite) {
   ctx.restore();
 }
 
+function drawBartender(ctx, sprite, elapsed) {
+  if (!isReady(sprite)) return;
+  const {width, height, top} = creameryHatch;
+  const x = bartender.x - width / 2 + width * 151 / 384;
+  const sill = top + height * 245 / 299;
+  const breath = Math.sin(elapsed * 1.7) * 1.15;
+  const bustHeight = height * 110 / 299 + breath;
+  ctx.drawImage(sprite, x, sill - bustHeight, width * 82 / 384, bustHeight);
+}
+
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
@@ -194,6 +213,7 @@ export function createRenderer(canvas) {
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
   const guardSprite = loadSprite('guards/concealed', 'webp');
+  const bartenderSprite = loadSprite('hall/creamery-bartender-idle', 'webp');
   const armedGuard = loadSprite('guards/rifle', 'webp');
   const staffSprites = Object.fromEntries(staffIds.map(id => [id, loadSprite('waiters/' + id + '-walk', 'webp')]));
   const emptySprites = Object.fromEntries(staffIds.filter(id => id !== 'edmund-vale')
@@ -217,6 +237,7 @@ export function createRenderer(canvas) {
 
     ctx.save();
     ctx.translate(-cameraX, -cameraY);
+    if (world) drawBartender(ctx, bartenderSprite, elapsed);
     if (milkScene) drawMilkShards(ctx, milkScene);
     const actors = [
       {depth: player.y + 22, draw: () => drawPip(ctx, player, elapsed)},
@@ -224,7 +245,7 @@ export function createRenderer(canvas) {
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
     for (const guard of guards) {
-      actors.push({depth: guard.y + 22, draw: () => drawGuard(ctx, guard.posted ? armedGuard : guardSprite, guard)});
+      actors.push({depth: guard.y + 22, draw: () => drawGuard(ctx, guard.posted ? armedGuard : guardSprite, guard, elapsed)});
     }
     for (const member of staff) {
       const sprite = member.withoutMilk ? emptySprites[member.id] : staffSprites[member.id];

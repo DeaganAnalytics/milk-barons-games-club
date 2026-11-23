@@ -1,4 +1,4 @@
-import {bartender} from './creamery.mjs';
+import {bartender, creameryHatch} from './creamery.mjs';
 import {HALL_CENTER, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const assetNames = [
@@ -81,7 +81,7 @@ export function composeHall(art) {
     ctx.drawImage(art[name], centerX - width / 2, top, width, height);
   };
 
-  drawCentered('creamery-hatch', bartender.x, NORTH_EDGE + 43, 142, 110);
+  drawCentered('creamery-hatch', bartender.x, creameryHatch.top, creameryHatch.width, creameryHatch.height);
   drawCentered('creamery-sign', bartender.x, NORTH_EDGE + 22, 166, 19);
   drawCentered('double-door', HALL_CENTER.x, NORTH_EDGE + 15, 176, 176);
   drawCentered('burgundy-banner', HALL_CENTER.x - 170, NORTH_EDGE + 43, 62, 93);
