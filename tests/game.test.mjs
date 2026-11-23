@@ -1,3 +1,4 @@
+import {createWaiters, updateWaiters, waiterFrame} from '../src/waiters.mjs';
 import {speechTop} from '../src/speech-layout.mjs';
 import {createGuards, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
@@ -376,4 +377,24 @@ test('the Baron records only completed rug trips and distinct looks toward the p
 test('Baron speech stays inside the camera near its top edge', () => {
   assert.equal(speechTop(342.5, 330, 3), 345);
   assert.equal(speechTop(575, 330, 3), 455);
+});
+
+test('two waiters patrol separately, animate, and pause when approached', () => {
+  const waiters = createWaiters();
+  const baron = createBaron();
+  const player = createPlayer();
+  const [waiter, waitress] = waiters;
+  assert.ok(waiter.x < HALL_CENTER.x && waitress.x > HALL_CENTER.x);
+  for (let frame = 0; frame < 160; frame++) {
+    updateWaiters(waiters, player, baron, [], 3 + frame * 0.05, 0.05);
+  }
+  assert.equal(waiter.facing, -1);
+  assert.ok(waiter.walkTime > 0);
+  assert.equal(waiterFrame(waiter, 11).row, 0);
+  const x = waiter.x;
+  const guest = {x, y: waiter.y + 30};
+  updateWaiters(waiters, guest, baron, [], 11, 0.05);
+  assert.equal(waiter.x, x);
+  assert.equal(waiterFrame(waiter, 11).row, 1);
+  assert.equal(nearestInteraction(guest, baron, null, [], waiters).id, 'male-waiter');
 });

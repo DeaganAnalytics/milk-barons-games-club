@@ -96,7 +96,7 @@ async function load(width, height, mobile, name, url = site) {
   await send('Emulation.setTouchEmulationEnabled', {enabled: mobile});
   await send('Page.navigate', {url});
   await waitFor('window.hasGameFrame && document.readyState === "complete"');
-  const assetCount = await evaluate(`(async () => {
+  const assets = await evaluate(`(async () => {
     const assets = new Set(performance.getEntriesByType('resource')
       .map(entry => entry.name)
       .filter(url => /[.](png|webp)$/.test(url)));
@@ -105,9 +105,11 @@ async function load(width, height, mobile, name, url = site) {
       image.src = url;
       return image.decode();
     }));
-    return assets.size;
+    return [...assets];
   })()`, true);
-  assert.equal(assetCount, 22);
+  for (const id of ['male-waiter', 'female-waiter']) {
+    assert.ok(assets.some(url => url.endsWith('/waiters/' + id + '-walk.webp')));
+  }
   await frames(1);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
@@ -137,12 +139,16 @@ try {
       return 1;
     };
     const drawImage = CanvasRenderingContext2D.prototype.drawImage;
+    window.waiterWalkFrames = new Set();
     CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
       if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 3425) {
         [window.mapScrollX, window.mapScrollY] = args;
         window.guardDraws = 0;
         window.mapFrames = (window.mapFrames ?? 0) + 1;
         window.guardSteps = [];
+      }
+      if (source.src?.includes('/waiters/') && args[1] === 0) {
+        window.waiterWalkFrames.add(source.src + ':' + args[0]);
       }
       if (source.src?.endsWith('/guards/concealed.webp')) {
         if (args[1] === 0) window.guardDraws++;
@@ -327,6 +333,34 @@ try {
   await reply('Why do you keep watching me?', 'What are you talking about young Pip?');
   await reply('Your eyes never leave me.', 'Pip my boy, I am merely supervising the business.');
   await closeConversation();
+
+  for (const [direction, count, id, heading, line] of [
+    ['ArrowLeft', 294, 'male-waiter', 'Waiter', 'A glass of milk, sir?'],
+    ['ArrowRight', 370, 'female-waiter', 'Waitress', 'Can I tempt you with a glass of milk?']
+  ]) {
+    await load(1100, 950, false, id);
+    await hold('ArrowUp', 60);
+    await hold(direction, count);
+    await hold('ArrowDown', 60);
+    assert.ok(await evaluate(`[...window.waiterWalkFrames].filter(frame =>
+      frame.includes('/${id}-walk.webp:')).length >= 2`));
+    await activate(heading);
+    assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), line);
+    assert.equal(await evaluate(`(async () => {
+      const portrait = document.getElementById('conversation-npc');
+      const background = getComputedStyle(portrait, '::before').backgroundImage;
+      if (!background.includes('/waiters/${id}-portrait.webp')) return false;
+      const image = new Image();
+      image.src = background.slice(5, -2);
+      await image.decode();
+      return image.naturalWidth > 0;
+    })()`, true), true);
+    if (process.env.SCREENSHOT_PREFIX) {
+      const shot = await send('Page.captureScreenshot', {format: 'png'});
+      await writeFile(`${process.env.SCREENSHOT_PREFIX}-${id}-dialogue.png`, Buffer.from(shot.data, 'base64'));
+    }
+    await closeConversation();
+  }
 
   const plankUrl = new URL(site);
   plankUrl.searchParams.set('floor', 'planks');

@@ -169,6 +169,12 @@ canvas {
   background: url('./assets/dialogue/portraits.webp') var(--portrait-position, 0% 0%) / 300% 400% no-repeat;
 }
 
+.conversation-portrait.standalone-portrait::before {
+  width: 91%;
+  height: 91%;
+  background: var(--portrait-image) center bottom / contain no-repeat;
+}
+
 .conversation-portraits figcaption {
   padding: 8px;
   background: #24392c;
