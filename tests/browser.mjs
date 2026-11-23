@@ -80,6 +80,12 @@ async function reply(label, expected) {
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), expected);
 }
 
+async function expressions(player, npc) {
+  const values = await evaluate(`['player', 'npc'].map(id =>
+    document.getElementById('conversation-' + id).dataset.expression)`);
+  assert.deepEqual(values, [player, npc]);
+}
+
 async function closeConversation() {
   await evaluate('document.getElementById("conversation-close").click()');
   assert.equal(await evaluate('document.getElementById("conversation").hidden'), true);
@@ -156,11 +162,13 @@ try {
   await activate('The Milk Baron');
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Welcome, welcome to my establishment!');
   await reply('Do you own this place?', 'Of course, I own nearly every place.');
+  await expressions('thinking', 'laughing');
   await closeConversation();
   await activate('The Milk Baron', true);
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Pip! Good to see you!');
   await reply('Why do you have cows for guards?', 'What do you mean?');
   await reply('The guards are cows.', 'I have guards.');
+  await expressions('attentive', 'displeased');
   await reply('But the horns?', 'I have guards.');
   await closeConversation();
   await activate('The Milk Baron');
@@ -208,13 +216,17 @@ try {
   }
   await reply('Are you a cow?', 'I am a guard.');
   await reply('But you have horns.', 'I am a guard.');
+  await expressions('thinking', 'deadpan');
   await closeConversation();
   await activate('Bull Guard');
   await reply("No I don't have anything to report.", 'Then get out of my way!');
+  await expressions('attentive', 'speaking');
   await closeConversation();
   await activate('Bull Guard');
   await reply('Ah yes, I do.', 'What is the problem.');
+  await expressions('happy', 'suspicious');
   await reply('Actually nevermind.', '...');
+  await expressions('thinking', 'deadpan');
   await closeConversation();
 
   await load(1100, 950, false, 'expanded-center');
@@ -249,6 +261,7 @@ try {
     'Shh! I’m trying to stay out of the Baron’s way.');
   await reply("Hey, don't I know you?", "No. Don't talk to me.");
   await reply('Are you Milo, the milk activist.', 'Please leave me alone.');
+  await expressions('thinking', 'sad');
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
   await closeConversation();
 
