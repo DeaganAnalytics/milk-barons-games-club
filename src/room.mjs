@@ -13,10 +13,13 @@ const rows = MAP_HEIGHT / ROOM_HEIGHT;
 export const RUGS = Array.from({length: columns * rows}, (_, index) => {
   const row = Math.floor(index / columns);
   const column = index % columns;
+  const atEnd = row === 0 || row === rows - 1;
+  const atSide = column === 0 || column === columns - 1;
   return {
     x: WEST_EDGE + (column + 0.5) * ROOM_WIDTH,
     y: NORTH_EDGE + (row + 0.5) * ROOM_HEIGHT,
-    horizontal: (row === 0 || row === rows - 1) && (column === 0 || column === columns - 1)
+    horizontal: atEnd && atSide,
+    small: atEnd || atSide
   };
 });
 
