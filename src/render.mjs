@@ -1,14 +1,9 @@
+import {loadImage} from './assets.mjs';
 import {speechTop} from './speech-layout.mjs';
 import {FACING_STEP, TURN} from './directions.mjs';
 import {speechOpacity} from './baron.mjs';
 import {NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
 import {composeHall, loadHallArt} from './hall-art.mjs';
-
-function loadSprite(name, extension = "png") {
-  const image = new Image();
-  image.src = new URL('../assets/' + name + '.' + extension, import.meta.url);
-  return image;
-}
 
 function isReady(image) {
   return image.complete && image.naturalWidth > 0;
@@ -262,19 +257,21 @@ export function createRenderer(canvas) {
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   ctx.setTransform(canvas.width / ROOM_WIDTH, 0, 0, canvas.height / ROOM_HEIGHT, 0, 0);
-  const hallArt = loadHallArt();
-  const hallImages = Object.values(hallArt);
-  const guardSprite = loadSprite('guards/concealed', 'webp');
-  const miloSprite = loadSprite('milo', 'webp');
-  const figure = loadSprite('player');
-  const fallback = loadSprite('baron');
-  const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
+  const guardSprite = loadImage('guards/concealed.webp');
+  const miloSprite = loadImage('milo.webp');
+  const figure = loadImage('player.png');
+  const fallback = loadImage('baron.png');
+  const baronFrames = Array.from({length: 8}, (_, index) => loadImage('baron-' + index + '.png'));
 
   let world;
+  loadHallArt().then(art => {
+    world = composeHall(art);
+  }).catch(error => {
+    console.error(error);
+  });
   return ({player, baron, milo, guards, camera: {x: cameraX, y: cameraY}, elapsed}) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
-    if (world || hallImages.every(isReady)) {
-      world ??= composeHall(hallArt);
+    if (world) {
       ctx.drawImage(world, cameraX - WEST_EDGE, cameraY - NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT,
         0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     } else {
