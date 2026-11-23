@@ -15,6 +15,28 @@ export function loadHallArt() {
   }));
 }
 
+function drawEndColumn(ctx, column, x, facing) {
+  const width = 40;
+  const top = 18;
+  const capHeight = 43;
+  const baseTop = 632;
+  const baseHeight = 46;
+  const shaftStart = 86;
+  const baseStart = 274;
+  const sourceWidth = column.naturalWidth;
+
+  ctx.save();
+  ctx.translate(x, 0);
+  ctx.scale(facing, 1);
+  // Extend the shaft to span the hall while keeping the carved corners in proportion.
+  ctx.drawImage(column, 0, 0, sourceWidth, shaftStart, 0, top, width, capHeight);
+  ctx.drawImage(column, 0, shaftStart, sourceWidth, baseStart - shaftStart,
+    0, top + capHeight, width, baseTop - top - capHeight);
+  ctx.drawImage(column, 0, baseStart, sourceWidth, column.naturalHeight - baseStart,
+    0, baseTop, width, baseHeight);
+  ctx.restore();
+}
+
 export function composeHall(art) {
   const hall = document.createElement('canvas');
   hall.width = EAST_EDGE - WEST_EDGE;
@@ -54,12 +76,8 @@ export function composeHall(art) {
   drawCentered('red-banner', CENTER_RUG.x + 170, 43, 62, 93);
   drawCentered('tapestry', SIDE_RUGS[1].x, 28, 112, 130);
 
-  ctx.drawImage(art['end-column'], WEST_EDGE, 17, 37, 662);
-  ctx.save();
-  ctx.translate(EAST_EDGE, 0);
-  ctx.scale(-1, 1);
-  ctx.drawImage(art['end-column'], 0, 17, 37, 662);
-  ctx.restore();
+  drawEndColumn(ctx, art['end-column'], WEST_EDGE, 1);
+  drawEndColumn(ctx, art['end-column'], EAST_EDGE, -1);
 
   drawCentered('center-rug', CENTER_RUG.x, CENTER_RUG.y - 120, 164, 240);
   for (const rug of SIDE_RUGS) drawCentered('wing-rug', rug.x, rug.y - 37, 180, 74);
