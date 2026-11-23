@@ -358,11 +358,22 @@ try {
   await closeConversation();
 
   await load(1100, 950, false, 'waiter-roster');
+  const portraits = ['assets/dialogue/portraits.webp', ...staffIds.flatMap(id => {
+    const stem = 'assets/waiters/' + id;
+    return id === 'edmund-vale'
+      ? [stem + '-portrait.webp']
+      : [stem + '-portrait.webp', stem + '-empty-portrait.webp'];
+  })];
+  assert.ok(await evaluate(`${JSON.stringify(portraits)}.every(path =>
+    performance.getEntriesByName(new URL(path, location.href).href).length > 0)`));
+
   await frames(480);
   for (const id of staffIds) {
     for (const row of [0, 1]) {
       assert.ok(await evaluate(`[...window.staffFrames].filter(frame =>
-        frame.includes('/${id}-walk.webp:${row}:')).length >= 2`), id + ' animation row ' + row);
+        frame.includes('/${id}-walk.webp:${row}:')
+        || ('${id}' === 'edmund-vale' && ${row} === 0
+          && frame.includes('/edmund-vale-vertical-walk.webp:'))).length >= 2`), id + ' animation row ' + row);
     }
     assert.ok(await evaluate(`(async () => {
       const image = new Image();

@@ -169,12 +169,16 @@ function drawGuard(ctx, sprite, guard) {
   ctx.restore();
 }
 
-function drawStaff(ctx, sprite, member, elapsed) {
+function drawStaff(ctx, sprite, member, elapsed, verticalSprite) {
+  const frame = staffFrame(member, elapsed);
+  const useVertical = frame.vertical && isReady(verticalSprite);
+  const {column} = frame;
+  const row = frame.vertical && !useVertical ? 0 : frame.row;
+  if (useVertical) sprite = verticalSprite;
   if (!isReady(sprite)) return;
-  const {column, row} = staffFrame(member, elapsed);
   ctx.save();
   ctx.translate(member.x, member.y + 20);
-  ctx.scale(member.facing, 1);
+  if (!useVertical) ctx.scale(member.facing, 1);
   const frameWidth = sprite.naturalWidth / 6;
   const frameHeight = sprite.naturalHeight / 2;
   ctx.drawImage(sprite, column * frameWidth, row * frameHeight, frameWidth, frameHeight,
@@ -193,6 +197,7 @@ export function createRenderer(canvas) {
   const staffSprites = Object.fromEntries(staffIds.map(id => [id, loadSprite('waiters/' + id + '-walk', 'webp')]));
   const emptySprites = Object.fromEntries(staffIds.filter(id => id !== 'edmund-vale')
     .map(id => [id, loadSprite('waiters/' + id + '-empty', 'webp')]));
+  const skimVertical = loadSprite('waiters/edmund-vale-vertical-walk', 'webp');
   const miloSprite = loadSprite('milo', 'webp');
   const fallback = loadSprite('baron');
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
@@ -222,7 +227,7 @@ export function createRenderer(canvas) {
     }
     for (const member of staff) {
       const sprite = member.withoutMilk ? emptySprites[member.id] : staffSprites[member.id];
-      actors.push({depth: member.y + 20, draw: () => drawStaff(ctx, sprite, member, elapsed)});
+      actors.push({depth: member.y + 20, draw: () => drawStaff(ctx, sprite, member, elapsed, skimVertical)});
     }
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
