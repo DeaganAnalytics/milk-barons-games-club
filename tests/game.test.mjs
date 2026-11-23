@@ -1,3 +1,5 @@
+import {createGame, stepGame} from '../src/game.mjs';
+import {isBlocked} from '../src/collision.mjs';
 import {speechTop} from '../src/speech-layout.mjs';
 import {createGuards, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
@@ -6,7 +8,7 @@ import {test} from 'node:test';
 import {callOutMilo, createBaron, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {cameraLeft, cameraTop, HALL_CENTER, isBlocked, nearestInteraction, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
+import {cameraLeft, cameraTop, HALL_CENTER, nearestInteraction, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -100,9 +102,9 @@ test('the Baron can follow the player north and south', () => {
   for (const rug of [RUGS[1], RUGS.at(-2)]) {
     const baron = createBaron();
     const viewY = cameraTop(rug.y);
-    updateBaronWalk(baron, rug, 0, 0, 0.05, viewY);
-    updateBaronWalk(baron, rug, 0, 10, 0.05, viewY);
-    assert.equal(baron.route.at(-1), rug);
+    updateBaronWalk(baron, rug, {x: 0, y: viewY}, 0, 0.05);
+    updateBaronWalk(baron, rug, {x: 0, y: viewY}, 10, 0.05);
+    assert.equal(baron.destination, rug);
   }
 });
 
@@ -112,7 +114,7 @@ test('the Baron waits ten continuous seconds off-screen then walks to the closes
   const update = (x, time, dt = 0.05) => {
     player.x = x;
     player.y = SIDE_RUGS[0].y;
-    updateBaronWalk(baron, player, cameraLeft(x), time, dt);
+    updateBaronWalk(baron, player, {x: cameraLeft(x), y: 0}, time, dt);
   };
   update(-500, 0);
   update(-500, 9.9);
@@ -123,26 +125,26 @@ test('the Baron waits ten continuous seconds off-screen then walks to the closes
   assert.equal(baron.walking, false);
   update(-500, 21);
   assert.equal(baron.walking, true);
-  assert.equal(baron.route.at(-1), SIDE_RUGS[0]);
+  assert.equal(baron.destination, SIDE_RUGS[0]);
   assert.match(baron.speech.text, /What's going on/);
-  assert.equal(speechOpacity(baron, cameraLeft(-500), 21), 0);
+  assert.equal(speechOpacity(baron, {x: cameraLeft(-500), y: 0}, 21), 0);
 
   let time = 21;
-  while (baron.route.length && time < 32) {
+  while (baron.destination && time < 32) {
     time += 0.05;
     update(-500, time);
     assert.equal(isBlocked(baron.x, baron.y, 13, {x: 0, y: 0}), false);
   }
   assert.deepEqual([baron.x, baron.y], [SIDE_RUGS[0].x, SIDE_RUGS[0].y]);
   assert.notEqual(baron.speech.visibleSince, null);
-  assert.equal(speechOpacity(baron, cameraLeft(-500), baron.speech.visibleSince + 3.5), 0.5);
+  assert.equal(speechOpacity(baron, {x: cameraLeft(-500), y: 0}, baron.speech.visibleSince + 3.5), 0.5);
   update(-500, time + 4);
   assert.equal(baron.walking, false);
   assert.equal(baron.speech, null);
 
   update(1200, time + 5);
   update(1200, time + 15);
-  assert.equal(baron.route.at(-1), SIDE_RUGS[1]);
+  assert.equal(baron.destination, SIDE_RUGS[1]);
   assert.match(baron.speech.text, /drink more milk/);
 });
 
@@ -151,7 +153,7 @@ test('the Baron can return to the center from either wing', () => {
   for (const rug of SIDE_RUGS) {
     const baron = {...createBaron(), ...rug};
     for (let frame = 0; frame <= 16 * 20; frame++) {
-      updateBaronWalk(baron, player, cameraLeft(player.x), frame / 20, 0.05);
+      updateBaronWalk(baron, player, {x: cameraLeft(player.x), y: 0}, frame / 20, 0.05);
       assert.equal(isBlocked(baron.x, baron.y, 13, {x: 0, y: 0}), false);
     }
     const target = closestRug(player);
@@ -170,15 +172,15 @@ test('the Baron says an idle remark about every 30 seconds and fades it out', ()
   const baron = createBaron();
   const player = createPlayer();
   const cameraY = cameraTop(player.y);
-  updateBaronIdleSpeech(baron, 0, cameraY, 29);
+  updateBaronIdleSpeech(baron, {x: 0, y: cameraY}, 29);
   assert.equal(baron.speech, null);
-  updateBaronIdleSpeech(baron, 0, cameraY, 30);
+  updateBaronIdleSpeech(baron, {x: 0, y: cameraY}, 30);
   assert.match(baron.speech.text, /WELCOME|extremely fair|carpet|oversee every game/);
   assert.ok(baron.nextIdleSpeech >= 57 && baron.nextIdleSpeech < 63);
-  assert.equal(speechOpacity(baron, 0, 33.5, cameraY), 0.5);
+  assert.equal(speechOpacity(baron, {x: 0, y: cameraY}, 33.5), 0.5);
   updateBaronAttention(baron, player, 30.1, 0.05);
   assert.ok(baron.expression > 0);
-  updateBaronWalk(baron, player, 0, 34, 0.05, cameraY);
+  updateBaronWalk(baron, player, {x: 0, y: cameraY}, 34, 0.05);
   assert.equal(baron.speech, null);
 });
 
@@ -187,19 +189,19 @@ test('Milo callouts and rug-walk lines take priority over idle remarks', () => {
   const cameraY = cameraTop(baron.y);
   callOutMilo(baron, createMilo(), 29);
   const callout = baron.speech;
-  updateBaronIdleSpeech(baron, 0, cameraY, 30);
+  updateBaronIdleSpeech(baron, {x: 0, y: cameraY}, 30);
   assert.equal(baron.speech, callout);
 
   const rugLine = {text: "What's going on over here?", visibleSince: null};
   baron.speech = rugLine;
-  baron.route = [RUGS[0]];
-  updateBaronIdleSpeech(baron, 0, cameraY, 32);
+  baron.destination = RUGS[0];
+  updateBaronIdleSpeech(baron, {x: 0, y: cameraY}, 32);
   assert.equal(baron.speech, rugLine);
-  baron.route = [];
+  baron.destination = null;
   baron.speech = null;
-  updateBaronIdleSpeech(baron, 0, cameraY + 1000, 34);
+  updateBaronIdleSpeech(baron, {x: 0, y: cameraY + 1000}, 34);
   assert.equal(baron.speech, null);
-  updateBaronIdleSpeech(baron, 0, cameraY, 35);
+  updateBaronIdleSpeech(baron, {x: 0, y: cameraY}, 35);
   assert.equal(baron.speech.visibleSince, 35);
   callOutMilo(baron, createMilo(), 35);
   assert.match(baron.speech.text, /^Milo/);
@@ -209,11 +211,11 @@ test('Milo rotates through all four far corners and can still be approached', ()
   const milo = createMilo();
   const baron = createBaron();
   updateMilo(milo, baron, 11, 0.05);
-  assert.equal(milo.route.length, 0);
+  assert.equal(milo.destination, null);
   const corners = new Set();
   for (let frame = 240; frame < 155 * 20; frame++) {
     updateMilo(milo, baron, frame / 20, 0.05);
-    if (!milo.route.length) corners.add(milo.x + ',' + milo.y);
+    if (!milo.destination) corners.add(milo.x + ',' + milo.y);
   }
   assert.deepEqual(corners, new Set([
     '-574,' + (NORTH_EDGE + 224), '-574,' + (SOUTH_TRIM_Y - 83),
@@ -239,7 +241,7 @@ test('the Baron spots Milo in the same square and Milo runs to the other side', 
       assert.equal(updateMilo(milo, baron, 2, 0.05), true);
       callOutMilo(baron, milo, 2);
       assert.ok(miloCallouts.includes(baron.speech.text));
-      assert.equal(speechOpacity(baron, cameraLeft(baron.x), 5.5, cameraTop(baron.y)), 0.5);
+      assert.equal(speechOpacity(baron, {x: cameraLeft(baron.x), y: cameraTop(baron.y)}, 5.5), 0.5);
       assert.equal(milo.fleeing, true);
 
       for (let frame = 41; frame < 280; frame++) {
@@ -335,7 +337,7 @@ test('either guard triggers an escape in Milo’s square without triggering Baro
     assert.equal(updateMilo(milo, baron, 2, 0.05, guards), false);
     assert.equal(milo.fleeing, true);
     assert.ok(milo.x > startX);
-    assert.ok(milo.route[0].x > HALL_CENTER.x);
+    assert.ok(milo.destination.x > HALL_CENTER.x);
     assert.equal(baron.speech, null);
   }
 });
@@ -357,14 +359,14 @@ test('Baron callouts use all three phrases per round without consecutive repeats
 test('the Baron records only completed rug trips and distinct looks toward the player', () => {
   const baron = createBaron();
   const player = createPlayer();
-  baron.route = [{x: baron.x + 8, y: baron.y}];
-  updateBaronWalk(baron, player, 0, 1, 0.025);
+  baron.destination = {x: baron.x + 8, y: baron.y};
+  updateBaronWalk(baron, player, {x: 0, y: 0}, 1, 0.025);
   assert.equal(baron.completedRugTrips, 0);
   updateBaronAttention(baron, player, 1, 0.025);
   assert.equal(baron.watchedDirections.size, 0);
-  updateBaronWalk(baron, player, 0, 2, 0.05);
+  updateBaronWalk(baron, player, {x: 0, y: 0}, 2, 0.05);
   assert.equal(baron.completedRugTrips, 1);
-  updateBaronWalk(baron, player, 0, 2.1, 0.05);
+  updateBaronWalk(baron, player, {x: 0, y: 0}, 2.1, 0.05);
   assert.equal(baron.completedRugTrips, 1);
 
   for (const [dx, dy] of [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [0, 1]]) {
@@ -376,4 +378,21 @@ test('the Baron records only completed rug trips and distinct looks toward the p
 test('Baron speech stays inside the camera near its top edge', () => {
   assert.equal(speechTop(342.5, 330, 3), 345);
   assert.equal(speechTop(575, 330, 3), 455);
+});
+
+test('the world step moves the player and follows with the camera', () => {
+  const game = createGame(() => 0.5);
+  const start = game.player.y;
+  stepGame(game, {dx: 0, dy: 1}, 0.05);
+  assert.equal(game.elapsed, 0.05);
+  assert.ok(game.player.y > start);
+  assert.deepEqual(game.camera, {x: cameraLeft(game.player.x), y: cameraTop(game.player.y)});
+});
+
+test('Milo chooses a free corner when both corners on the far side are occupied', () => {
+  const milo = createMilo();
+  const baron = {...createBaron(), x: milo.x, y: milo.y};
+  const guards = [{x: 1264, y: milo.y, radius: 14}, {x: 1264, y: SOUTH_TRIM_Y - 83, radius: 14}];
+  assert.equal(updateMilo(milo, baron, 2, 0.05, guards), true);
+  assert.deepEqual(milo.destination, {x: milo.x, y: SOUTH_TRIM_Y - 83});
 });
