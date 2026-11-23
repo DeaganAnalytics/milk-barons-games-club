@@ -1,5 +1,5 @@
 import {createMilkService, milkCalls, updateMilkService} from '../src/milk-service.mjs';
-import {createStaff, updateStaff, staffFrame} from '../src/staff.mjs';
+import {createStaff, faceStaffMovement, updateStaff, staffFrame} from '../src/staff.mjs';
 import {speechTop} from '../src/speech-layout.mjs';
 import {createGuards, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
@@ -468,4 +468,18 @@ test('server delivers and refills offscreen, then Skim clears the glass and rest
   assert.equal(server.withoutMilk, true);
   updateMilkService(service, baron, staff, [], {x: 1000, y: 0}, 25, 0.05, false);
   assert.equal(server.withoutMilk, false);
+});
+
+
+test('Skim uses front and back walking rows for vertical movement', () => {
+  const cleaner = {sweeps: true, walking: true, walkTime: 0.22, facing: 1};
+  faceStaffMovement(cleaner, 0.15, -2);
+  assert.deepEqual(staffFrame(cleaner, 0), {column: 2, row: 1, vertical: true});
+  faceStaffMovement(cleaner, 0.15, 2);
+  assert.deepEqual(staffFrame(cleaner, 0), {column: 2, row: 0, vertical: true});
+  faceStaffMovement(cleaner, -2, 0.15);
+  assert.deepEqual(staffFrame(cleaner, 0), {column: 2, row: 0});
+  assert.equal(cleaner.facing, -1);
+  cleaner.walking = false;
+  assert.deepEqual(staffFrame(cleaner, 0.25), {column: 2, row: 1});
 });

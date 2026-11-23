@@ -1,3 +1,4 @@
+import {staffIds} from './staff.mjs';
 import {drawPipPortrait} from './pip-art.mjs';
 
 const guardOpening = 'Do you have a problem to report? Otherwise get out of my way.';
@@ -81,7 +82,32 @@ const portraits = {
   guard: {row: 3, expressions: ['deadpan', 'suspicious', 'speaking']}
 };
 
+const portraitCache = new Map();
+
+function staffPortraitUrl(id, withoutMilk = false) {
+  const filename = id + (withoutMilk ? '-empty-portrait.webp' : '-portrait.webp');
+  return new URL('../assets/waiters/' + filename, import.meta.url);
+}
+
+function warmPortraits() {
+  if (portraitCache.size) return;
+  const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url)];
+  for (const id of staffIds) {
+    urls.push(staffPortraitUrl(id));
+    if (id !== 'edmund-vale') urls.push(staffPortraitUrl(id, true));
+  }
+  // Keep the decoded images alive while the conversation panel is hidden.
+  for (const url of urls) {
+    const image = new Image();
+    if (url.pathname.endsWith('-empty-portrait.webp')) image.fetchPriority = 'low';
+    image.src = url.href;
+    portraitCache.set(url.href, image);
+    image.decode().catch(() => {});
+  }
+}
+
 export function createDialogue(baron) {
+  warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
   const info = document.getElementById('info').closest('.panel');
@@ -99,8 +125,7 @@ export function createDialogue(baron) {
   function setPortrait(element, character, mood, withoutMilk) {
     if (!portraits[character]) {
       element.classList.add('standalone-portrait');
-      const art = character + (withoutMilk ? '-empty-portrait.webp' : '-portrait.webp');
-      element.style.setProperty('--portrait-image', `url(${new URL('../assets/waiters/' + art, import.meta.url)})`);
+      element.style.setProperty('--portrait-image', `url(${staffPortraitUrl(character, withoutMilk)})`);
       element.dataset.expression = mood;
       return;
     }

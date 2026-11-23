@@ -1,3 +1,4 @@
+import {faceStaffMovement} from './staff.mjs';
 import {guardBlocks} from './guards.mjs';
 import {EAST_EDGE, isBlocked, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
@@ -43,7 +44,7 @@ function run(member, target, baron, obstacles, dt) {
         || guardBlocks(x, y, member, obstacles)) continue;
     member.x = x;
     member.y = y;
-    if (Math.abs(dx) > 0.1) member.facing = Math.sign(dx);
+    faceStaffMovement(member, dx, dy);
     member.walkTime += dt * 1.75;
     member.walking = true;
     return offset === 0 && stride === remaining ? 'arrived' : 'moving';

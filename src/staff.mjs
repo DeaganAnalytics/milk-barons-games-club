@@ -42,6 +42,15 @@ function chooseTarget(member, baron, random) {
   return null;
 }
 
+export function faceStaffMovement(member, dx, dy) {
+  if (member.sweeps) {
+    member.walkDirection = Math.abs(dy) > Math.abs(dx)
+      ? (dy < 0 ? 'north' : 'south')
+      : 'side';
+  }
+  if (Math.abs(dx) > 0.1) member.facing = Math.sign(dx);
+}
+
 export function updateStaff(staff, player, baron, guards, elapsed, dt, random = Math.random) {
   for (const member of staff) {
     if (member.serviceDuty) continue;
@@ -66,9 +75,9 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
       member.pauseUntil = elapsed + 0.5 + random();
       continue;
     }
+    faceStaffMovement(member, x - member.x, y - member.y);
     member.x = x;
     member.y = y;
-    if (Math.abs(dx) > 1) member.facing = Math.sign(dx);
     member.walking = step > 0;
     member.walkTime += step / SPEED;
     if (arrived) {
@@ -79,7 +88,12 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
 }
 
 export function staffFrame(member, elapsed) {
-  if (member.walking) return {column: Math.floor(member.walkTime * 1000 / 110) % 6, row: 0};
+  if (member.walking) {
+    const column = Math.floor(member.walkTime * 1000 / 110) % 6;
+    if (member.sweeps && member.walkDirection === 'north') return {column, row: 1, vertical: true};
+    if (member.sweeps && member.walkDirection === 'south') return {column, row: 0, vertical: true};
+    return {column, row: 0};
+  }
   if (member.sweeps) return {column: Math.floor(elapsed * 8) % 6, row: 1};
   const idleTime = (elapsed + member.idleOffset) % 2.18;
   return {column: idleTime >= 1.4 && idleTime < 1.68 ? 1 : 0, row: 1};
