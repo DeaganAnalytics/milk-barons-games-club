@@ -1,5 +1,7 @@
 import {bartender, creameryHatch} from './creamery.mjs';
 import {drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
+import {partySpeech, refillProgress} from './party-chatter.mjs';
+import {drawGuestRefill, drawPartyGuest, partyGuests} from './party-guests.mjs';
 import {drawPip} from './pip-art.mjs';
 import {staffFrame, staffIds} from './staff.mjs';
 import {speechTop} from './speech-layout.mjs';
@@ -77,8 +79,7 @@ function drawBaron(ctx, pose, fallback, baron, elapsed) {
   ctx.restore();
 }
 
-function drawSpeech(ctx, baron, cameraX, cameraY, elapsed) {
-  const opacity = speechOpacity(baron, cameraX, elapsed, cameraY);
+function drawSpeech(ctx, actor, text, opacity, cameraX, cameraY) {
   if (opacity <= 0) return;
   ctx.save();
   ctx.globalAlpha = opacity;
@@ -91,15 +92,15 @@ function drawSpeech(ctx, baron, cameraX, cameraY, elapsed) {
   ctx.fillStyle = '#fff4d8';
 
   const lines = [''];
-  for (const word of baron.speech.text.split(' ')) {
+  for (const word of text.split(' ')) {
     const last = lines.length - 1;
     const candidate = lines[last] ? lines[last] + ' ' + word : word;
     if (ctx.measureText(candidate).width > 260 && lines[last]) lines.push(word);
     else lines[last] = candidate;
   }
   const halfWidth = Math.max(...lines.map(line => ctx.measureText(line).width)) / 2 + 12;
-  const x = Math.max(cameraX + halfWidth, Math.min(cameraX + ROOM_WIDTH - halfWidth, baron.x));
-  const top = speechTop(baron.y, cameraY, lines.length);
+  const x = Math.max(cameraX + halfWidth, Math.min(cameraX + ROOM_WIDTH - halfWidth, actor.x));
+  const top = speechTop(actor.y, cameraY, lines.length);
   lines.forEach((line, i) => {
     const y = top + i * 25;
     ctx.strokeText(line, x, y);
@@ -219,6 +220,7 @@ export function createRenderer(canvas) {
   const emptySprites = Object.fromEntries(staffIds.filter(id => id !== 'edmund-vale')
     .map(id => [id, loadSprite('waiters/' + id + '-empty', 'webp')]));
   const skimVertical = loadSprite('waiters/edmund-vale-vertical-walk', 'webp');
+  const partySprites = partyGuests.map(guest => loadSprite('guests/' + guest.id, 'webp'));
   const miloSprite = loadSprite('milo', 'webp');
   const fallback = loadSprite('baron');
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
@@ -229,7 +231,7 @@ export function createRenderer(canvas) {
   };
 
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -254,14 +256,31 @@ export function createRenderer(canvas) {
     for (const guard of guards) {
       actors.push({depth: guard.y + 22, draw: () => drawGuard(ctx, guard.posted ? armedGuard : guardSprite, guard, elapsed)});
     }
+    const refill = chatter?.refill;
+    const pouring = refill && !refill.route.length;
+    const progress = pouring ? refillProgress(refill) : 0;
     for (const member of staff) {
-      const sprite = member.withoutMilk ? emptySprites[member.id] : staffSprites[member.id];
+      const usingBottle = pouring && member === refill.server;
+      const sprite = member.withoutMilk || usingBottle ? emptySprites[member.id] : staffSprites[member.id];
       actors.push({depth: member.y + 20, draw: () => drawStaff(ctx, sprite, member, elapsed, skimVertical)});
     }
+    partyGuests.forEach((guest, index) => {
+      let milk = chatter?.milk[index];
+      if (pouring && refill.guest === index) {
+        const fill = Math.max(0, Math.min(1, (progress - 0.29) / 0.46));
+        milk += (0.85 - milk) * fill;
+      }
+      actors.push({depth: guest.y, draw: () => drawPartyGuest(ctx, guest, partySprites[index], elapsed, milk, pouring)});
+    });
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
     if (milkScene) drawMilkAction(ctx, milkScene, baron, animateBaronArm);
-    drawSpeech(ctx, baron, cameraX, cameraY, elapsed);
+    if (pouring) drawGuestRefill(ctx, partyGuests[refill.guest], partySprites[refill.guest], refill.server, progress);
+    if (baron.speech) {
+      drawSpeech(ctx, baron, baron.speech.text, speechOpacity(baron, cameraX, elapsed, cameraY), cameraX, cameraY);
+    }
+    const speech = chatter && partySpeech(chatter, {x: cameraX, y: cameraY});
+    if (speech) drawSpeech(ctx, speech.guest, speech.text, speech.opacity, cameraX, cameraY);
     ctx.restore();
   };
 }

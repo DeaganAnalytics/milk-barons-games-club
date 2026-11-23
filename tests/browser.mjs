@@ -359,6 +359,24 @@ try {
   await hold('ArrowLeft', 170);
   await hold('ArrowDown', 1900);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2740]);
+  assert.deepEqual(await evaluate(`(() => {
+    const original = CanvasRenderingContext2D.prototype.drawImage;
+    const guests = [];
+    CanvasRenderingContext2D.prototype.drawImage = function (image, ...args) {
+      if (image.src?.includes('/assets/guests/')) {
+        const {e, f} = this.getTransform();
+        guests.push([image.src.split('/').pop(), args[3], e, f]);
+      }
+      return original.call(this, image, ...args);
+    };
+    try { window.advanceFrames(1); }
+    finally { CanvasRenderingContext2D.prototype.drawImage = original; }
+    return guests.map(([file, height, x, y]) => [file, height, Math.round(x / 2), Math.round(y / 2)]);
+  })()`), [['plum.webp', 66, 82, 603], ['emerald.webp', 66, 141, 603]]);
+  if (process.env.SCREENSHOT_PREFIX) {
+    const shot = await send('Page.captureScreenshot', {format: 'png'});
+    await writeFile(`${process.env.SCREENSHOT_PREFIX}-southwest.png`, Buffer.from(shot.data, 'base64'));
+  }
   await hold('ArrowRight', 1200);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 2740]);
   if (process.env.SCREENSHOT_PREFIX) {

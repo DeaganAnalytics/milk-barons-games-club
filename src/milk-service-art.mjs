@@ -12,7 +12,7 @@ const glassGrips = {
 const mix = (a, b, t) => a + (b - a) * t;
 const ease = t => t * t * (3 - 2 * t);
 
-function glass(ctx, x, y, angle, milk, martini) {
+export function drawMilkGlass(ctx, x, y, angle, milk, martini = false) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(angle);
@@ -161,5 +161,5 @@ export function drawMilkAction(ctx, scene, baron, animateBaronArm) {
     }
     reach(ctx, shoulderX, shoulderY, armX, armY, '#302119', '#201814');
   }
-  glass(ctx, x, y, angle, milk, martini);
+  drawMilkGlass(ctx, x, y, angle, milk, martini);
 }

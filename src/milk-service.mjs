@@ -1,6 +1,6 @@
 import {faceStaffMovement} from './staff.mjs';
 import {guardBlocks} from './guards.mjs';
-import {EAST_EDGE, isBlocked, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {EAST_EDGE, isBlocked, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 export const milkCalls = ['MILK!', 'More milk!', "WHERE'S MY MILK?!"];
 const interval = 60;
@@ -30,7 +30,7 @@ function approachPoint(member, point, reach, baron, obstacles, angle) {
   }
 }
 
-function run(member, target, baron, obstacles, dt) {
+export function runServiceStaff(member, target, baron, obstacles, dt) {
   const remaining = distance(member, target);
   if (remaining < 2) return 'arrived';
   const stride = Math.min(210 * dt, remaining);
@@ -51,47 +51,6 @@ function run(member, target, baron, obstacles, dt) {
   }
   member.walking = false;
   return 'blocked';
-}
-
-function routeAroundBaron(member, target, baron) {
-  const width = 29 + member.radius + 10;
-  const height = 35 + member.radius + 10;
-  const corners = [-1, 1].flatMap(dx => [-1, 1].map(dy => ({
-    x: baron.x + dx * width, y: baron.y + 6 + dy * height
-  }))).filter(point => !isBlocked(point.x, point.y, member.radius, baron));
-  const nodes = [member, target, ...corners];
-  const costs = nodes.map((_, index) => index === 0 ? 0 : Infinity);
-  const parents = [];
-  const visited = new Set();
-  const clear = (start, end, length) => {
-    const samples = Math.max(1, Math.ceil(length / 8));
-    for (let step = 1; step <= samples; step++) {
-      const x = start.x + (end.x - start.x) * step / samples;
-      const y = start.y + (end.y - start.y) * step / samples;
-      if (isBlocked(x, y, member.radius, baron, start)) return false;
-    }
-    return true;
-  };
-  // Only the Baron's four collision corners can obstruct the direct delivery.
-  while (!visited.has(1)) {
-    let next = -1;
-    for (let index = 0; index < nodes.length; index++) {
-      if (!visited.has(index) && costs[index] < (costs[next] ?? Infinity)) next = index;
-    }
-    if (next === -1) return [target];
-    visited.add(next);
-    for (let index = 1; index < nodes.length; index++) {
-      if (visited.has(index)) continue;
-      const length = distance(nodes[next], nodes[index]);
-      if (costs[next] + length < costs[index] && clear(nodes[next], nodes[index], length)) {
-        costs[index] = costs[next] + length;
-        parents[index] = next;
-      }
-    }
-  }
-  const route = [];
-  for (let index = 1; index !== 0; index = parents[index]) route.unshift(nodes[index]);
-  return route;
 }
 
 function sendTo(scene, phase, member, point, reach, baron, obstacles) {
@@ -127,7 +86,7 @@ export function updateMilkService(service, baron, staff, guards, camera, elapsed
     service.remaining = Math.max(0, service.remaining - dt);
     if (service.remaining > 1e-6) return;
     const cleaner = staff.find(member => member.sweeps);
-    const server = staff.filter(member => !member.sweeps && !member.withoutMilk)
+    const server = staff.filter(member => !member.sweeps && !member.withoutMilk && !member.serviceDuty)
       .reduce((closest, member) => !closest || distance(member, baron) < distance(closest, baron) ? member : closest, null);
     if (!server || !cleaner) return;
 
@@ -159,7 +118,7 @@ export function updateMilkService(service, baron, staff, guards, camera, elapsed
     const obstacles = scene.blocked > 1.2 ? [] : [...staff, ...guards];
     const waypoint = scene.route[0];
     const previous = distance(member, waypoint);
-    const result = run(member, waypoint, baron, obstacles, dt);
+    const result = runServiceStaff(member, waypoint, baron, obstacles, dt);
     if (result === 'arrived') {
       scene.route.shift();
       scene.blocked = 0;

@@ -1,8 +1,9 @@
+import {createPartyChatter, partySpeech, updatePartyChatter} from '../src/party-chatter.mjs';
 import {bartender, createCreameryGuard} from '../src/creamery.mjs';
 import {createMilkService, milkCalls, updateMilkService} from '../src/milk-service.mjs';
 import {createStaff, faceStaffMovement, updateStaff, staffFrame} from '../src/staff.mjs';
 import {speechTop} from '../src/speech-layout.mjs';
-import {createGuards, updateGuards} from '../src/guards.mjs';
+import {createGuards, summonGuard, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
@@ -517,4 +518,71 @@ test('Milo keeps his normal route near the posted guard and walks around a block
     assert.ok(Math.hypot(milo.x - posted.x, milo.y - posted.y) >= 26 - 1e-9);
   }
   assert.deepEqual({x: milo.x, y: milo.y}, destination);
+});
+
+test('party guests shuffle whole conversations and refill both glasses after every four exchanges', () => {
+  const chatter = createPartyChatter();
+  const camera = {x: WEST_EDGE, y: SOUTH_EDGE - ROOM_HEIGHT};
+  const busyServer = {x: WEST_EDGE + 111, y: SOUTH_TRIM_Y - 79, serviceDuty: true};
+  const server = {x: WEST_EDGE + 200, y: SOUTH_TRIM_Y - 100, radius: 14, walkTime: 0};
+  const baron = createBaron();
+  const greetings = [];
+  let lastText;
+  let elapsed = 0;
+  let refills = 0;
+  let sawSecondGlass = false;
+  const tick = (view = camera) => {
+    elapsed += 0.05;
+    updatePartyChatter(chatter, view, [busyServer, server], baron, [], elapsed, 0.05, () => 0.5);
+  };
+
+  for (let i = 0; i < 40; i++) tick({x: 0, y: 0});
+  assert.equal(chatter.remaining, 0.8);
+  while (elapsed < 100 && greetings.length < 8) {
+    tick();
+    const speech = partySpeech(chatter, camera);
+    if (speech?.text !== lastText && speech && chatter.line === 0) greetings.push(speech.text);
+    lastText = speech?.text;
+    if (chatter.refill) {
+      assert.equal(chatter.completed, 4);
+      assert.equal(speech, null);
+      assert.equal(chatter.refill.server, server);
+      assert.equal(server.serviceDuty, true);
+      if (chatter.refill.guest === 1) {
+        assert.equal(chatter.milk[0], 0.85);
+        assert.ok(chatter.milk[1] < 0.85);
+        sawSecondGlass = true;
+      }
+    } else if (sawSecondGlass && !refills) {
+      assert.equal(server.serviceDuty, false);
+      assert.deepEqual(chatter.milk, [0.85, 0.85]);
+      refills++;
+    }
+  }
+  assert.equal(refills, 1);
+  assert.equal(new Set(greetings.slice(0, 7)).size, 7);
+  assert.equal(greetings.length, 8);
+  assert.notEqual(greetings[6], greetings[7]);
+});
+
+test('the nearest roving guard runs to Pip and reports one arrival', () => {
+  const baron = createBaron();
+  const pip = {x: baron.x + 90, y: baron.y, radius: 13};
+  const [guard, distantGuard] = createGuards(pip, baron, {x: 0, y: 0}, () => 0.5);
+  Object.assign(guard, {x: baron.x - 100, y: baron.y});
+  Object.assign(distantGuard, {x: baron.x - 700, y: baron.y, pauseUntil: Infinity});
+  const posted = {x: pip.x, y: pip.y + 30, posted: true, radius: 14};
+  const guards = [guard, distantGuard, posted];
+  summonGuard(guards, pip);
+  assert.ok(guard.pursuit);
+  assert.equal(posted.pursuit, undefined);
+  const milo = {x: 0, y: 0};
+  let result;
+  let elapsed = 0;
+  for (; !result && elapsed < 5; elapsed += 0.05) {
+    result = updateGuards(guards, pip, baron, milo, elapsed, 0.05);
+  }
+  assert.equal(result, guard);
+  assert.equal(guard.pursuit, null);
+  assert.equal(updateGuards(guards, pip, baron, milo, elapsed, 0.05), null);
 });

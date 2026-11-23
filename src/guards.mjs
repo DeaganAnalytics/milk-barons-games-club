@@ -1,5 +1,5 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {EAST_EDGE, isBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {EAST_EDGE, isBlocked, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const RADIUS = 14;
 const SPEED = 71;
@@ -54,27 +54,56 @@ function approaches(x, y, guard, actor, distance) {
   return next < distance && next <= Math.hypot(guard.x - actor.x, guard.y - actor.y);
 }
 
+export function summonGuard(guards, player) {
+  if (guards.some(guard => guard.pursuit)) return;
+  const guard = guards.filter(guard => !guard.posted).reduce((closest, candidate) =>
+    !closest || Math.hypot(candidate.x - player.x, candidate.y - player.y)
+      < Math.hypot(closest.x - player.x, closest.y - player.y) ? candidate : closest, null);
+  if (guard) guard.pursuit = {destination: null, route: []};
+}
+
 export function updateGuards(guards, player, baron, milo, elapsed, dt) {
+  let arrivedGuard = null;
   for (const guard of guards) {
     if (guard.posted) continue;
     guard.walking = false;
+    const pursuit = guard.pursuit;
+    if (pursuit && Math.hypot(guard.x - player.x, guard.y - player.y) <= 44) {
+      guard.facing = Math.round(facingIndex(player.x - guard.x, player.y - guard.y) / 2) % 4;
+      guard.pursuit = null;
+      guard.target = null;
+      guard.pauseUntil = elapsed + 1;
+      arrivedGuard = guard;
+      continue;
+    }
+    if (pursuit && (!pursuit.destination || Math.hypot(
+      player.x - pursuit.destination.x, player.y - pursuit.destination.y
+    ) >= 24)) {
+      pursuit.destination = {x: player.x, y: player.y};
+      pursuit.route = routeAroundBaron(guard, pursuit.destination, baron);
+    }
     // Let the player approach instead of constantly evading them.
     const nearPlayer = Math.hypot(guard.x - player.x, guard.y - player.y) <= APPROACH_DISTANCE;
     const needsToYield = [baron, milo].some(actor => Math.hypot(guard.x - actor.x, guard.y - actor.y) < 60);
-    if (dt <= 0 || elapsed < guard.pauseUntil || (nearPlayer && !needsToYield)) continue;
+    if (dt <= 0 || (!pursuit && (elapsed < guard.pauseUntil || (nearPlayer && !needsToYield)))) continue;
     guard.target ??= patrolTarget();
 
-    const dx = guard.target.x - guard.x;
-    const dy = guard.target.y - guard.y;
+    const target = pursuit ? (pursuit.route[0] ?? player) : guard.target;
+    const dx = target.x - guard.x;
+    const dy = target.y - guard.y;
     const distance = Math.hypot(dx, dy);
     if (distance < 8) {
+      if (pursuit) {
+        pursuit.route.shift();
+        continue;
+      }
       guard.target = null;
       guard.pauseUntil = elapsed + 0.5 + Math.random() * 1.5;
       continue;
     }
 
     const direction = Math.atan2(dy, dx);
-    const step = Math.min(distance, SPEED * dt);
+    const step = Math.min(distance, (pursuit ? 210 : SPEED) * dt);
     for (const offset of STEERING_ANGLES) {
       const angle = direction + offset * guard.side;
       const vx = Math.cos(angle) * step;
@@ -97,6 +126,8 @@ export function updateGuards(guards, player, baron, milo, elapsed, dt) {
       guard.target = null;
       guard.blockedTime = 0;
       guard.pauseUntil = elapsed + 0.25;
+      if (pursuit) pursuit.destination = null;
     }
   }
+  return arrivedGuard;
 }
