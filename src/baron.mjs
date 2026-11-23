@@ -1,6 +1,6 @@
 import {guardBlocks} from './guards.mjs';
 import {facingIndex, TURN} from './directions.mjs';
-import {CENTER_RUG, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {HALL_CENTER, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 
 const OFFSCREEN_DELAY = 5;
 const WALK_SPEED = 146;
@@ -24,7 +24,7 @@ const dialogue = [
 
 export function createBaron() {
   return {
-    ...CENTER_RUG, walking: false, facing: 0, stride: 0,
+    ...HALL_CENTER, walking: false, facing: 0, stride: 0,
     expression: 0, nextSmile: 2.5, smileUntil: 0, chats: 0,
     offscreenSince: null, route: [], speech: null, nextLine: 0, remainingMiloLines: [], lastMiloLine: null
   };

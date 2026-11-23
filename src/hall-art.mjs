@@ -1,4 +1,4 @@
-import {CENTER_RUG, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {HALL_CENTER, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const assetNames = [
   'wall-panel', 'end-column', 'base-trim', 'double-door',
@@ -80,9 +80,9 @@ export function composeHall(art) {
     ctx.drawImage(art[name], centerX - width / 2, top, width, height);
   };
 
-  drawCentered('double-door', CENTER_RUG.x, NORTH_EDGE + 15, 176, 176);
-  drawCentered('burgundy-banner', CENTER_RUG.x - 170, NORTH_EDGE + 43, 62, 93);
-  drawCentered('red-banner', CENTER_RUG.x + 170, NORTH_EDGE + 43, 62, 93);
+  drawCentered('double-door', HALL_CENTER.x, NORTH_EDGE + 15, 176, 176);
+  drawCentered('burgundy-banner', HALL_CENTER.x - 170, NORTH_EDGE + 43, 62, 93);
+  drawCentered('red-banner', HALL_CENTER.x + 170, NORTH_EDGE + 43, 62, 93);
   for (const rug of SIDE_RUGS) drawCentered('tapestry', rug.x, NORTH_EDGE + 28, 112, 130);
 
   ctx.restore();
@@ -90,10 +90,12 @@ export function composeHall(art) {
   drawEndColumn(ctx, column, WEST_EDGE, 1, NORTH_EDGE + 18, SOUTH_TRIM_Y - 1);
   drawEndColumn(ctx, column, EAST_EDGE, -1, NORTH_EDGE + 18, SOUTH_TRIM_Y - 1);
 
-  ctx.drawImage(art.centerRug, 274, 256, 143, 224, CENTER_RUG.x - 71, CENTER_RUG.y - 101, 143, 224);
   for (const rug of RUGS) {
-    if (rug === CENTER_RUG) continue;
-    ctx.drawImage(art.wingRug, 289, 199, 961, 624, rug.x - 72, rug.y - 47, 144, 94);
+    if (rug.horizontal) {
+      ctx.drawImage(art.wingRug, 289, 199, 961, 624, rug.x - 72, rug.y - 47, 144, 94);
+    } else {
+      ctx.drawImage(art.centerRug, 274, 256, 143, 224, rug.x - 143 / 2, rug.y - 112, 143, 224);
+    }
   }
   return hall;
 }

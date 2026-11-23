@@ -6,25 +6,25 @@ export const MAP_HEIGHT = SOUTH_EDGE - NORTH_EDGE;
 export const SOUTH_TRIM_Y = SOUTH_EDGE - 52;
 export const WEST_EDGE = -ROOM_WIDTH;
 export const EAST_EDGE = ROOM_WIDTH * 2;
-export const CENTER_RUG = {x: ROOM_WIDTH / 2, y: (NORTH_EDGE + SOUTH_EDGE) / 2};
-export const SIDE_RUGS = [
-  {x: -ROOM_WIDTH / 2, y: 357},
-  {x: ROOM_WIDTH * 1.5, y: 357}
-];
-export const RUGS = Array.from({length: MAP_HEIGHT / ROOM_HEIGHT}, (_, row) =>
-  Array.from({length: (EAST_EDGE - WEST_EDGE) / ROOM_WIDTH}, (_, column) => {
-    if (row === 1 && column !== 1) return SIDE_RUGS[column / 2];
-    // The main rug sits on the north edge of the third row, at the hall midpoint.
-    if (row === 2 && column === 1) return CENTER_RUG;
-    return {
-      x: WEST_EDGE + (column + 0.5) * ROOM_WIDTH,
-      y: NORTH_EDGE + row * ROOM_HEIGHT + ROOM_HEIGHT / 2
-    };
-  })).flat();
+export const HALL_CENTER = {x: ROOM_WIDTH / 2, y: (NORTH_EDGE + SOUTH_EDGE) / 2};
+const columns = (EAST_EDGE - WEST_EDGE) / ROOM_WIDTH;
+const rows = MAP_HEIGHT / ROOM_HEIGHT;
+
+export const RUGS = Array.from({length: columns * rows}, (_, index) => {
+  const row = Math.floor(index / columns);
+  const column = index % columns;
+  return {
+    x: WEST_EDGE + (column + 0.5) * ROOM_WIDTH,
+    y: NORTH_EDGE + (row + 0.5) * ROOM_HEIGHT,
+    horizontal: (row === 0 || row === rows - 1) && (column === 0 || column === columns - 1)
+  };
+});
+
+export const SIDE_RUGS = [RUGS[columns], RUGS[columns * 2 - 1]];
 
 export function closestRug(player) {
   const distance = rug => Math.hypot(rug.x - player.x, rug.y - player.y);
-  return RUGS.reduce((closest, rug) => distance(rug) < distance(closest) ? rug : closest, CENTER_RUG);
+  return RUGS.reduce((closest, rug) => distance(rug) < distance(closest) ? rug : closest);
 }
 
 export function sameSquare(first, second) {
@@ -48,7 +48,7 @@ function overlaps(x, y, radius, obstacle) {
 export function isBlocked(x, y, radius, baron, from) {
   if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < NORTH_EDGE + 160 || y > SOUTH_TRIM_Y - 16) return true;
   // The closed center door stands proud of the back wall.
-  if (y < NORTH_EDGE + 190 && Math.abs(x - CENTER_RUG.x) < 75 + radius) return true;
+  if (y < NORTH_EDGE + 190 && Math.abs(x - HALL_CENTER.x) < 75 + radius) return true;
   const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};
   if (!overlaps(x, y, radius, baronObstacle)) return false;
   // The Baron can walk up to an occupied rug. Let a player he overlaps step away.

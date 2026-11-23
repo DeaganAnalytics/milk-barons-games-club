@@ -1,4 +1,4 @@
-import {CENTER_RUG, EAST_EDGE, NORTH_EDGE, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {HALL_CENTER, EAST_EDGE, NORTH_EDGE, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 import {guardBlocks} from './guards.mjs';
 import {TURN} from './directions.mjs';
 
@@ -47,8 +47,8 @@ function startEscape(milo, baron, guards, elapsed) {
   const threat = spottedByBaron ? baron : guards.find(guard => sameSquare(milo, guard));
   if (!threat) return false;
 
-  const goEast = threat.x < CENTER_RUG.x;
-  const goNorth = milo.y < CENTER_RUG.y;
+  const goEast = threat.x < HALL_CENTER.x;
+  const goNorth = milo.y < HALL_CENTER.y;
   const preferred = goEast ? (goNorth ? 3 : 2) : (goNorth ? 0 : 1);
   const alternate = preferred ^ 1;
   const preferredOccupied = [baron, ...guards].some(actor => sameSquare(actor, CORNERS[preferred]));

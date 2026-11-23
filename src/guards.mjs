@@ -1,5 +1,5 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {CENTER_RUG, EAST_EDGE, isBlocked, NORTH_EDGE, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {HALL_CENTER, EAST_EDGE, isBlocked, NORTH_EDGE, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const RADIUS = 14;
 const SPEED = 71;
@@ -9,7 +9,7 @@ const STEERING_ANGLES = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2
 
 export function createGuards() {
   return [1, -1].map(side => ({
-    x: CENTER_RUG.x + side * 98, y: CENTER_RUG.y + 240,
+    x: HALL_CENTER.x + side * 98, y: HALL_CENTER.y + 240,
     side, radius: RADIUS, facing: 0, stride: 0, walking: false,
     target: null, pauseUntil: 2.5, blockedTime: 0
   }));
