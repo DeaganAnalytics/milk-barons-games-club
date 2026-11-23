@@ -38,6 +38,14 @@ function isOnscreen(baron, {x: cameraX, y: cameraY}) {
     && baron.y + 34 > cameraY && baron.y - 57 < cameraY + ROOM_HEIGHT;
 }
 
+// Milo interrupts any line. Travel replaces idle speech, while idle waits for silence.
+const speechPriority = {idle: 0, travel: 1, milo: 2};
+
+function say(baron, kind, text, visibleSince) {
+  if (baron.speech && speechPriority[baron.speech.kind] > speechPriority[kind]) return;
+  baron.speech = {kind, text, visibleSince};
+}
+
 export function updateBaronWalk(baron, player, camera, elapsed, dt, guards = []) {
   if (!baron.destination) {
     if (isOnscreen(baron, camera)) {
@@ -48,7 +56,7 @@ export function updateBaronWalk(baron, player, camera, elapsed, dt, guards = [])
         const rug = closestRug(player);
         if (baron.x !== rug.x || baron.y !== rug.y) {
           baron.destination = rug;
-          baron.speech = {text: rugLines[baron.nextLine], visibleSince: null};
+          say(baron, 'travel', rugLines[baron.nextLine], null);
           baron.nextLine = (baron.nextLine + 1) % rugLines.length;
         }
         baron.offscreenSince = null;
@@ -97,7 +105,7 @@ export function callOutMilo(baron, milo, elapsed) {
     const index = Math.floor(Math.random() * lines.length);
     [baron.lastMiloLine] = lines.splice(index, 1);
   }
-  baron.speech = {text: baron.lastMiloLine, visibleSince: elapsed};
+  say(baron, 'milo', baron.lastMiloLine, elapsed);
   if (!baron.walking) baron.facing = facingIndex(milo.x - baron.x, milo.y - baron.y);
 }
 
@@ -123,7 +131,7 @@ export function updateBaronIdleSpeech(baron, camera, elapsed) {
       || !isOnscreen(baron, camera)) return;
 
   const text = idleLines[Math.floor(Math.random() * idleLines.length)];
-  baron.speech = {text, visibleSince: elapsed};
+  say(baron, 'idle', text, elapsed);
   baron.nextIdleSpeech = elapsed + 27 + Math.random() * 6;
   baron.smileUntil = elapsed + 1.8;
   baron.nextSmile = baron.smileUntil + 4;

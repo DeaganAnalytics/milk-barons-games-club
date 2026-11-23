@@ -1,3 +1,4 @@
+import {availableBaronReplies} from '../src/dialogue-content.mjs';
 import {createGame, stepGame} from '../src/game.mjs';
 import {isBlocked} from '../src/collision.mjs';
 import {speechTop} from '../src/speech-layout.mjs';
@@ -395,4 +396,16 @@ test('Milo chooses a free corner when both corners on the far side are occupied'
   const guards = [{x: 1264, y: milo.y, radius: 14}, {x: 1264, y: SOUTH_TRIM_Y - 83, radius: 14}];
   assert.equal(updateMilo(milo, baron, 2, 0.05, guards), true);
   assert.deepEqual(milo.destination, {x: milo.x, y: SOUTH_TRIM_Y - 83});
+});
+
+test('Baron dialogue unlocks at three trips and six watched directions', () => {
+  const baron = createBaron();
+  baron.completedRugTrips = 2;
+  baron.watchedDirections = new Set([0, 1, 2, 3, 4]);
+  const replies = () => availableBaronReplies(baron).map(reply => reply.label);
+  assert.equal(replies().length, 2);
+  baron.completedRugTrips++;
+  assert.equal(replies().at(-1), 'Are you following me?');
+  baron.watchedDirections.add(5);
+  assert.equal(replies().at(-1), 'Why do you keep watching me?');
 });
