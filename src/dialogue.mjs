@@ -1,3 +1,4 @@
+import {bartender} from './creamery.mjs';
 import {staffIds} from './staff.mjs';
 import {drawPipPortrait} from './pip-art.mjs';
 
@@ -84,7 +85,8 @@ const portraits = {
 
 const portraitCache = new Map();
 
-function staffPortraitUrl(id, withoutMilk = false) {
+function standalonePortraitUrl(id, withoutMilk = false) {
+  if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
   const filename = id + (withoutMilk ? '-empty-portrait.webp' : '-portrait.webp');
   return new URL('../assets/waiters/' + filename, import.meta.url);
 }
@@ -93,9 +95,10 @@ function warmPortraits() {
   if (portraitCache.size) return;
   const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url)];
   for (const id of staffIds) {
-    urls.push(staffPortraitUrl(id));
-    if (id !== 'edmund-vale') urls.push(staffPortraitUrl(id, true));
+    urls.push(standalonePortraitUrl(id));
+    if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
+  urls.push(standalonePortraitUrl(bartender.id));
   // Keep the decoded images alive while the conversation panel is hidden.
   for (const url of urls) {
     const image = new Image();
@@ -125,7 +128,7 @@ export function createDialogue(baron) {
   function setPortrait(element, character, mood, withoutMilk) {
     if (!portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.style.setProperty('--portrait-image', `url(${staffPortraitUrl(character, withoutMilk)})`);
+      element.style.setProperty('--portrait-image', `url(${standalonePortraitUrl(character, withoutMilk)})`);
       element.dataset.expression = mood;
       return;
     }

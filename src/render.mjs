@@ -194,6 +194,7 @@ export function createRenderer(canvas) {
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
   const guardSprite = loadSprite('guards/concealed', 'webp');
+  const armedGuard = loadSprite('guards/rifle', 'webp');
   const staffSprites = Object.fromEntries(staffIds.map(id => [id, loadSprite('waiters/' + id + '-walk', 'webp')]));
   const emptySprites = Object.fromEntries(staffIds.filter(id => id !== 'edmund-vale')
     .map(id => [id, loadSprite('waiters/' + id + '-empty', 'webp')]));
@@ -223,7 +224,7 @@ export function createRenderer(canvas) {
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
     for (const guard of guards) {
-      actors.push({depth: guard.y + 22, draw: () => drawGuard(ctx, guardSprite, guard)});
+      actors.push({depth: guard.y + 22, draw: () => drawGuard(ctx, guard.posted ? armedGuard : guardSprite, guard)});
     }
     for (const member of staff) {
       const sprite = member.withoutMilk ? emptySprites[member.id] : staffSprites[member.id];

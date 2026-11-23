@@ -56,6 +56,7 @@ function approaches(x, y, guard, actor, distance) {
 
 export function updateGuards(guards, player, baron, milo, elapsed, dt) {
   for (const guard of guards) {
+    if (guard.posted) continue;
     guard.walking = false;
     // Let the player approach instead of constantly evading them.
     const nearPlayer = Math.hypot(guard.x - player.x, guard.y - player.y) <= APPROACH_DISTANCE;

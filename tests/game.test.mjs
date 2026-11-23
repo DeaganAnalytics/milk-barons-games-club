@@ -1,3 +1,4 @@
+import {bartender, createCreameryGuard} from '../src/creamery.mjs';
 import {createMilkService, milkCalls, updateMilkService} from '../src/milk-service.mjs';
 import {createStaff, faceStaffMovement, updateStaff, staffFrame} from '../src/staff.mjs';
 import {speechTop} from '../src/speech-layout.mjs';
@@ -482,4 +483,17 @@ test('Skim uses front and back walking rows for vertical movement', () => {
   assert.equal(cleaner.facing, -1);
   cleaner.walking = false;
   assert.deepEqual(staffFrame(cleaner, 0.25), {column: 2, row: 1});
+});
+
+
+test('the creamery bartender is reachable from the floor and the guard stays posted', () => {
+  const baron = createBaron();
+  const player = {...createPlayer(), x: bartender.x, y: bartender.y + 12};
+  const guard = createCreameryGuard();
+  const initialPost = {...guard};
+  assert.ok(guard.x > bartender.x);
+  assert.equal(isBlocked(player.x, player.y, player.radius, baron), false);
+  assert.equal(nearestInteraction(player, baron, null, [guard], [bartender]).id, bartender.id);
+  updateGuards([guard], player, baron, createMilo(), 90, 0.05);
+  assert.deepEqual(guard, initialPost);
 });
