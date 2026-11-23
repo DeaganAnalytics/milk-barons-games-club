@@ -1,8 +1,8 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {isBlocked} from './room.mjs';
+import {CENTER_RUG, isBlocked} from './room.mjs';
 
 export function createPlayer() {
-  return {x: 350, y: 585, speed: 112, radius: 13, facing: 0, stride: 0, walking: false};
+  return {x: CENTER_RUG.x + 5, y: CENTER_RUG.y + 228, speed: 112, radius: 13, facing: 0, stride: 0, walking: false};
 }
 
 export function updatePlayer(player, baron, {dx, dy}, dt) {

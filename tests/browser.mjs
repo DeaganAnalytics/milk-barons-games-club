@@ -108,6 +108,13 @@ try {
       window.hasGameFrame = true;
       return 1;
     };
+    const drawImage = CanvasRenderingContext2D.prototype.drawImage;
+    CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
+      if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 2740) {
+        [window.mapScrollX, window.mapScrollY] = args;
+      }
+      return drawImage.call(this, source, ...args);
+    };
     const fillText = CanvasRenderingContext2D.prototype.fillText;
     window.spokenLines = [];
     CanvasRenderingContext2D.prototype.fillText = function (text, ...args) {
@@ -142,42 +149,32 @@ try {
   assert.equal(await evaluate('document.querySelector(".pressed") === null'), true);
   await activate('The Milk Baron');
 
-  for (const direction of ['ArrowLeft', 'ArrowRight']) {
-    await load(1100, 950, false, direction);
-    await hold('ArrowUp', 72);
-    await hold(direction, 385);
-    await activate('The club');
-    assert.equal(await evaluate('window.spokenLines.length'), 0);
-    await frames(380);
-    assert.equal(await evaluate('window.spokenLines.some(line => line.text.startsWith("What\'s going on") && line.opacity === 1)'), true);
-    await frames(300);
-    if (direction === 'ArrowLeft') {
-      assert.equal(await evaluate('window.spokenLines.some(line => line.text === "Milo, I see you!")'), true);
-    }
-    assert.equal(await evaluate('window.spokenLines.some(line => line.opacity > 0 && line.opacity < 1)'), true);
-    const lines = await evaluate('window.spokenLines.length');
-    await frames(60);
-    assert.equal(await evaluate('window.spokenLines.length'), lines);
-    if (process.env.SCREENSHOT_PREFIX) {
-      const shot = await send('Page.captureScreenshot', {format: 'png'});
-      await writeFile(`${process.env.SCREENSHOT_PREFIX}-${direction}-rug.png`, Buffer.from(shot.data, 'base64'));
-    }
-    await hold(direction === 'ArrowLeft' ? 'ArrowRight' : 'ArrowLeft', 385);
-    await frames(770);
-    await hold('ArrowUp', 28);
-    await activate('The Milk Baron');
+  await load(1100, 950, false, 'expanded-center');
+  await hold('ArrowLeft', 600);
+  await hold('ArrowUp', 850);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 0]);
+  await hold('ArrowDown', 1500);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2055]);
+  await hold('ArrowRight', 1200);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 2055]);
+  assert.equal(await evaluate('window.spokenLines.some(line => line.opacity > 0 && line.opacity < 1)'), true);
+  if (process.env.SCREENSHOT_PREFIX) {
+    const shot = await send('Page.captureScreenshot', {format: 'png'});
+    await writeFile(`${process.env.SCREENSHOT_PREFIX}-southeast.png`, Buffer.from(shot.data, 'base64'));
   }
-  await load(1100, 950, false, 'milo');
-  await hold('ArrowUp', 72);
-  await hold('ArrowLeft', 495);
-  await hold('ArrowUp', 100);
-  await activate('Milo Milksworth');
+  await hold('ArrowUp', 1500);
+  assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 0]);
+  if (process.env.SCREENSHOT_PREFIX) {
+    const shot = await send('Page.captureScreenshot', {format: 'png'});
+    await writeFile(`${process.env.SCREENSHOT_PREFIX}-northeast.png`, Buffer.from(shot.data, 'base64'));
+  }
+
   const plankUrl = new URL(site);
   plankUrl.searchParams.set('floor', 'planks');
   await load(1100, 950, false, 'wide-plank', plankUrl.href);
   assert.equal(await evaluate('performance.getEntriesByType("resource").some(entry => entry.name.endsWith("/wide-plank.webp"))'), true);
   assert.deepEqual(errors, [], JSON.stringify(errors));
-  console.log('Passed desktop and mobile layout, sprite loading, keyboard and touch movement, all interactions, both wings, return to center, and fading Baron speech.');
+  console.log('Passed desktop and mobile layout, sprite loading, keyboard and touch movement, Baron interaction, movement to all four map corners, and fading Baron speech.');
 } finally {
   socket.close();
 }

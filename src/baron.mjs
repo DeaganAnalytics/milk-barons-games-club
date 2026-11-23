@@ -1,5 +1,5 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {CENTER_RUG, CLEAR_AISLE_Y, closestRug, ROOM_WIDTH} from './room.mjs';
+import {CENTER_RUG, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 
 const OFFSCREEN_DELAY = 5;
 const WALK_SPEED = 146;
@@ -24,22 +24,22 @@ export function createBaron() {
   };
 }
 
-function isOnscreen(baron, cameraX) {
+function isOnscreen(baron, cameraX, cameraY) {
   // Include the full sprite, so a partly visible Baron does not start the timer.
-  return baron.x + 33 > cameraX && baron.x - 33 < cameraX + ROOM_WIDTH;
+  return baron.x + 33 > cameraX && baron.x - 33 < cameraX + ROOM_WIDTH
+    && baron.y + 34 > cameraY && baron.y - 57 < cameraY + ROOM_HEIGHT;
 }
 
-export function updateBaronWalk(baron, player, cameraX, elapsed, dt) {
+export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0) {
   if (!baron.route.length) {
-    if (isOnscreen(baron, cameraX)) {
+    if (isOnscreen(baron, cameraX, cameraY)) {
       baron.offscreenSince = null;
     } else {
       baron.offscreenSince ??= elapsed;
       if (elapsed - baron.offscreenSince >= OFFSCREEN_DELAY) {
-        const rug = closestRug(player.x);
+        const rug = closestRug(player);
         if (baron.x !== rug.x || baron.y !== rug.y) {
-          // Cross the hall along the clear aisle between the rugs.
-          baron.route = [{x: baron.x, y: CLEAR_AISLE_Y}, {x: rug.x, y: CLEAR_AISLE_Y}, rug];
+          baron.route = [rug];
           baron.speech = {text: rugLines[baron.nextLine], visibleSince: null};
           baron.nextLine = (baron.nextLine + 1) % rugLines.length;
         }
@@ -74,7 +74,7 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt) {
   if (!baron.walking) baron.stride = 0;
 
   if (baron.speech) {
-    if (isOnscreen(baron, cameraX)) baron.speech.visibleSince ??= elapsed;
+    if (isOnscreen(baron, cameraX, cameraY)) baron.speech.visibleSince ??= elapsed;
     if (baron.speech.visibleSince !== null) {
       if (elapsed - baron.speech.visibleSince >= SPEECH_DURATION) baron.speech = null;
     } else if (!baron.route.length) {
@@ -88,8 +88,8 @@ export function callOutMilo(baron, milo, elapsed) {
   if (!baron.walking) baron.facing = facingIndex(milo.x - baron.x, milo.y - baron.y);
 }
 
-export function speechOpacity(baron, cameraX, elapsed) {
-  if (!isOnscreen(baron, cameraX) || baron.speech?.visibleSince == null) return 0;
+export function speechOpacity(baron, cameraX, elapsed, cameraY = 0) {
+  if (!isOnscreen(baron, cameraX, cameraY) || baron.speech?.visibleSince == null) return 0;
   return Math.max(0, Math.min(1, SPEECH_DURATION - (elapsed - baron.speech.visibleSince)));
 }
 
