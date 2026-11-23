@@ -151,7 +151,7 @@ try {
         window.guardSteps = [];
       }
       if (source.src?.endsWith('-walk.webp') && source.src.includes('/waiters/')) {
-        window.waiterFrames.add(source.src + ':' + args[1] + ':' + args[0]);
+        window.waiterFrames.add(source.src + ':' + args[1] / args[3] + ':' + args[0] / args[2]);
       }
       if (source.src?.endsWith('/guards/concealed.webp')) {
         if (args[1] === 0) window.guardDraws++;
@@ -340,7 +340,7 @@ try {
   await load(1100, 950, false, 'waiter-roster');
   await frames(480);
   for (const id of waiterIds) {
-    for (const row of [0, 160]) {
+    for (const row of [0, 1]) {
       assert.ok(await evaluate(`[...window.waiterFrames].filter(frame =>
         frame.includes('/${id}-walk.webp:${row}:')).length >= 2`), id + ' animation row ' + row);
     }

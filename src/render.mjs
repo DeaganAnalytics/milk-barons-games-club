@@ -264,7 +264,10 @@ function drawWaiter(ctx, sprite, waiter, elapsed) {
   ctx.save();
   ctx.translate(waiter.x, waiter.y + 20);
   ctx.scale(waiter.facing, 1);
-  ctx.drawImage(sprite, column * 128, row * 160, 128, 160, -38.4, -87, 76.8, 96);
+  const frameWidth = sprite.naturalWidth / 6;
+  const frameHeight = sprite.naturalHeight / 2;
+  ctx.drawImage(sprite, column * frameWidth, row * frameHeight, frameWidth, frameHeight,
+    -38.4, -87, 76.8, 96);
   ctx.restore();
 }
 
