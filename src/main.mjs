@@ -1,3 +1,4 @@
+import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
 import {callOutMilo, createBaron, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
@@ -13,7 +14,9 @@ const player = createPlayer();
 const baron = createBaron();
 const milo = createMilo();
 const guards = createGuards(player, baron, milo);
+guards.push(createCreameryGuard());
 const staff = createStaff(player, baron, milo, guards);
+const guests = [...staff, bartender];
 const milkService = createMilkService();
 const render = createRenderer(document.getElementById('game'));
 const dialogue = createDialogue(baron);
@@ -26,7 +29,7 @@ const {readMovement, clearInput} = bindControls({
   nudge: (dx, dy) => movePlayer(player, baron, dx, dy, guards),
   interact: () => {
     if (dialogue.isOpen()) return;
-    const target = nearestInteraction(player, baron, milo, guards, staff);
+    const target = nearestInteraction(player, baron, milo, guards, guests);
     if (target) {
       clearInput();
       dialogue.open(target);

@@ -1,3 +1,4 @@
+import {bartender} from './creamery.mjs';
 import {staffIds} from './staff.mjs';
 import {drawPipPortrait} from './pip-art.mjs';
 
@@ -8,13 +9,24 @@ const baronGreetings = [
   {text: 'Enjoying your time?', mood: 'pleased'}
 ];
 
-const guardReplies = [
+const cowReply = {
+  label: 'Are you a cow?', playerMood: 'thinking',
+  next: {text: 'I am a guard.', mood: 'deadpan', replies: [
+    {label: 'But you have horns.', playerMood: 'thinking', next: {text: 'I am a guard.', mood: 'deadpan'}}
+  ]}
+};
+
+const postedGuardOpening = 'If you have something to report, find one of the roving security officers';
+const postedGuardReplies = [
+  cowReply,
   {
-    label: 'Are you a cow?', playerMood: 'thinking',
-    next: {text: 'I am a guard.', mood: 'deadpan', replies: [
-      {label: 'But you have horns.', playerMood: 'thinking', next: {text: 'I am a guard.', mood: 'deadpan'}}
-    ]}
-  },
+    label: 'Why do you have an assault rifle?', playerMood: 'thinking',
+    next: {text: 'To guard the milk.', mood: 'deadpan'}
+  }
+];
+
+const guardReplies = [
+  cowReply,
   {
     label: "No I don't have anything to report.", playerMood: 'attentive',
     next: {text: 'Then get out of my way!', mood: 'speaking'}
@@ -84,7 +96,8 @@ const portraits = {
 
 const portraitCache = new Map();
 
-function staffPortraitUrl(id, withoutMilk = false) {
+function standalonePortraitUrl(id, withoutMilk = false) {
+  if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
   const filename = id + (withoutMilk ? '-empty-portrait.webp' : '-portrait.webp');
   return new URL('../assets/waiters/' + filename, import.meta.url);
 }
@@ -93,9 +106,10 @@ function warmPortraits() {
   if (portraitCache.size) return;
   const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url)];
   for (const id of staffIds) {
-    urls.push(staffPortraitUrl(id));
-    if (id !== 'edmund-vale') urls.push(staffPortraitUrl(id, true));
+    urls.push(standalonePortraitUrl(id));
+    if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
+  urls.push(standalonePortraitUrl(bartender.id));
   // Keep the decoded images alive while the conversation panel is hidden.
   for (const url of urls) {
     const image = new Image();
@@ -125,7 +139,8 @@ export function createDialogue(baron) {
   function setPortrait(element, character, mood, withoutMilk) {
     if (!portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.style.setProperty('--portrait-image', `url(${staffPortraitUrl(character, withoutMilk)})`);
+      element.dataset.portrait = character;
+      element.style.setProperty('--portrait-image', `url(${standalonePortraitUrl(character, withoutMilk)})`);
       element.dataset.expression = mood;
       return;
     }
@@ -168,7 +183,11 @@ export function createDialogue(baron) {
 
   function open(target) {
     const opening = !portraits[target.id] ? {text: target.message, mood: 'attentive'}
-      : target.id === 'guard' ? {text: guardOpening, replies: guardReplies, mood: 'deadpan'}
+      : target.id === 'guard' ? {
+          text: target.posted ? postedGuardOpening : guardOpening,
+          replies: target.posted ? postedGuardReplies : guardReplies,
+          mood: 'deadpan'
+        }
       : target.id === 'milo' ? {text: target.message, replies: miloReplies, mood: 'worried'}
         : {...baronGreetings[greetingIndex++ % baronGreetings.length], replies: availableBaronReplies(baron)};
     speaker.textContent = title.textContent = target.title;

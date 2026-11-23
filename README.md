@@ -8,6 +8,8 @@ Move with WASD, the arrow keys, or the on-screen directional buttons. Press E, S
 
 Every minute of active time outside dialogue and rug travel, the Baron calls for milk. The closest server with milk delivers it, and Edmund Skim clears the broken glass before the Baron resumes his rounds.
 
+The Backroom Creamery is built into the upper-left wall. Walk up to the hatch and interact to talk to the bartender.
+
 ## Run locally
 
 From the repository root, run `python3 -m http.server 8000` and open `http://localhost:8000`. The site uses native browser modules and runs directly from the static files.
