@@ -85,6 +85,12 @@ async function expressions(player, npc) {
   const values = await evaluate(`['player', 'npc'].map(id =>
     document.getElementById('conversation-' + id).dataset.expression)`);
   assert.deepEqual(values, [player, npc]);
+  assert.ok(await evaluate(`(() => {
+    const canvas = document.querySelector('#conversation-player canvas');
+    const ctx = canvas.getContext('2d');
+    return canvas.width === 512 && canvas.height === 512
+      && ctx.getImageData(256, 175, 1, 1).data[3] === 255;
+  })()`));
 }
 
 async function closeConversation() {

@@ -1,3 +1,5 @@
+import {drawPipPortrait} from './pip-art.mjs';
+
 const guardOpening = 'Do you have a problem to report? Otherwise get out of my way.';
 const baronGreetings = [
   {text: 'Welcome, welcome to my establishment!', mood: 'pleased'},
@@ -74,7 +76,6 @@ function availableBaronReplies(baron) {
 }
 
 const portraits = {
-  player: {row: 0, expressions: ['attentive', 'happy', 'thinking']},
   baron: {row: 1, expressions: ['pleased', 'laughing', 'displeased']},
   milo: {row: 2, expressions: ['worried', 'sad', 'relieved']},
   guard: {row: 3, expressions: ['deadpan', 'suspicious', 'speaking']}
@@ -91,6 +92,7 @@ export function createDialogue(baron) {
   const line = document.getElementById('conversation-line');
   const replyList = document.getElementById('conversation-replies');
   const playerPortrait = document.getElementById('conversation-player');
+  const playerArt = playerPortrait.querySelector('canvas');
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
 
@@ -115,7 +117,10 @@ export function createDialogue(baron) {
 
   function show(node, character, playerMood) {
     line.textContent = node.text;
-    setPortrait(playerPortrait, 'player', playerMood);
+    if (playerPortrait.dataset.expression !== playerMood) {
+      drawPipPortrait(playerArt, playerMood);
+      playerPortrait.dataset.expression = playerMood;
+    }
     setPortrait(npcPortrait, character, node.mood);
     replyList.replaceChildren(...(node.replies ?? []).map(reply => {
       const button = document.createElement('button');
