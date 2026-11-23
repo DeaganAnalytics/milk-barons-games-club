@@ -153,10 +153,18 @@ try {
     const drawImage = CanvasRenderingContext2D.prototype.drawImage;
     window.staffFrames = new Set();
     window.creameryDraws = new Set();
+    window.creameryIdle = {};
     window.milkTrace = {baron: null, empty: new Set(), shards: false, glass: false};
     CanvasRenderingContext2D.prototype.drawImage = function (source, ...args) {
       if (source.src?.endsWith('/guards/rifle.webp') || source.src?.includes('/hall/creamery-')) {
         window.creameryDraws.add(source.src);
+      }
+      if (source.src?.endsWith('/hall/creamery-bartender-idle.webp')) {
+        window.creameryIdle.bartender = [args[3], args[1] + args[3]];
+      }
+      if (source.src?.endsWith('/guards/rifle.webp')) {
+        const {c, d, e, f} = this.getTransform();
+        window.creameryIdle.guard = [c, d, e + 2 * c, f + 2 * d];
       }
       if (source instanceof HTMLCanvasElement && source.width === 2070 && source.height === 3425) {
         [window.mapScrollX, window.mapScrollY] = args;
@@ -307,6 +315,13 @@ try {
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 0]);
   assert.ok(await evaluate(`['creamery-hatch.webp', 'creamery-sign.webp', 'rifle.webp'].every(name =>
     [...window.creameryDraws].some(url => url.endsWith('/' + name)))`));
+  const firstIdle = await evaluate('window.creameryIdle');
+  await frames(31);
+  const secondIdle = await evaluate('window.creameryIdle');
+  assert.notEqual(firstIdle.bartender[0], secondIdle.bartender[0]);
+  assert.ok(Math.abs(firstIdle.bartender[1] - secondIdle.bartender[1]) < 1e-8);
+  assert.notDeepEqual(firstIdle.guard.slice(0, 2), secondIdle.guard.slice(0, 2));
+  for (const index of [2, 3]) assert.ok(Math.abs(firstIdle.guard[index] - secondIdle.guard[index]) < 1e-8);
   await hold('ArrowRight', 73);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
@@ -323,7 +338,7 @@ try {
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-bartender.png`, Buffer.from(shot.data, 'base64'));
   }
   await closeConversation();
-  await hold('ArrowRight', 53);
+  await hold('ArrowRight', 36);
   await hold('ArrowDown', 14);
   await activate('Bull Guard');
   const postedGreeting = 'If you have something to report, find one of the roving security officers';

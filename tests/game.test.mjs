@@ -497,3 +497,24 @@ test('the creamery bartender is reachable from the floor and the guard stays pos
   updateGuards([guard], player, baron, createMilo(), 90, 0.05);
   assert.deepEqual(guard, initialPost);
 });
+
+
+test('Milo keeps his normal route near the posted guard and walks around a blocked path', () => {
+  const milo = createMilo();
+  const baron = createBaron();
+  const posted = createCreameryGuard();
+  const start = {x: milo.x, y: milo.y};
+  updateMilo(milo, baron, 1, 0.05, [posted]);
+  assert.equal(milo.fleeing, false);
+  assert.equal(milo.y, start.y);
+  // Exercise a straight path crossing a stationary guard with no other exit pressure.
+  posted.x = start.x + 70;
+  posted.y = start.y;
+  const destination = {x: start.x + 190, y: start.y};
+  milo.route = [destination];
+  for (let frame = 0; frame < 100 && milo.route.length; frame++) {
+    updateMilo(milo, baron, 2 + frame * 0.05, 0.05, [posted]);
+    assert.ok(Math.hypot(milo.x - posted.x, milo.y - posted.y) >= 26 - 1e-9);
+  }
+  assert.deepEqual({x: milo.x, y: milo.y}, destination);
+});
