@@ -1,7 +1,7 @@
 import {CENTER_RUG, EAST_EDGE, ROOM_HEIGHT, ROOM_WIDTH, SIDE_RUGS, WEST_EDGE} from './room.mjs';
 
 const assetNames = [
-  'wall-panel', 'end-column', 'base-trim', 'double-door', 'service-door',
+  'wall-panel', 'end-column', 'base-trim', 'double-door',
   'burgundy-banner', 'red-banner', 'tapestry'
 ];
 
@@ -83,10 +83,9 @@ export function composeHall(art) {
   };
 
   drawCentered('double-door', CENTER_RUG.x, 15, 176, 176);
-  drawCentered('service-door', SIDE_RUGS[0].x, 38, 81, 134);
   drawCentered('burgundy-banner', CENTER_RUG.x - 170, 43, 62, 93);
   drawCentered('red-banner', CENTER_RUG.x + 170, 43, 62, 93);
-  drawCentered('tapestry', SIDE_RUGS[1].x, 28, 112, 130);
+  for (const rug of SIDE_RUGS) drawCentered('tapestry', rug.x, 28, 112, 130);
 
   ctx.restore();
   drawEndColumn(ctx, art['end-column'], WEST_EDGE, 1);

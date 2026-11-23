@@ -88,7 +88,7 @@ async function load(width, height, mobile, name, url = site) {
     }));
     return assets.size;
   })()`, true);
-  assert.equal(assetCount, 22);
+  assert.equal(assetCount, 21);
   await frames(1);
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});

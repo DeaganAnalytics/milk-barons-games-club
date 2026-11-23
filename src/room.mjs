@@ -26,9 +26,8 @@ function overlaps(x, y, radius, obstacle) {
 
 export function isBlocked(x, y, radius, baron, from) {
   if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < 160 || y > 617) return true;
-  // Closed doors stand proud of the back wall.
+  // The closed center door stands proud of the back wall.
   if (y < 190 && Math.abs(x - CENTER_RUG.x) < 75 + radius) return true;
-  if (y < 172 && Math.abs(x - SIDE_RUGS[0].x) < 31 + radius) return true;
   const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};
   if (!overlaps(x, y, radius, baronObstacle)) return false;
   // The Baron can walk up to an occupied rug. Let a player he overlaps step away.

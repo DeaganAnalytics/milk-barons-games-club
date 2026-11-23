@@ -33,12 +33,12 @@ test('movement normalizes diagonals and stops animating when blocked', () => {
   assert.equal(player.stride, 0);
 });
 
-test('closed doors and the Baron block movement while old furniture positions are open', () => {
+test('the closed center door and the Baron block movement while old furniture positions are open', () => {
   const baron = createBaron();
-  for (const [x, y] of [[350, 175], [-345, 165], [385, 363]]) {
+  for (const [x, y] of [[350, 175], [385, 363]]) {
     assert.equal(isBlocked(x, y, 13, baron), true);
   }
-  for (const [x, y] of [[171, 319], [535, 319], [170, 553], [165, 215], [520, 215]]) {
+  for (const [x, y] of [[-345, 165], [171, 319], [535, 319], [170, 553], [165, 215], [520, 215]]) {
     assert.equal(isBlocked(x, y, 13, baron), false);
   }
   baron.x -= 20;
