@@ -313,8 +313,9 @@ try {
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-creamery.png`, Buffer.from(shot.data, 'base64'));
   }
   await activate('The Bartender');
+  assert.equal(await evaluate("document.querySelectorAll('#conversation-replies button').length"), 0);
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'),
-    'Welcome to the Backroom Creamery. Milk?');
+    "Sorry, we're not serving customers right now");
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'),'::before')
     .backgroundImage.includes('/dialogue/creamery-bartender.webp')`));
   if (process.env.SCREENSHOT_PREFIX) {
@@ -322,7 +323,18 @@ try {
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-bartender.png`, Buffer.from(shot.data, 'base64'));
   }
   await closeConversation();
-  await hold('ArrowLeft', 100);
+  await hold('ArrowRight', 53);
+  await hold('ArrowDown', 14);
+  await activate('Bull Guard');
+  const postedGreeting = 'If you have something to report, find one of the roving security officers';
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), postedGreeting);
+  await reply('Why do you have an assault rifle?', 'To guard the milk.');
+  await closeConversation();
+  await activate('Bull Guard');
+  await reply('Are you a cow?', 'I am a guard.');
+  await reply('But you have horns.', 'I am a guard.');
+  await closeConversation();
+  await hold('ArrowLeft', 170);
   await hold('ArrowDown', 1900);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2740]);
   await hold('ArrowRight', 1200);

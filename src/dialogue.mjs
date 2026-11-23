@@ -9,13 +9,24 @@ const baronGreetings = [
   {text: 'Enjoying your time?', mood: 'pleased'}
 ];
 
-const guardReplies = [
+const cowReply = {
+  label: 'Are you a cow?', playerMood: 'thinking',
+  next: {text: 'I am a guard.', mood: 'deadpan', replies: [
+    {label: 'But you have horns.', playerMood: 'thinking', next: {text: 'I am a guard.', mood: 'deadpan'}}
+  ]}
+};
+
+const postedGuardOpening = 'If you have something to report, find one of the roving security officers';
+const postedGuardReplies = [
+  cowReply,
   {
-    label: 'Are you a cow?', playerMood: 'thinking',
-    next: {text: 'I am a guard.', mood: 'deadpan', replies: [
-      {label: 'But you have horns.', playerMood: 'thinking', next: {text: 'I am a guard.', mood: 'deadpan'}}
-    ]}
-  },
+    label: 'Why do you have an assault rifle?', playerMood: 'thinking',
+    next: {text: 'To guard the milk.', mood: 'deadpan'}
+  }
+];
+
+const guardReplies = [
+  cowReply,
   {
     label: "No I don't have anything to report.", playerMood: 'attentive',
     next: {text: 'Then get out of my way!', mood: 'speaking'}
@@ -172,7 +183,11 @@ export function createDialogue(baron) {
 
   function open(target) {
     const opening = !portraits[target.id] ? {text: target.message, mood: 'attentive'}
-      : target.id === 'guard' ? {text: guardOpening, replies: guardReplies, mood: 'deadpan'}
+      : target.id === 'guard' ? {
+          text: target.posted ? postedGuardOpening : guardOpening,
+          replies: target.posted ? postedGuardReplies : guardReplies,
+          mood: 'deadpan'
+        }
       : target.id === 'milo' ? {text: target.message, replies: miloReplies, mood: 'worried'}
         : {...baronGreetings[greetingIndex++ % baronGreetings.length], replies: availableBaronReplies(baron)};
     speaker.textContent = title.textContent = target.title;
