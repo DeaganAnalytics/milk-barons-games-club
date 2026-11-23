@@ -31,14 +31,17 @@ export function composeHall(art) {
   ctx.fillRect(WEST_EDGE, 154, hall.width, 493);
 
   const wallPanel = art['wall-panel'];
+  const baseTrim = art['base-trim'];
   const panelWidth = ROOM_WIDTH / 3;
   // Repeat the painted interior without the sprite's dark side outlines.
   const leftInset = 12;
   const rightInset = 14;
+  const trimInset = 12;
   for (let x = WEST_EDGE; x < EAST_EDGE; x += panelWidth) {
     ctx.drawImage(wallPanel, leftInset, 0, wallPanel.naturalWidth - leftInset - rightInset,
       wallPanel.naturalHeight, x, 18, panelWidth, 160);
-    ctx.drawImage(art['base-trim'], x, 633, panelWidth + 1, 43);
+    ctx.drawImage(baseTrim, trimInset, 0, baseTrim.naturalWidth - trimInset * 2,
+      baseTrim.naturalHeight, x, 633, panelWidth, 43);
   }
 
   const drawCentered = (name, centerX, top, width, height) => {
