@@ -1,3 +1,4 @@
+import {elias, eliasPortraits} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
@@ -149,6 +150,7 @@ const portraitCache = new Map();
 function standalonePortraitUrl(id, withoutMilk = false, mood) {
   if (id === pilloryCommissioner.id) return new URL('../assets/dialogue/commissioner/' + mood + '.webp', import.meta.url);
   if (id === pilloryAttendant.id) return new URL('../assets/dialogue/attendant/' + mood + '.webp', import.meta.url);
+  if (id === elias.id) return new URL('../assets/dialogue/elias/' + mood + '.webp', import.meta.url);
   if (id === professor.id) return new URL('../assets/dialogue/professor/' + mood + '.webp', import.meta.url);
   if (id === lifeguard.id) return new URL('../assets/dialogue/lifeguard-' + mood + '.webp', import.meta.url);
   if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
@@ -170,6 +172,7 @@ function warmPortraits() {
   urls.push(standalonePortraitUrl(bartender.id));
   for (const mood of commissionerMoods) urls.push(standalonePortraitUrl(pilloryCommissioner.id, false, mood));
   for (const mood of attendantMoods) urls.push(standalonePortraitUrl(pilloryAttendant.id, false, mood));
+  for (const mood of eliasPortraits) urls.push(standalonePortraitUrl(elias.id, false, mood));
   for (const mood of professorMoods) urls.push(standalonePortraitUrl(professor.id, false, mood));
   for (const mood of lifeguardMoods) urls.push(standalonePortraitUrl(lifeguard.id, false, mood));
   for (const {id} of partyGuests) {
@@ -296,6 +299,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
+      : target.id === elias.id ? {text: target.message, mood: 'current-smile'}
       : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.pilloryThanks ? {text: 'Thanks, I needed a laugh today.', mood: 'deadpan'}

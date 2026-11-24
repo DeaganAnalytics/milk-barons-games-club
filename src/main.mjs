@@ -1,3 +1,4 @@
+import {elias} from './elias.mjs';
 import {createCoinBalance, STARTING_COINS} from './coins.mjs';
 import {createAttendantMilk, updateAttendantMilk} from './attendant-milk.mjs';
 import {createAttendantThrow, createMilkBalloon, createPilloryReportScene, updateMilkBalloon} from './milk-balloon.mjs';
@@ -26,7 +27,7 @@ const milo = createMilo();
 const guards = createGuards(player, baron, milo);
 guards.push(createCreameryGuard());
 const staff = createStaff(player, baron, milo, guards);
-const guests = [...staff, bartender, lifeguard, professor, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
+const guests = [...staff, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
 const milkService = createMilkService();
