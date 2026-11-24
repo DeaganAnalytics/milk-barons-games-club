@@ -33,3 +33,13 @@ export function movePlayer(player, baron, dx, dy, guards = []) {
     player.stride = 0;
   }
 }
+
+export function takeDanceExit(player) {
+  if (onDanceFloor(player.x, player.y)) {
+    if (player.danceIdle > 3) player.dancedThisVisit = true;
+    return false;
+  }
+  if (!player.dancedThisVisit) return false;
+  player.dancedThisVisit = false;
+  return true;
+}

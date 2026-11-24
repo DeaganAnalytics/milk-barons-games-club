@@ -1285,7 +1285,7 @@ test('Elias’s regular dialogue pairs the cow and garlic reactions with the int
 });
 
 test('Elias trails the camera edge and stays put while Pip approaches', async () => {
-  const {updateEliasFollow} = await import('../src/elias.mjs');
+  const {eliasConversation, eliasFollowingConversation, updateEliasFollow} = await import('../src/elias.mjs');
   const actor = {x: 666, y: 500, stride: 0};
   const baron = {x: 0, y: 0};
   updateEliasFollow(actor, {x: 350, y: 500}, baron, 0, 200, 0.1);
@@ -1293,9 +1293,18 @@ test('Elias trails the camera edge and stays put while Pip approaches', async ()
   updateEliasFollow(actor, {x: 625, y: 500}, baron, 280, 200, 0.1);
   assert.equal(actor.x, 666);
   assert.equal(actor.running, false);
+  assert.equal(actor.hasFollowedPip, undefined);
   updateEliasFollow(actor, {x: 300, y: 500}, baron, -45, 200, 0.1);
   assert.ok(actor.x < 666);
   assert.equal(actor.running, true);
+  assert.equal(actor.hasFollowedPip, true);
+  assert.ok(!eliasConversation.replies.some(reply => reply.label === 'Are you following me?'));
+  const reply = eliasFollowingConversation.replies.find(reply => reply.label === 'Are you following me?');
+  assert.equal(reply.next.text, 'Da.');
+  assert.equal(reply.next.replies[0].label, 'Wait, what?!');
+  const explanation = reply.next.replies[0].next;
+  assert.match(explanation.text, /every single coin you earn or lose/);
+  assert.equal(explanation.replies[0].next, eliasFollowingConversation);
 });
 
 test('the pool report sends both roving guards to separate cheering spots and leaves posted guards alone', async () => {
@@ -1322,4 +1331,29 @@ test('the pool report sends both roving guards to separate cheering spots and le
   assert.ok(Math.abs(cheering.get(roving[0]) - cheering.get(roving[1])) > 40);
   assert.ok(roving.every(guard => !guard.poolReportPending));
   assert.equal(posted.pursuit, undefined);
+});
+
+test('Elias charges for a dance only after Pip dances and leaves, with either reply', async () => {
+  const {takeDanceExit} = await import('../src/player.mjs');
+  const {eliasDanceConversation, routeEliasToPip} = await import('../src/elias.mjs');
+  const player = {...createPlayer(), ...DANCE_FLOOR};
+  assert.equal(takeDanceExit(player), false);
+  player.x -= 190;
+  assert.equal(takeDanceExit(player), false);
+  player.x = DANCE_FLOOR.x;
+  player.danceIdle = 3.1;
+  assert.equal(takeDanceExit(player), false);
+  player.x -= 190;
+  player.danceIdle = 0;
+  assert.equal(takeDanceExit(player), true);
+  assert.equal(takeDanceExit(player), false);
+  const actor = {x: DANCE_FLOOR.x + 240, y: DANCE_FLOOR.y};
+  const route = routeEliasToPip(actor, player, createBaron());
+  assert.ok(route.length > 1);
+  assert.ok(Math.hypot(route.at(-1).x - player.x, route.at(-1).y - player.y) <= 38);
+  for (const reply of eliasDanceConversation.replies) {
+    const fee = reply.next.replies[0];
+    assert.equal(fee.label, 'Dancing fee?! What dancing fee?');
+    assert.equal(fee.next.action, 'chargeDanceFee');
+  }
 });

@@ -1,4 +1,4 @@
-import {advanceEliasRun, elias, updateEliasFollow} from './elias.mjs';
+import {advanceEliasRun, elias, routeEliasToPip, updateEliasFollow} from './elias.mjs';
 import {createCoinBalance, STARTING_COINS} from './coins.mjs';
 import {createAttendantMilk, updateAttendantMilk} from './attendant-milk.mjs';
 import {createAttendantThrow, createMilkBalloon, createPilloryReportScene, updateMilkBalloon} from './milk-balloon.mjs';
@@ -16,7 +16,7 @@ import {createMilo, fleeMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
 import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
 import {partyGuests} from './party-guests.mjs';
-import {createPlayer, movePlayer, updatePlayer} from './player.mjs';
+import {createPlayer, movePlayer, takeDanceExit, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
 import {cameraLeft, cameraTop, guestEnclosure, insideGuestEnclosure, MILK_POOL, nearGuestGate, nearestInteraction, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 import {createStaff, updateStaff} from './staff.mjs';
@@ -36,6 +36,7 @@ const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
 const render = createRenderer(document.getElementById('game'));
 let eliasApproaching = true;
+let eliasDanceRoute = null;
 let seenMilo = false;
 let seenPoolAndClothes = false;
 let poolClothesReport = null;
@@ -89,6 +90,7 @@ const dialogue = createDialogue(baron, {
   onAction: (action, target) => {
     if (action === 'awardPilloryTip' || action === 'baronMoneyGift' || action === 'awardPoolClothesTip') coinBalance.change(5);
     if (action === 'baronMoneyPenalty') coinBalance.change(-25);
+    if (action === 'chargeDanceFee') coinBalance.change(-3);
     if (action === 'finishEliasWelcome') {
       document.getElementById('coin-counter').hidden = false;
       elias.findingEdge = true;
@@ -148,15 +150,15 @@ function warnAtGuestGate() {
 }
 
 const {readMovement, clearInput} = bindControls({
-  isPaused: () => eliasApproaching || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
+  isPaused: () => eliasApproaching || Boolean(eliasDanceRoute) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
   nudge: (dx, dy) => {
-    if (eliasApproaching || !gameOver.hidden || milkBalloon) return;
+    if (eliasApproaching || eliasDanceRoute || !gameOver.hidden || milkBalloon) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else movePlayer(player, baron, dx, dy, guards);
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
-    if (eliasApproaching || !gameOver.hidden || milkBalloon) return;
+    if (eliasApproaching || eliasDanceRoute || !gameOver.hidden || milkBalloon) return;
     const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
       && !(guestEnclosure.active && insideGuestEnclosure(guest)));
     const target = nearestInteraction(player, baron, milo, guards, nearbyGuests);
@@ -189,6 +191,17 @@ function frame(timestamp) {
       eliasApproaching = false;
       clearInput();
       dialogue.open({...elias, welcome: true});
+    }
+    requestAnimationFrame(frame);
+    return;
+  }
+  if (eliasDanceRoute) {
+    if (advanceEliasRun(elias, eliasDanceRoute[0], dt, 0)) eliasDanceRoute.shift();
+    render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
+      staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
+    if (!eliasDanceRoute.length) {
+      eliasDanceRoute = null;
+      dialogue.open({...elias, danceFee: true});
     }
     requestAnimationFrame(frame);
     return;
@@ -250,6 +263,13 @@ function frame(timestamp) {
       return;
     }
     updatePlayer(player, baron, movement, dt, guards);
+  }
+  if (!guestEscort && takeDanceExit(player)) {
+    clearInput();
+    player.walking = false;
+    eliasDanceRoute = routeEliasToPip(elias, player, baron);
+    requestAnimationFrame(frame);
+    return;
   }
   if (gateGuard && updateRopeWarning(ropeWarning, player, dt)) {
     clearInput();

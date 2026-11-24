@@ -61,33 +61,79 @@ export const eliasWelcome = welcomeLines.reduceRight((next, [text, mood, playerM
   text, mood, playerMood, replies: [continueTo(next)]
 }), questions);
 
-export const eliasConversation = {text: elias.message, mood: 'current-smile', replies: []};
-
-function exchange(lines) {
-  let replies = [continueTo(eliasConversation)];
+function exchange(lines, menu) {
+  let replies = [continueTo(menu)];
   for (const [label, text, mood, playerMood = 'thinking'] of [...lines].reverse()) {
     replies = [{label, playerMood, next: {text, mood, replies}}];
   }
   return replies[0];
 }
 
-eliasConversation.replies.push(
-  exchange([
+const regularExchanges = [
+  [
     ['Why are the guards cows?', 'Zey are not. I am unsure of ze purpose of zis question. Is zis another one of your little activist games?', 'insulted'],
     ['But the horns...', 'ZEY ARE NOT COWS!', 'demonic-angry', 'alarmed']
-  ]),
-  exchange([
+  ],
+  [
     ['Who are you?', 'I am Elias.', 'current-smile'],
     ['But who are you in relation to the Baron?', 'I am his accountant.', 'self-assured-smirk'],
     ['His accountant?!', 'Vhy, da! Someone must manage all his money!', 'laugh', 'alarmed']
-  ]),
-  exchange([
+  ],
+  [
     ['Are you a vampire?', 'No. Vampires do not exist.', 'worried'],
     ['But you look like a vampire.', 'I assure you, I am not.', 'insulted'],
     ['Do you want some garlic?', 'VHO HAS GARLIC?!', 'worried'],
     ['...', 'I mean... vho has garlic? Yes, garlic for milk. I am particularly fond of milk-flavoured garlic.', 'self-assured-smirk', 'alarmed']
-  ])
-);
+  ]
+];
+
+const followingExchange = [
+  ['Are you following me?', 'Da.', 'current-smile'],
+  ['Wait, what?!', 'Naturally, Master Pip. I must account for every single coin you earn or lose. I am an accountant, after all.', 'self-assured-smirk', 'alarmed']
+];
+
+function buildConversation(exchanges) {
+  const menu = {text: elias.message, mood: 'current-smile', replies: []};
+  menu.replies = exchanges.map(lines => exchange(lines, menu));
+  return menu;
+}
+
+export const eliasConversation = buildConversation(regularExchanges);
+export const eliasFollowingConversation = buildConversation([...regularExchanges, followingExchange]);
+
+const danceFeeReply = {
+  label: 'Dancing fee?! What dancing fee?',
+  playerMood: 'alarmed',
+  next: {
+    text: 'Do not be ridiculous, Master Pip. Gentlemen cannot enter a nightclub for free!',
+    mood: 'insulted',
+    action: 'chargeDanceFee'
+  }
+};
+
+export const eliasDanceConversation = {
+  text: 'Did you enjoy ze dancing, Master Pip?',
+  mood: 'current-smile',
+  replies: [
+    {label: 'Yes.', playerMood: 'attentive', next: {
+      text: 'Good, good! I shall deduct ze dancing fee from your account.',
+      mood: 'self-assured-smirk', replies: [danceFeeReply]
+    }},
+    {label: 'No.', playerMood: 'worried', next: {
+      text: 'Vell, you vill enjoy zis even less. I shall deduct ze dancing fee from your account.',
+      mood: 'devious', replies: [danceFeeReply]
+    }}
+  ]
+};
+
+export function routeEliasToPip(actor, player, baron) {
+  const radius = 11;
+  const spots = [[-38, 0], [38, 0], [0, -38], [0, 38]]
+    .map(([dx, dy]) => ({x: player.x + dx, y: player.y + dy}))
+    .filter(({x, y}) => !isNpcBlocked(x, y, radius, baron))
+    .sort((a, b) => Math.hypot(a.x - actor.x, a.y - actor.y) - Math.hypot(b.x - actor.x, b.y - actor.y));
+  return routeAroundBaron({...actor, radius}, spots[0] ?? player, baron);
+}
 
 export function advanceEliasRun(actor, destination, dt, stop, speed = 230) {
   const dx = destination.x - actor.x;
@@ -148,6 +194,7 @@ export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
   }
   const arrived = advanceEliasRun(actor, waypoint, dt, 0, 144);
   actor.running = step > 0;
+  if (outside && !actor.findingEdge && step > 0) actor.hasFollowedPip = true;
   if (arrived) {
     actor.followRoute?.shift();
     if (!actor.followRoute?.length && Math.hypot(target.x - actor.x, target.y - actor.y) < 1) actor.findingEdge = false;

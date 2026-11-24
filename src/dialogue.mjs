@@ -1,4 +1,4 @@
-import {elias, eliasConversation, eliasPortraits, eliasWelcome} from './elias.mjs';
+import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasWelcome} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
@@ -242,7 +242,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
 
   function show(node, character, playerMood, withoutMilk) {
     action = node.action ?? null;
-    closeButton.hidden = Boolean(activeTarget.welcome && !action);
+    closeButton.hidden = Boolean((activeTarget.welcome || activeTarget.danceFee) && !action);
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
@@ -323,7 +323,8 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
-      : target.id === elias.id ? (target.welcome ? eliasWelcome : eliasConversation)
+      : target.id === elias.id && target.danceFee ? eliasDanceConversation
+      : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)
       : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.poolClothesThanks ? {
