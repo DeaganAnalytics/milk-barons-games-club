@@ -17,7 +17,7 @@ import {test} from 'node:test';
 import {callOutMilo, createBaron, isBaronDancing, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, guestGateOutside, insideGuestEnclosure, HALL_CENTER, MILK_POOL, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
+import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, guestGateOutside, insideGuestEnclosure, HALL_CENTER, MILK_FOUNTAIN, MILK_POOL, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -905,9 +905,11 @@ test('the milk pool sits between four rugs and NPC routes go around it', () => {
   const surrounding = RUGS.filter(rug => Math.abs(rug.x - MILK_POOL.x) === ROOM_WIDTH / 2
     && Math.abs(rug.y - MILK_POOL.y) === ROOM_HEIGHT / 2);
   assert.equal(surrounding.length, 4);
-  assert.ok(surrounding.includes(closestRug(HALL_CENTER)));
+  assert.equal(MILK_POOL.x, HALL_CENTER.x + ROOM_WIDTH / 2);
+  assert.equal(MILK_POOL.y, HALL_CENTER.y + ROOM_HEIGHT / 2 - 2 * ROOM_HEIGHT);
   const baron = createBaron();
   assert.equal(isBlocked(MILK_POOL.x, MILK_POOL.y, 13, baron), true);
+
   const start = {x: MILK_POOL.x, y: MILK_POOL.y - 210, radius: 14};
   const end = {x: MILK_POOL.x, y: MILK_POOL.y + 135};
   const route = routeAroundBaron(start, end, baron);
@@ -1011,4 +1013,23 @@ test('a guard routes around the pool, watches for 15 seconds, then resumes patro
   updateGuards([guard], player, baron, milo, until, 0.05);
   assert.equal(guard.poolWatch, null);
   assert.equal(guard.pursuit, null);
+});
+
+test('the fountain occupies the former pool site and NPCs can route around it', () => {
+  assert.deepEqual(MILK_FOUNTAIN, {x: MILK_POOL.x, y: MILK_POOL.y + 2 * ROOM_HEIGHT});
+  const baron = createBaron();
+  assert.ok(isBlocked(MILK_FOUNTAIN.x, MILK_FOUNTAIN.y, 13, baron));
+  const start = {x: MILK_FOUNTAIN.x, y: MILK_FOUNTAIN.y - 110, radius: 14};
+  const end = {x: MILK_FOUNTAIN.x, y: MILK_FOUNTAIN.y + 110};
+  const route = routeAroundBaron(start, end, baron);
+  assert.equal(route.at(-1), end);
+  assert.ok(route.length > 1);
+  let from = start;
+  for (const to of route) {
+    for (let step = 0; step <= 20; step++) {
+      assert.equal(isBlocked(from.x + (to.x - from.x) * step / 20,
+        from.y + (to.y - from.y) * step / 20, start.radius, baron), false);
+    }
+    from = to;
+  }
 });
