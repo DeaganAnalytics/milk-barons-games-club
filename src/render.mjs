@@ -1,4 +1,4 @@
-import {drawProfessor} from './professor.mjs';
+import {createProfessorSpeech, drawProfessor, professorHeight} from './professor.mjs';
 import {drawMilkFountain, fountainHeight, fountainWidth} from './milk-fountain.mjs';
 import {createMilkPool, drawMilkPool, milkPoolSpeech} from './milk-pool.mjs';
 import {ropeWarningSpeech} from './rope-warning.mjs';
@@ -284,12 +284,13 @@ export function createRenderer(canvas) {
     '1': loadSprite('baron-milk-right', 'webp')
   };
 
+  const professorSpeech = createProfessorSpeech();
   let world;
   return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
-      ctx.drawImage(world, cameraX - WEST_EDGE, cameraY - NORTH_EDGE, professorFeet, ROOM_WIDTH, ROOM_HEIGHT,
+      ctx.drawImage(world, cameraX - WEST_EDGE, cameraY - NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT,
         0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     } else {
       ctx.fillStyle = '#ae744c';
@@ -326,7 +327,10 @@ export function createRenderer(canvas) {
         && MILK_FOUNTAIN.x + fountainWidth / 2 >= cameraX && MILK_FOUNTAIN.x - fountainWidth / 2 <= cameraX + ROOM_WIDTH) {
       actors.push({depth: fountainFront, draw: () => drawMilkFountain(ctx, fountainArt, elapsed, fountainFront)});
     }
-    if (isReady(professorArt) && professorFeet.y >= cameraY && professorFeet.y - 92 <= cameraY + ROOM_HEIGHT
+    const professorVisible = isReady(professorArt) && professorFeet.y >= cameraY
+      && professorFeet.y - professorHeight <= cameraY + ROOM_HEIGHT
+      && professorFeet.x >= cameraX && professorFeet.x <= cameraX + ROOM_WIDTH;
+    if (isReady(professorArt) && professorFeet.y >= cameraY && professorFeet.y - professorHeight <= cameraY + ROOM_HEIGHT
         && professorFeet.x + 75 >= cameraX && professorFeet.x - 30 <= cameraX + ROOM_WIDTH) {
       actors.push({depth: professorFeet.y, draw: () => drawProfessor(ctx, professorArt, professorSipping, elapsed)});
     }
@@ -409,6 +413,11 @@ export function createRenderer(canvas) {
           drawSpeech(ctx, index === 0 ? 'Bravo!' : 'Splendid!', 1, guest.x, guest.y - 75, guest.y, cameraX, cameraY);
         }
       });
+    }
+    const professorRemark = professorSpeech(elapsed, professorVisible && !ropeScene);
+    if (professorRemark) {
+      drawSpeech(ctx, professorRemark.text, professorRemark.opacity, professorFeet.x,
+        professorFeet.y - professorHeight, professorFeet.y, cameraX, cameraY);
     }
     if (poolVisible) {
       const speech = milkPoolSpeech(milkPool, elapsed);

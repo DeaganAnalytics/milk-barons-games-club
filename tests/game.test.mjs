@@ -1,4 +1,4 @@
-import {professorPose} from '../src/professor.mjs';
+import {createProfessorSpeech, professorPose} from '../src/professor.mjs';
 import {createMilkPool, lifeguard, milkPoolSpeech, updateMilkPool} from '../src/milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
@@ -1045,4 +1045,14 @@ test('the professor rocks while he raises, holds, and lowers the straw', () => {
   assert.equal(professorPose(8.32).lift, 0);
   assert.notEqual(professorPose(2).rock, professorPose(3).rock);
   assert.equal(isBlocked(professorFeet.x, professorFeet.y, 13, createBaron()), true);
+});
+
+test('the professor gives a random remark every 20 seconds without repeats', () => {
+  const speech = createProfessorSpeech(() => 0);
+  assert.equal(speech(19.9, true), null);
+  assert.equal(speech(20, false), null);
+  assert.equal(speech(21, true).text, 'The milk must flow.');
+  assert.equal(speech(24, true), null);
+  assert.equal(speech(40.9, true), null);
+  assert.equal(speech(41, true).text, 'One man, one vote. Such a barbaric concept.');
 });

@@ -1,7 +1,57 @@
 import {MILK_FOUNTAIN, professorFeet} from './room.mjs';
 
-const height = 92;
+export const professorHeight = 92;
 const width = 55;
+
+const ambientLines = [
+  'The milk must flow.',
+  'One man, one vote. Such a barbaric concept.',
+  'The wealthy deserve their wealth.',
+  'Economic inequality is a sign of a functioning society.',
+  'Universal suffrage? An unfortunate intellectual experiment.',
+  'The Dairy Aristocracy is the natural culmination of civilisation.',
+  'The Baron is a most enlightened patron of academia.',
+  'A prosperous ruling class is the foundation of a prosperous nation.',
+  'The peasants simply lack the intellectual capacity to govern.',
+  'Redistribution of wealth? Good heavens, no!',
+  'Inherited wealth is merely accumulated intergenerational excellence.',
+  'Poverty is an excellent incentive for productivity.',
+  'Social mobility is desirable, provided it remains theoretical.',
+  'The concentration of wealth is not a flaw in the system. It is its greatest achievement.',
+  'An educated peasantry is a rather dangerous proposition.',
+  'The free market works remarkably well when properly controlled by the aristocracy.',
+  'My research is entirely independent, as the Baron generously reminds me.',
+  'The evidence overwhelmingly supports the conclusions of my benefactors.',
+  'The lower classes must learn to live within their means. The upper classes have no such obligation.',
+  'Political stability requires that certain people remain politically irrelevant.',
+  'Some call it corruption. I prefer the term institutional continuity.',
+  'Equality before the law is a lovely sentiment. Entirely impractical, of course.',
+  'The milk trickles down eventually. My economic models assure me of that.',
+  'A milk pool may appear extravagant to the uneducated, but consider the economic stimulus!',
+  'History has consistently demonstrated the superiority of whichever class commissions its historians.',
+  'I have devoted fifty years to studying why people like myself deserve to rule.',
+  'God save the Baron, and God preserve our dividends!'
+];
+
+export function createProfessorSpeech(random = Math.random) {
+  let nextAt = 20;
+  let until = 0;
+  let previous = -1;
+  return (elapsed, visible) => {
+    if (!visible) return null;
+    if (elapsed >= nextAt) {
+      // Choose among the other lines after the first remark.
+      const count = ambientLines.length - Number(previous >= 0);
+      const index = Math.floor(random() * count);
+      previous = previous >= 0 && index >= previous ? index + 1 : index;
+      const text = ambientLines[previous];
+      until = elapsed + Math.max(3, text.length / 18);
+      nextAt = elapsed + 20;
+    }
+    if (elapsed >= until) return null;
+    return {text: ambientLines[previous], opacity: Math.min(1, (until - elapsed) / 0.5)};
+  };
+}
 
 function smoothstep(progress) {
   const t = Math.max(0, Math.min(1, progress));
@@ -27,7 +77,7 @@ export function drawProfessor(ctx, idleArt, sippingArt, elapsed) {
   ctx.fill();
   ctx.translate(x, y);
   ctx.rotate(rock);
-  ctx.drawImage(lift > 0.02 && sippingArt.naturalWidth ? sippingArt : idleArt, -width / 2, -height, width, height);
+  ctx.drawImage(lift > 0.02 && sippingArt.naturalWidth ? sippingArt : idleArt, -width / 2, -professorHeight, width, professorHeight);
 
   const handX = 13 - 4 * lift;
   const handY = -39 - 30 * lift;
