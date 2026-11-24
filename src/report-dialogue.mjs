@@ -78,7 +78,7 @@ const mensClothes = exchange([
   ])
 ]});
 
-const unattendedClothes = {
+export const unattendedClothes = {
   label: 'There are some unattended clothes by the pool.', playerMood: 'attentive',
   next: {text: "Women's clothes?", mood: 'suspicious', replies: [
     exchange([

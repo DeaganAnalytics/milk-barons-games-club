@@ -11,7 +11,7 @@ import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
 import {callOutMilo, createBaron, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
-import {createGuards, dispatchGuardToMilo, dispatchGuardToPool, summonGuard, updateGuards} from './guards.mjs';
+import {createGuards, dispatchGuardToMilo, dispatchRovingGuardsToPool, summonGuard, updateGuards} from './guards.mjs';
 import {createMilo, fleeMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
 import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
@@ -38,6 +38,7 @@ const render = createRenderer(document.getElementById('game'));
 let eliasApproaching = true;
 let seenMilo = false;
 let seenPoolAndClothes = false;
+let poolClothesReport = null;
 let seenPillory = false;
 let reportedPillory = false;
 let guestEscort = null;
@@ -78,6 +79,7 @@ const dialogue = createDialogue(baron, {
   canReportPillory: guard => seenPillory && !reportedPillory && guard && !guard.pursuit
     && !guard.poolWatch && !pilloryInView(cameraLeft(player.x), cameraTop(player.y)),
   canReportPool: () => seenPoolAndClothes,
+  canReportPoolClothes: () => poolClothesReport === null,
   canReportMilo: () => ({seen: seenMilo, pending: milo.injuryPending || guards.some(guard => guard.pursuit?.milo)}),
   takeMiloInjury: () => {
     const injured = milo.injuryPending;
@@ -85,7 +87,7 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
-    if (action === 'awardPilloryTip' || action === 'baronMoneyGift') coinBalance.change(5);
+    if (action === 'awardPilloryTip' || action === 'baronMoneyGift' || action === 'awardPoolClothesTip') coinBalance.change(5);
     if (action === 'baronMoneyPenalty') coinBalance.change(-25);
     if (action === 'finishEliasWelcome') {
       document.getElementById('coin-counter').hidden = false;
@@ -126,7 +128,9 @@ const dialogue = createDialogue(baron, {
       milkBalloon = createPilloryReportScene(player, target.guard, baron);
       info.textContent = 'Pip leads the guard to the pillory.';
     }
-    if (action === 'inspectPool') dispatchGuardToPool(target.guard);
+    if (action === 'inspectPool' && !poolClothesReport) {
+      poolClothesReport = {guards: dispatchRovingGuardsToPool(guards), thanked: false};
+    }
     if (action === 'reportMilo') dispatchGuardToMilo(target.guard);
     if (action === 'fleeMilo') fleeMilo(milo, player, baron, guards);
   }
@@ -159,6 +163,11 @@ const {readMovement, clearInput} = bindControls({
     if (target) {
       if (target.id === 'milo') seenMilo = true;
       if (target.guestGate) ropeWarning.talks++;
+      if (target.guard && poolClothesReport?.guards.includes(target.guard) && !poolClothesReport.thanked
+          && poolClothesReport.guards.every(guard => !guard.poolReportPending)) {
+        poolClothesReport.thanked = true;
+        target.poolClothesThanks = true;
+      }
       clearInput();
       dialogue.open(target);
     } else info.textContent = 'Nobody is close enough to talk to.';

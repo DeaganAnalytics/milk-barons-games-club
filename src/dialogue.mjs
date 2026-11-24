@@ -6,7 +6,7 @@ import {createProfessorConversation, professorMoods} from './professor-dialogue.
 import {professor} from './professor.mjs';
 import {lifeguardDialogue, lifeguardMoods} from './lifeguard-dialogue.mjs';
 import {lifeguard} from './milk-pool.mjs';
-import {availableReports, injuredMiloReply, poolReports} from './report-dialogue.mjs';
+import {availableReports, injuredMiloReply, poolReports, unattendedClothes} from './report-dialogue.mjs';
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
@@ -188,7 +188,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReportMilo, canReportPillory, canReportPool, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -306,7 +306,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const report = guardReplies[2];
     const status = canReportMilo?.() ?? {};
     const reports = [...availableReports(baron.completedRugTrips, status.seen, status.pending),
-      ...(canReportPool?.() ? poolReports : [])];
+      ...(canReportPool?.() ? poolReports.filter(report => report !== unattendedClothes || canReportPoolClothes?.() !== false) : [])];
     if (canReportPillory?.(target.guard)) reports.push({
       label: 'Someone has the Stickman Rights Commissioner in a pillory!',
       playerMood: 'alarmed',
@@ -326,6 +326,10 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       : target.id === elias.id ? (target.welcome ? eliasWelcome : eliasConversation)
       : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue
+      : target.poolClothesThanks ? {
+          text: "Thanks for the tip about the women skimmy-dipping in the milk pool. Best bloody shift I've had in months. Here, take a few coins for your troubles.",
+          mood: 'speaking', action: 'awardPoolClothesTip'
+        }
       : target.pilloryThanks ? {text: 'Thanks, I needed a laugh today. Have ₥5 as a tip.', mood: 'deadpan', action: 'awardPilloryTip'}
       : target.postEscort ? postEscortWarning
       : target.guestGate ? guestGateWarning

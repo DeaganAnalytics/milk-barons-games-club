@@ -1297,3 +1297,29 @@ test('Elias trails the camera edge and stays put while Pip approaches', async ()
   assert.ok(actor.x < 666);
   assert.equal(actor.running, true);
 });
+
+test('the pool report sends both roving guards to separate cheering spots and leaves posted guards alone', async () => {
+  const {dispatchRovingGuardsToPool} = await import('../src/guards.mjs');
+  const player = createPlayer();
+  const baron = createBaron();
+  const milo = createMilo();
+  const roving = createGuards(player, baron, milo);
+  roving.forEach((guard, i) => {
+    guard.x = MILK_POOL.x + (i ? -100 : 100);
+    guard.y = MILK_POOL.y + 135;
+  });
+  const posted = {...roving[0], x: MILK_POOL.x + 250, posted: true};
+  const guards = [...roving, posted];
+  assert.deepEqual(dispatchRovingGuardsToPool(guards), roving);
+  assert.ok(roving.every(guard => guard.pursuit?.pool));
+  const cheering = new Map();
+  for (let frame = 1; frame <= 1000; frame++) {
+    updateGuards(guards, player, baron, milo, frame / 20, 0.05);
+    for (const guard of roving) if (guard.poolWatch) cheering.set(guard, guard.x);
+    if (roving.every(guard => !guard.poolReportPending)) break;
+  }
+  assert.equal(cheering.size, 2);
+  assert.ok(Math.abs(cheering.get(roving[0]) - cheering.get(roving[1])) > 40);
+  assert.ok(roving.every(guard => !guard.poolReportPending));
+  assert.equal(posted.pursuit, undefined);
+});
