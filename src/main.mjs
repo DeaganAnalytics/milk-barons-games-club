@@ -11,7 +11,7 @@ import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} 
 import {advanceGuestEscort, beginGuestEscort, guestRopesInView} from './guest-escort.mjs';
 import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
-import {callOutMilo, createBaron, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
+import {callOutMilo, createBaron, isBaronDancing, isOnscreen, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
 import {createGuards, dispatchGuardToMilo, dispatchRovingGuardsToPool, summonGuard, updateGuards} from './guards.mjs';
 import {createMilo, fleeMilo, updateMilo} from './milo.mjs';
@@ -20,7 +20,7 @@ import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {createPlayer, movePlayer, takeDanceExit, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
-import {cameraLeft, cameraTop, guestEnclosure, insideGuestEnclosure, MILK_POOL, nearGuestGate, nearestInteraction, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, MILK_POOL, nearGuestGate, nearestInteraction, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 import {createStaff, updateStaff} from './staff.mjs';
 
 const player = createPlayer();
@@ -102,6 +102,23 @@ export const coinBalance = createCoinBalance((count, outcome) => {
   if (outcome === 'win') endGame('You Win!', 'You reached 200 coins.');
 });
 
+const firstSightLines = new Map([
+  ['baronDance', 'Is the Baron... dancing? Good heavens. So much jiggling.'],
+  ['milo', "A man dressed in rags scurries along the wall. Doesn't he look familiar?"],
+  ['ladies', "Two exceptionally wealthy, beautiful and sophisticated ladies gossip in the corner. They're well out of your league. Perhaps you should introduce yourself?"],
+  ['pool', "An entire swimming pool filled with pure milk. Such extravagance! Wait... where are those young ladies' clothes?!"],
+  ['pillory', 'A plainly dressed woman is trapped in a pillory, and a ridiculous-looking man in a top hat is enthusiastically waving at you. Perhaps you should investigate?'],
+  ['danceFloor', 'Two young women, a drunken guard and a man dressed as a giant milk bottle are dancing away. Perhaps you should join in?']
+]);
+const sightNotices = [];
+let nextSightNoticeAt = 0;
+
+function noteSight(key, visible) {
+  if (!visible || !firstSightLines.has(key)) return;
+  sightNotices.push(firstSightLines.get(key));
+  firstSightLines.delete(key);
+}
+
 function clubEvent(text, change) {
   const previousCoins = coinBalance.count;
   const previousKarma = karma.score;
@@ -114,6 +131,7 @@ function clubEvent(text, change) {
     karmaPoints && (karmaPoints > 0 ? 'Karma gained.' : 'Karma lost.')
   ].filter(Boolean);
   info.textContent = [text, ...details].join(' ');
+  nextSightNoticeAt = elapsed + 4;
 }
 
 const coinEvents = {
@@ -379,12 +397,15 @@ function frame(timestamp) {
   const cameraY = cameraTop(player.y);
   const cameraX = cameraLeft(player.x);
   updateEliasFollow(elias, player, baron, cameraX, cameraY, dt);
-  seenPillory ||= pilloryInView(cameraX, cameraY);
-  seenPoolAndClothes ||= [
-    MILK_POOL,
-    poolClothing
-  ].every(({x, y}) => x >= cameraX && x <= cameraX + ROOM_WIDTH
-    && y >= cameraY && y <= cameraY + ROOM_HEIGHT);
+  const inView = ({x, y}) => x >= cameraX && x <= cameraX + ROOM_WIDTH
+    && y >= cameraY && y <= cameraY + ROOM_HEIGHT;
+  const pilloryVisible = pilloryInView(cameraX, cameraY);
+  seenPillory ||= pilloryVisible;
+  seenPoolAndClothes ||= inView(MILK_POOL) && inView(poolClothing);
+  noteSight('ladies', partyGuests.every(guest => inView({x: guest.x, y: guest.y - 33})));
+  noteSight('pool', inView(MILK_POOL));
+  noteSight('pillory', pilloryVisible);
+  noteSight('danceFloor', inView(DANCE_FLOOR));
   const wasTraveling = baron.route.length > 0;
   const serviceWasActive = Boolean(milkService.scene);
   if (!serviceWasActive) updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY, guards);
@@ -400,8 +421,13 @@ function frame(timestamp) {
   if (updateMilo(milo, baron, elapsed, dt, guards) && !baronLocked) callOutMilo(baron, milo, elapsed);
   if (!baronLocked) updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed);
   const arrivedGuard = updateGuards(guards, player, baron, milo, elapsed, dt);
-  seenMilo ||= milo.x >= cameraX && milo.x <= cameraX + ROOM_WIDTH
+  const miloVisible = milo.x >= cameraX && milo.x <= cameraX + ROOM_WIDTH
     && milo.y + 20 >= cameraY && milo.y - 46 <= cameraY + ROOM_HEIGHT;
+  seenMilo ||= miloVisible;
+  noteSight('milo', miloVisible);
+  noteSight('baronDance', isBaronDancing(baron) && isOnscreen(baron, cameraX, cameraY));
+  // Stagger discoveries that happen together so each line can be read.
+  if (sightNotices.length && elapsed >= nextSightNoticeAt) clubEvent(sightNotices.shift());
   if (arrivedGuard) {
     if (guestEscort?.guard === arrivedGuard) guestEscort.phase = 'warning';
     clearInput();
