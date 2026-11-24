@@ -359,7 +359,7 @@ export function createRenderer(canvas, onCowGuardSeen) {
     const ropeScene = ropeWarning?.scene;
     const pipFalling = ropeScene?.phase === 'fall' || ropeScene?.phase === 'over';
     const actors = [
-      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene.time, drawPip) : drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant && !milkBalloon.guard ? milkBalloonHand(milkBalloon, player) : null)},
+      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene, drawPip) : drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant && !milkBalloon.guard ? milkBalloonHand(milkBalloon, player) : null)},
       {depth: baron.y + 34, draw: () => {
         if (dancing) drawBaronDance(ctx, baronDancePose, baron, elapsed);
         else drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed);
@@ -469,8 +469,8 @@ export function createRenderer(canvas, onCowGuardSeen) {
       }
       actors.push({depth: guest.y, draw: () => {
         ctx.save();
-        if (pipFalling) ctx.translate(0, -Math.abs(Math.sin(elapsed * 9 + index * 1.8)) * 6);
-        drawPartyGuest(ctx, guest, partySprites[index], elapsed, milk, pouring || pipFalling);
+        if (pipFalling && ropeScene.celebrate) ctx.translate(0, -Math.abs(Math.sin(elapsed * 9 + index * 1.8)) * 6);
+        drawPartyGuest(ctx, guest, partySprites[index], elapsed, milk, pouring || (pipFalling && ropeScene.celebrate));
         ctx.restore();
       }});
     });
@@ -520,7 +520,7 @@ export function createRenderer(canvas, onCowGuardSeen) {
         drawSpeech(ctx, warning.guest, 1, guest.x, guest.y - 68, guest.y, cameraX, cameraY);
       }
     }
-    if (pipFalling) {
+    if (pipFalling && ropeScene.celebrate) {
       partyGuests.forEach((guest, index) => {
         if (guest.x > cameraX && guest.x < cameraX + ROOM_WIDTH) {
           drawSpeech(ctx, index === 0 ? 'Bravo!' : 'Splendid!', 1, guest.x, guest.y - 75, guest.y, cameraX, cameraY);

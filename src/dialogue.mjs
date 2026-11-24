@@ -214,6 +214,7 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
   let greetingIndex = 0;
   let bartenderGreetingIndex = 0;
   let askedDancingBaron = false;
+  let askedEliasAboutVampires = false;
   let askedBaronForMoney = false;
   const usedReplies = new Set();
   let reportedBaronFollowing = false;
@@ -304,12 +305,14 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
     const replies = report ? [report, ...node.replies] : node.replies ?? [];
     const seenCowGuard = hasSeenCowGuard?.();
     const availableReplies = replies.filter(reply => !usedReplies.has(reply.once)
-      && (seenCowGuard || !cowGuardQuestions.has(reply.label)));
+      && (seenCowGuard || !cowGuardQuestions.has(reply.label))
+      && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
     replyList.replaceChildren(...availableReplies.map(reply => {
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = reply.label;
       button.addEventListener('click', () => {
+        if (character === elias.id && reply.label === 'Are you a vampire?') askedEliasAboutVampires = true;
         if (character === 'baron' && reply.label === 'Can I speak to DJ Dairy?') askedDancingBaron = true;
         if (reply.once === 'lifeguardMoneyRequest' || reply.once === 'bartenderMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;

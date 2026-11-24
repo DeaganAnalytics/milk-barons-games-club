@@ -389,7 +389,7 @@ try {
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-creamery.png`, Buffer.from(shot.data, 'base64'));
   }
   await activate('The Bartender');
-  assert.equal(await evaluate("document.querySelectorAll('#conversation-replies button').length"), 7);
+  assert.equal(await evaluate("document.querySelectorAll('#conversation-replies button').length"), 6);
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), "What'll it be? Milk?");
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'),'::before')
     .backgroundImage.includes('/dialogue/bartender/polite.webp')`));
@@ -502,6 +502,25 @@ try {
   for (const {id, posted, visible, offered} of cowGuardOptions) {
     assert.equal(offered, visible, `Cow guard question for ${id} (posted: ${posted})`);
   }
+
+  const garlicUnlock = await evaluate(`(async () => {
+    const {createDialogue} = await import('./src/dialogue.mjs');
+    const dialogue = createDialogue();
+    const bartender = {id: 'creamery-bartender', title: 'The Bartender'};
+    const buttons = () => Array.from(document.querySelectorAll('#conversation-replies button'));
+    const offered = () => buttons().some(button => button.textContent === 'Do you have any garlic-flavoured milk?');
+    dialogue.open(bartender);
+    const before = offered();
+    dialogue.dismiss();
+    dialogue.open({id: 'elias', title: 'Elias'});
+    buttons().find(button => button.textContent === 'Are you a vampire?').click();
+    dialogue.dismiss();
+    dialogue.open(bartender);
+    const after = offered();
+    dialogue.dismiss();
+    return [before, after];
+  })()`, true);
+  assert.deepEqual(garlicUnlock, [false, true]);
 
   await load(390, 844, true, 'conditional-baron-dialogue');
   const choices = () => evaluate('Array.from(document.querySelectorAll("#conversation-replies button"), button => button.textContent)');

@@ -193,8 +193,9 @@ const dialogue = createDialogue(baron, {
     if (action === 'bartenderDoubleTip') clubEvent('The bartender and the guard collect their tips.', () => coinBalance.change(-5));
     if (action === 'bartenderRefusal') {
       clearInput();
-      beginRopeScene(ropeWarning, creameryGuard, player, baron);
-      ropeWarning.scene.deathMessage = 'You refused to pay the bartender.';
+      beginRopeScene(ropeWarning, creameryGuard, player, baron, {
+        deathMessage: 'You refused to pay the bartender.', celebrate: false
+      });
     }
     if (action === 'stealPoolClothing' && takePoolClothing(milkPool, target.selection, elapsed)) {
       clubEvent(clothingEvents[target.selection], () => {

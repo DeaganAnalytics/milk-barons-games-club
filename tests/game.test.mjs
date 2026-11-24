@@ -1547,3 +1547,26 @@ test('bartender cycles ten greetings and offers drinks, tips, and the refusal sc
   assert.equal(tipOptions[2].next.replies[0].next.exitAction, 'bartenderRefusal');
   assert.equal(tipOptions[2].next.replies[1].next.replies[0].next.action, 'bartenderDoubleTip');
 });
+
+test('the Creamery refusal uses the same animated guard phases without the ladies celebrating', async () => {
+  const {createCreameryGuard} = await import('../src/creamery.mjs');
+  const guard = createCreameryGuard();
+  const player = {...createPlayer(), x: guard.x - 90, y: guard.y + 32};
+  const state = createRopeWarning();
+  beginRopeScene(state, guard, player, createBaron(), {deathMessage: 'Creamery refusal', celebrate: false});
+  const {scene} = state;
+  const phases = new Set([scene.phase]);
+  const oldX = guard.x;
+  const oldY = guard.y;
+  advanceRopeScene(scene, player, 0.05);
+  const firstStep = Math.hypot(guard.x - oldX, guard.y - oldY);
+  assert.ok(firstStep > 0 && firstStep < 12);
+  for (let i = 0; i < 180 && scene.phase !== 'over'; i++) {
+    advanceRopeScene(scene, player, 0.05);
+    phases.add(scene.phase);
+  }
+  assert.deepEqual([...phases], ['approach', 'aim', 'fall', 'over']);
+  assert.equal(guard.walking, false);
+  assert.equal(scene.celebrate, false);
+  assert.equal(scene.deathMessage, 'Creamery refusal');
+});

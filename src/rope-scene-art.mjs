@@ -1,12 +1,22 @@
+import {GUARD_AIM_TIME} from './rope-warning.mjs';
+
+const ease = progress => progress * progress * (3 - 2 * progress);
+
 export function drawRopeAim(ctx, sprite, scene, player) {
   const {guard, phase, time} = scene;
   const side = guard.facing === 1 ? 1 : -1;
-  const aim = phase === 'aim' ? Math.min(1, time / 0.65) : 1;
-  const recoil = phase === 'fall' ? Math.max(0, 1 - time * 8) : 0;
-  const firing = phase === 'fall' && time < 0.13;
+  const aim = phase === 'aim' ? ease(Math.min(1, time / GUARD_AIM_TIME)) : 1;
+  const turn = phase === 'aim' ? ease(Math.min(1, time / 0.16)) : 1;
+  const recoil = phase === 'fall' ? (1 - ease(Math.min(1, time / 0.2))) * Math.min(1, time / 0.035) : 0;
+  const flash = phase === 'fall' ? 1 - ease(Math.min(1, time / 0.13)) : 0;
 
   ctx.save();
   ctx.translate(guard.x, guard.y + 22);
+  if (turn < 1) {
+    const frame = (scene.incomingFacing ?? 0) * 100;
+    ctx.drawImage(sprite, frame, 0, 100, 200, -21, -84, 42, 86);
+    ctx.globalAlpha = turn;
+  }
   ctx.scale(side, 1);
   ctx.drawImage(sprite, 100, 0, 100, 200, -21, -84, 42, 86);
   ctx.translate(1, -40);
@@ -34,7 +44,8 @@ export function drawRopeAim(ctx, sprite, scene, player) {
     ctx.ellipse(x, 3, 3, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
   }
-  if (firing) {
+  if (flash > 0) {
+    ctx.globalAlpha = flash;
     ctx.fillStyle = '#ffe39f';
     ctx.beginPath();
     ctx.moveTo(34, 0);
@@ -48,23 +59,28 @@ export function drawRopeAim(ctx, sprite, scene, player) {
   }
   ctx.restore();
 
-  if (firing) {
+  if (flash > 0) {
+    ctx.save();
+    ctx.globalAlpha = flash;
     ctx.strokeStyle = '#ffe7abbd';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     ctx.moveTo(guard.x + side * 44, guard.y - 17);
     ctx.lineTo(player.x, player.y - 17);
     ctx.stroke();
+    ctx.restore();
   }
 }
 
-export function drawPipFall(ctx, player, time, drawPip) {
+export function drawPipFall(ctx, player, scene, drawPip) {
+  const {time, guard} = scene;
+  const away = Math.sign(player.x - guard.x) || 1;
   const progress = Math.min(1, time / 0.55);
-  const fall = 1 - (1 - progress) ** 2;
+  const fall = ease(progress);
   const foot = player.y + 19;
   ctx.save();
-  ctx.translate(player.x, foot);
-  ctx.rotate(fall * Math.PI / 2);
+  ctx.translate(player.x + away * fall * 5, foot);
+  ctx.rotate(away * fall * Math.PI / 2);
   ctx.translate(-player.x, -foot);
   drawPip(ctx, player, 0);
   ctx.restore();
