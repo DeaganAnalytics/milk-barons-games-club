@@ -1,3 +1,4 @@
+import {clubSightLines} from './club-sight-lines.mjs';
 import {facingIndex} from './directions.mjs';
 import {advanceEliasRun, elias, routeEliasToPip, updateEliasFollow} from './elias.mjs';
 import {createCoinBalance, STARTING_COINS} from './coins.mjs';
@@ -110,14 +111,7 @@ export const coinBalance = createCoinBalance((count, outcome) => {
   if (outcome === 'win') endGame('You Win!', 'You reached 200 coins.');
 });
 
-const firstSightLines = new Map([
-  ['baronDance', 'Is the Baron... dancing? Good heavens. So much jiggling.'],
-  ['milo', "A man dressed in rags scurries along the wall. Doesn't he look familiar?"],
-  ['ladies', "Two exceptionally wealthy, beautiful and sophisticated ladies gossip in the corner. They're well out of your league. Perhaps you should introduce yourself?"],
-  ['pool', "An entire swimming pool filled with pure milk. Such extravagance! Wait... where are those young ladies' clothes?!"],
-  ['pillory', 'A plainly dressed woman is trapped in a pillory, and a ridiculous-looking man in a top hat is enthusiastically waving at you. Perhaps you should investigate?'],
-  ['danceFloor', 'Two young women, a drunken guard and a man dressed as a giant milk bottle are dancing away. Perhaps you should join in?']
-]);
+const firstSightLines = new Map(clubSightLines);
 const sightNotices = [];
 let nextSightNoticeAt = 0;
 

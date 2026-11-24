@@ -1,3 +1,4 @@
+import {clubSightLines} from '../src/club-sight-lines.mjs';
 import {milkCalls} from '../src/milk-service.mjs';
 import {staffIds} from '../src/staff.mjs';
 import assert from 'node:assert/strict';
@@ -301,6 +302,29 @@ try {
   assert.equal(await evaluate('document.querySelector(".pressed") === null'), true);
   await activate('The Milk Baron');
   await closeConversation();
+
+  await load(412, 915, true, 'pixel-8a-club-text');
+  const wrapping = await evaluate(`(() => {
+    const info = document.getElementById('info');
+    const sample = info.cloneNode();
+    sample.removeAttribute('id');
+    sample.style.visibility = 'hidden';
+    info.after(sample);
+    try {
+      const range = document.createRange();
+      return ${JSON.stringify(clubSightLines)}.map(([key, text]) => {
+        sample.textContent = text;
+        range.selectNodeContents(sample);
+        const lines = new Set(Array.from(range.getClientRects(), rect => rect.top));
+        return [key, lines.size];
+      });
+    } finally {
+      sample.remove();
+    }
+  })()`);
+  for (const [key, lines] of wrapping) {
+    assert.ok(lines > 0 && lines <= 3, `Club notice "${key}" wraps to ${lines} lines at 412px`);
+  }
 
   await load(1100, 950, false, 'guard-walk');
   assert.equal(await evaluate('window.guardSteps.length'), 0);
