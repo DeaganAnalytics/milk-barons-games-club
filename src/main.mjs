@@ -92,6 +92,8 @@ const dialogue = createDialogue(baron, {
     if (action === 'awardPilloryTip' || action === 'baronMoneyGift' || action === 'awardPoolClothesTip') coinBalance.change(5);
     if (action === 'baronMoneyPenalty') coinBalance.change(-25);
     if (action === 'finePoolLie') coinBalance.change(-10);
+    if (action === 'chargeProfessorFee' || action === 'lifeguardMoneyPenalty') coinBalance.change(-5);
+    if (action === 'lifeguardMoneyGift') coinBalance.change(3);
     if (action === 'chargeDanceFee') coinBalance.change(-3);
     if (action === 'collectTax') coinBalance.collectTax();
     if (action === 'finishEliasWelcome') {

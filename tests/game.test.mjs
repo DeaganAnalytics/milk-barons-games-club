@@ -1076,7 +1076,8 @@ test('Pip can meet the professor once and revisit all four topics', () => {
   assert.match(first.text, /what is your name/);
   assert.deepEqual(menu.replies.map(reply => reply.label), [
     'What are you doing here?', 'What do you think of the Baron?',
-    'What do you think about democracy?', 'You seem like a smart man. Why are the guards cows?'
+    'What do you think about democracy?', 'You seem like a smart man. Why are the guards cows?',
+    'Can I have some money?'
   ]);
 
   const seen = new Set();
@@ -1094,6 +1095,37 @@ test('Pip can meet the professor once and revisit all four topics', () => {
   assert.deepEqual([...moods].sort(), [...professorMoods].sort());
   assert.deepEqual(endings, ['Guards!']);
   assert.equal(open(), menu);
+});
+
+test('the Professor’s money lecture charges at the end and returns to the topic menu', () => {
+  const open = createProfessorConversation();
+  open();
+  const menu = open();
+  const request = menu.replies.find(reply => reply.label === 'Can I have some money?');
+  assert.equal(request.once, 'chargeProfessorFee');
+  let node = request.next;
+  for (const label of ['Continue', 'Continue', 'Continue', 'I suppose that makes sense.', 'Well, yes.', 'I guess so.', 'Wait, what?!']) {
+    assert.equal(node.action, undefined);
+    assert.equal(node.replies[0].label, label);
+    node = node.replies[0].next;
+  }
+  assert.equal(node.action, request.once);
+  assert.match(node.text, /investment in human capital/);
+  assert.equal(node.replies[0].next, menu);
+});
+
+test('the one-time lifeguard request splits at 50% and 75% with the correct coin actions', async () => {
+  const {lifeguardDialogue} = await import('../src/lifeguard-dialogue.mjs');
+  const request = lifeguardDialogue.replies.find(reply => reply.label === 'Can I have some money?');
+  assert.equal(request.once, 'lifeguardMoneyRequest');
+  assert.equal(request.next.text, 'What? Why?');
+  const chooseOutcome = request.next.replies[0].next;
+  assert.equal(chooseOutcome(0).action, 'lifeguardMoneyGift');
+  assert.equal(chooseOutcome(0.499).action, 'lifeguardMoneyGift');
+  assert.equal(chooseOutcome(0.5).action, undefined);
+  assert.match(chooseOutcome(0.749).text, /charity/);
+  assert.equal(chooseOutcome(0.75).replies[0].next.action, 'lifeguardMoneyPenalty');
+  assert.equal(chooseOutcome(0.999).replies[0].next.text, 'Pay up, scrawny.');
 });
 
 test('the attendant introduces the stall once before offering the milk balloon game', async () => {

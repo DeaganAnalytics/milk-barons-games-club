@@ -4,9 +4,9 @@ const [smirk, skeptical, thinking, condescending, deadpan] = professorMoods;
 const menu = {text: '', mood: smirk, replies: []};
 const back = [{label: 'Continue', playerMood: 'attentive', next: menu}];
 
-function exchange(steps, replies = back) {
+function exchange(steps, replies = back, action) {
   return steps.reduceRight((next, [label, text, mood, playerMood = 'thinking']) => ({
-    label, playerMood, next: {text, mood, replies: next ? [next] : replies}
+    label, playerMood, next: {text, mood, replies: next ? [next] : replies, action: next ? undefined : action}
   }), null);
 }
 
@@ -79,6 +79,18 @@ const politicalSystem = exchange([
   ["Then what's the point of voting?", 'To demonstrate overwhelming public support for the correct outcome, naturally.', smirk]
 ]);
 
+const moneyLecture = exchange([
+  ['Can I have some money?', 'Good heavens, no! The indiscriminate redistribution of wealth undermines the incentive structures upon which our magnificent economic system depends.', skeptical, 'attentive'],
+  ['Continue', 'Were I to reward your poverty with money, I would effectively be subsidising your failure to accumulate capital.', condescending],
+  ['Continue', 'Furthermore, by reducing my own wealth, I would diminish my capacity to generate future wealth, thereby depriving society of the considerable economic benefits of my prosperity.', thinking],
+  ['Continue', 'You see, young man, by refusing to give you money, I am ultimately acting in your best interests.', smirk, 'worried'],
+  ['I suppose that makes sense.', "Splendid! Now, would you agree that the acquisition of knowledge is an investment in one's future prosperity?", smirk, 'attentive'],
+  ['Well, yes.', 'And that those who provide valuable services deserve financial compensation?', thinking],
+  ['I guess so.', 'Excellent! That concludes your introductory lecture in political economy. My usual consultation fee is ₥50, but in recognition of your financial circumstances, I shall charge you a mere ₥5.', smirk],
+  ['Wait, what?!', "Congratulations, young man! You've just made your first investment in human capital.", smirk, 'alarmed']
+], back, 'chargeProfessorFee');
+moneyLecture.once = 'chargeProfessorFee';
+
 menu.replies.push(
   exchange([
     ['What are you doing here?', 'Drinking milk, of course. Keeps the bones strong, the skin youthful and the intellect sharp.', smirk],
@@ -100,7 +112,8 @@ menu.replies.push(
     ['They have horns!', 'Guards.', deadpan, 'alarmed'],
     ['And udders!', 'My dear boy, I cannot make this any simpler for you. They are guards.', condescending, 'alarmed'],
     ['But...', 'Guards!', skeptical, 'worried']
-  ], [])
+  ], []),
+  moneyLecture
 );
 
 export function createProfessorConversation() {

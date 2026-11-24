@@ -38,6 +38,26 @@ const clothesTheft = reply('What if someone steals their clothes?', 'thinking', 
   ]
 ));
 
+function moneyOutcome(roll = Math.random()) {
+  if (roll < 0.5) return {
+    ...say("Heh, I'm enjoying the view today. Here, have ₥3. Now MOOOVE your scrawny arse out of the way!", grin),
+    action: 'lifeguardMoneyGift'
+  };
+  if (roll < 0.75) return say("Do I look like a charity? I don't care! Now MOOOVE IT!", frown);
+  return say("So you're desperate, eh? Give me ₥5 or I'll tell the Baron you've been begging his staff for money.", frown, [
+    reply("You've got to be kidding me.", 'alarmed', {
+      ...say('Pay up, scrawny.', deadpan), action: 'lifeguardMoneyPenalty'
+    })
+  ]);
+}
+
+const requestMoney = {
+  ...reply('Can I have some money?', 'worried', say('What? Why?', thinking, [
+    reply("If I don't get ₥200, the Baron will send me to the dairy.", 'worried', moneyOutcome)
+  ])),
+  once: 'lifeguardMoneyRequest'
+};
+
 lifeguardDialogue.replies.push(
   reply('Can I go in?', 'thinking', say('Are you a beautiful woman or a wealthy man?', thinking, [
     reply('[Lie] Yes.', 'attentive', say("And I'm a qualified lifeguard. Get out of here!", frown)),
@@ -72,5 +92,6 @@ lifeguardDialogue.replies.push(
       "I wouldn't order the complimentary milkshake if I were you.", thinking, back
     ))
   ])),
+  requestMoney,
   reply("I'll leave you to it.", 'attentive', say("Excellent. You're obstructing my view.", deadpan))
 );

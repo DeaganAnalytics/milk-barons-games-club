@@ -204,6 +204,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
   let askedBaronForMoney = false;
+  const usedReplies = new Set();
   let reportedBaronFollowing = false;
   let heardLifeguardCannotSwim = false;
   const closeButton = document.getElementById('conversation-close');
@@ -231,6 +232,18 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     element.dataset.expression = mood;
   }
 
+  function finishAction(finishedAction, target) {
+    if (finishedAction === 'reportBaronFollowing') {
+      reportedBaronFollowing = true;
+      return;
+    }
+    if (finishedAction === 'chargeProfessorFee') {
+      if (usedReplies.has(finishedAction)) return;
+      usedReplies.add(finishedAction);
+    }
+    onAction?.(finishedAction, target);
+  }
+
   function close(runAction = true) {
     panel.hidden = true;
     map.hidden = info.hidden = controls.hidden = false;
@@ -239,8 +252,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const finishedTarget = activeTarget;
     activeTarget = null;
     action = null;
-    if (runAction && finishedAction === 'reportBaronFollowing') reportedBaronFollowing = true;
-    else if (runAction && finishedAction) onAction?.(finishedAction, finishedTarget);
+    if (runAction && finishedAction) finishAction(finishedAction, finishedTarget);
   }
 
   function show(node, character, playerMood, withoutMilk) {
@@ -265,14 +277,22 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const currentSpeaker = node.character ?? character;
     speaker.textContent = currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title;
     setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk);
-    replyList.replaceChildren(...(node.replies ?? []).map(reply => {
+    replyList.replaceChildren(...(node.replies ?? []).filter(reply => !usedReplies.has(reply.once)).map(reply => {
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = reply.label;
       button.addEventListener('click', () => {
+        if (reply.once === 'lifeguardMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;
         if (next === null) close();
-        else show(next, character, reply.playerMood, withoutMilk);
+        else {
+          if (node.action === 'chargeProfessorFee') {
+            action = null;
+            finishAction(node.action, activeTarget);
+            if (!activeTarget) return; // The fee may end the game.
+          }
+          show(next, character, reply.playerMood, withoutMilk);
+        }
       });
       return button;
     }));
