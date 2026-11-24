@@ -6,7 +6,7 @@ export const lifeguard = {
 };
 
 export const poolClothing = {
-  id: 'pool-clothing', title: 'Swimmers’ Clothing', x: MILK_POOL.x + 58, y: MILK_POOL.y - 109, radius: 24
+  id: 'pool-clothing', title: 'Swimmers’ Clothing', x: MILK_POOL.x + 58, y: MILK_POOL.y - 109, radius: 24, interactionHalfWidth: 48
 };
 
 export const remainingClothing = {women: 'man', man: 'women', all: null};
@@ -105,16 +105,21 @@ const missingSuitGuardLines = [
   "Whoever did this is getting a bloody fine!"
 ];
 
-export function takePoolClothing(pool, selection) {
+export function takePoolClothing(pool, selection, elapsed) {
   if (pool.stolenClothing || !Object.hasOwn(remainingClothing, selection)) return false;
   pool.stolenClothing = selection;
+  pool.clothingAmbientAt = elapsed + 60;
+  return true;
+}
+
+function startClothingAmbient(pool) {
+  pool.clothingAmbientStarted = true;
   pool.reaction = pool.pendingReaction = null;
   pool.lines = [];
   pool.replyDelay = false;
-  pool.remaining = 2;
-  pool.guardNext = selection === 'man';
+  pool.remaining = 0;
+  pool.guardNext = pool.stolenClothing === 'man';
   pool.lifeguardLine = 0;
-  return true;
 }
 
 function swimmerPosition(swimmer, elapsed) {
@@ -129,7 +134,7 @@ function swimmerPosition(swimmer, elapsed) {
 
 export function createMilkPool() {
   return {
-    stolenClothing: null, clothingReported: false,
+    stolenClothing: null, clothingReported: false, clothingAmbientAt: Infinity, clothingAmbientStarted: false,
     snorkel: {x: 0, y: 35, direction: -1, swimmer: 0, returning: false},
     reaction: null, pendingReaction: null, lifeguardLine: 0, guardNext: true, lines: [], replyDelay: false, remaining: 11
   };
@@ -138,7 +143,8 @@ export function createMilkPool() {
 export function updateMilkPool(pool, elapsed, dt, random = Math.random) {
   if (dt <= 0) return;
   if (pool.reaction && elapsed >= pool.reaction.until) pool.reaction = null;
-  const dressesMissing = pool.stolenClothing === 'women' || pool.stolenClothing === 'all';
+  if (!pool.clothingAmbientStarted && elapsed >= pool.clothingAmbientAt) startClothingAmbient(pool);
+  const dressesMissing = pool.clothingAmbientStarted && pool.stolenClothing !== 'man';
   const snorkel = pool.snorkel;
   const target = snorkel.returning
     ? {x: snorkel.swimmer === 0 ? -204 : 204, y: 35}
@@ -185,7 +191,7 @@ export function updateMilkPool(pool, elapsed, dt, random = Math.random) {
   } else {
     if (pool.guardNext) {
       const remarks = dressesMissing ? missingDressesGuardLines
-        : pool.stolenClothing === 'man' ? missingSuitGuardLines : lifeguardLines;
+        : pool.clothingAmbientStarted ? missingSuitGuardLines : lifeguardLines;
       pool.lines = [['lifeguard', remarks[pool.lifeguardLine]]];
       pool.lifeguardLine = (pool.lifeguardLine + 1) % remarks.length;
     } else {
