@@ -354,3 +354,21 @@ canvas {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .baron-slap #conversation-npc {
+    animation: baron-lunge 280ms ease-out;
+  }
+
+  .baron-slap #conversation-player {
+    animation: pip-recoil 320ms 70ms ease-out both;
+  }
+}
+
+@keyframes baron-lunge {
+  35% { transform: translateX(-9%); }
+}
+
+@keyframes pip-recoil {
+  35% { transform: translateX(-7%) rotate(-5deg); }
+}

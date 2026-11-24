@@ -41,6 +41,21 @@ export function createBaron() {
   };
 }
 
+export function advanceBaronApproach(baron, target, dt) {
+  const dx = target.x - baron.x;
+  const dy = target.y - baron.y;
+  const distance = Math.hypot(dx, dy);
+  const step = Math.min(distance, dt * 185);
+  baron.walking = step > 0;
+  if (step > 0) {
+    baron.facing = facingIndex(dx, dy);
+    baron.stride = (baron.stride + step * TURN / 18) % TURN;
+    baron.x += dx * step / distance;
+    baron.y += dy * step / distance;
+  }
+  return step === distance;
+}
+
 export function isOnscreen(baron, cameraX, cameraY) {
   // Include the full sprite, so a partly visible Baron does not start the timer.
   return baron.x + 33 > cameraX && baron.x - 33 < cameraX + ROOM_WIDTH
