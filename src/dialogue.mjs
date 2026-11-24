@@ -22,6 +22,19 @@ const partyGuestOpening = {
   ]
 };
 
+const postEscortWarning = {
+  text: 'Central? Please send a guard to protect our esteemed female guests in the bottom left corner.',
+  mood: 'radio', replies: [
+    {label: 'Continue', playerMood: 'worried', next: {
+      text: 'You have been warned. They are out of league.', mood: 'formal', replies: [
+        {label: 'I just wanted to...', playerMood: 'sorry', next: {
+          text: "Don't!", mood: 'angry'
+        }}
+      ]
+    }}
+  ]
+};
+
 const guestGateWarning = {
   text: "Sir, stop bothering the ladies. Please leave or I'll have to shoot you.", mood: 'formal', replies: [
     {label: "You'll shoot me?", playerMood: 'alarmed', next: {text: "Yes. Baron's orders.", mood: 'deadpan'}},
@@ -197,9 +210,11 @@ export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} 
     panel.hidden = true;
     map.hidden = info.hidden = controls.hidden = false;
     interact.focus({preventScroll: true});
-    const finishedAction = action;
+    const finishedAction = action ?? (activeTarget?.postEscort ? 'secureGuests' : null);
+    const finishedTarget = activeTarget;
+    activeTarget = null;
     action = null;
-    if (finishedAction) onAction?.(finishedAction, activeTarget);
+    if (finishedAction) onAction?.(finishedAction, finishedTarget);
   }
 
   function show(node, character, playerMood, withoutMilk) {
@@ -246,6 +261,7 @@ export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} 
     activeTarget = target;
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
+      : target.postEscort ? postEscortWarning
       : target.guestGate ? guestGateWarning
       : target.summoned ? {
           text: target.repeat ? 'Sir, please stop bothering the ladies.' : 'Sir I have to ask you to leave.',
@@ -265,7 +281,7 @@ export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} 
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;
-    show(opening, target.id, injured || target.summoned || target.guestGate ? 'worried' : 'attentive', target.withoutMilk);
+    show(opening, target.id, injured || target.summoned || target.guestGate || target.postEscort ? 'worried' : 'attentive', target.withoutMilk);
   }
 
   return {open, isOpen: () => !panel.hidden};

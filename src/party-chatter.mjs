@@ -1,6 +1,6 @@
 import {runServiceStaff} from './milk-service.mjs';
 import {partyGuests} from './party-guests.mjs';
-import {guestEnclosure, guestGateOutside, insideGuestEnclosure, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
+import {guestEnclosure, guestGateInside, guestGateOutside, insideGuestEnclosure, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
 
 const exchanges = [
   [[0, 'Oh, I just ADORE milk!'], [1, "Darling, it's simply divine!"]],
@@ -55,11 +55,8 @@ export function partySpeech(chatter, camera) {
 }
 
 function nextExchange(chatter, random) {
-  const justEnclosed = guestEnclosure.active && !chatter.enclosed;
-  if (!chatter.order.length || justEnclosed) {
-    if (!chatter.order.length) chatter.order = [...exchanges];
-    if (guestEnclosure.active) chatter.order.push(...enclosedExchanges);
-    chatter.enclosed = guestEnclosure.active;
+  if (!chatter.order.length) {
+    chatter.order = chatter.enclosed ? [...exchanges, ...enclosedExchanges] : [...exchanges];
     for (let i = chatter.order.length - 1; i > 0; i--) {
       const j = Math.floor(random() * (i + 1));
       [chatter.order[i], chatter.order[j]] = [chatter.order[j], chatter.order[i]];
@@ -78,12 +75,13 @@ function routeToGuests(server, baron) {
   if (!guestEnclosure.active) return routeAroundBaron(server, serviceSpot, baron);
   server.guestAccess = true;
   if (insideGuestEnclosure(server)) return [serviceSpot];
-  const {east, gateY} = guestEnclosure;
-  return [...routeAroundBaron(server, guestGateOutside, baron), {x: east - 24, y: gateY}, serviceSpot];
+  return [...routeAroundBaron(server, guestGateOutside, baron), guestGateInside, serviceSpot];
 }
 
-function routeOutOfGuests() {
-  return [{x: guestEnclosure.east - 24, y: guestEnclosure.gateY}, guestGateOutside];
+function routeOutOfGuests(server) {
+  // Once aligned at the opening, keep heading east even if the route is recalculated.
+  const atOpening = server.x >= guestGateInside.x - 1 && Math.abs(server.y - guestEnclosure.gateY) < 1;
+  return atOpening ? [guestGateOutside] : [guestGateInside, guestGateOutside];
 }
 
 function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
@@ -108,7 +106,8 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
     const waypoint = route[0];
     const before = Math.hypot(server.x - waypoint.x, server.y - waypoint.y);
     const obstacles = refill.blocked > 1.2 ? [] : [...staff, ...guards];
-    if (runServiceStaff(server, waypoint, baron, obstacles, dt) === 'arrived') {
+    const crossing = waypoint === guestGateInside || (refill.exiting && waypoint === guestGateOutside);
+    if (runServiceStaff(server, waypoint, baron, obstacles, dt, crossing) === 'arrived') {
       route.shift();
       refill.blocked = 0;
       if (!route.length) {
@@ -125,7 +124,7 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
     } else if (before - Math.hypot(server.x - waypoint.x, server.y - waypoint.y) < dt * 30) {
       refill.blocked += dt;
       if (refill.blocked > 2) {
-        refill.route = refill.exiting ? routeOutOfGuests() : routeToGuests(server, baron);
+        refill.route = refill.exiting ? routeOutOfGuests(server) : routeToGuests(server, baron);
         refill.blocked = 0;
       }
     }
@@ -141,7 +140,7 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
     server.facing = 1;
   } else if (guestEnclosure.active) {
     refill.exiting = true;
-    refill.route = routeOutOfGuests();
+    refill.route = routeOutOfGuests(server);
   } else {
     server.serviceDuty = false;
     server.pauseUntil = elapsed + 0.5;
@@ -152,6 +151,12 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
 
 export function updatePartyChatter(chatter, camera, staff, baron, guards, elapsed, dt, random = Math.random) {
   if (dt <= 0) return;
+  if (guestEnclosure.active && !chatter.enclosed) {
+    chatter.enclosed = true;
+    chatter.order = [...enclosedExchanges].reverse();
+    chatter.exchange = null;
+    chatter.remaining = 0.8;
+  }
   if (chatter.completed === 4) {
     updateRefill(chatter, staff, baron, guards, elapsed, dt);
     return;

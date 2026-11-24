@@ -39,12 +39,12 @@ function approachPoint(member, point, reach, baron, obstacles, angle) {
   }
 }
 
-export function runServiceStaff(member, target, baron, obstacles, dt) {
+export function runServiceStaff(member, target, baron, obstacles, dt, straight = false) {
   const remaining = distance(member, target);
-  if (remaining < 2) return 'arrived';
+  if (remaining < (straight ? 0.001 : 2)) return 'arrived';
   const stride = Math.min(210 * dt, remaining);
   const heading = Math.atan2(target.y - member.y, target.x - member.x);
-  for (const offset of steering) {
+  for (const offset of straight ? [0] : steering) {
     const dx = Math.cos(heading + offset) * stride;
     const dy = Math.sin(heading + offset) * stride;
     const x = member.x + dx;

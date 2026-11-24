@@ -1,3 +1,4 @@
+import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
 import {partyGuests} from '../src/party-guests.mjs';
 import {availableReports} from '../src/report-dialogue.mjs';
@@ -794,7 +795,7 @@ test('the enclosure blocks Pip and milk staff enter and exit through the east ga
   }
 });
 
-test('the corner guests add the five security exchanges to their pending shuffle when the ropes go up', () => {
+test('the five rope exchanges play in order before the combined shuffle', () => {
   const chatter = createPartyChatter();
   const camera = {x: WEST_EDGE, y: SOUTH_EDGE - ROOM_HEIGHT};
   const baron = createBaron();
@@ -810,15 +811,90 @@ test('the corner guests add the five security exchanges to their pending shuffle
   assert.ok(chatter.order.every(exchange => !exchange[0][1].includes('velvet ropes')));
   guestEnclosure.active = true;
   try {
-    const remaining = Array.from({length: 16}, next);
-    assert.equal(new Set(remaining).size, 16);
-    const ropeExchange = remaining.find(exchange => exchange[0][1].includes('velvet ropes'));
-    assert.deepEqual(ropeExchange, [
+    updatePartyChatter(chatter, {x: 0, y: 0}, [], baron, [], 1, 0.05);
+    assert.equal(chatter.exchange, null);
+    const ropeRotation = Array.from({length: 5}, next);
+    assert.deepEqual(ropeRotation.map(exchange => exchange[0]), [
+      [0, 'The Baron is simply marvellous. These security arrangements are impeccable!'],
       [0, "Aren't these velvet ropes simply beautiful?"],
-      [1, 'They must have cost a fortune. Thank goodness for taxpayers!']
+      [1, 'Finally, something to keep the riff-raff away!'],
+      [1, 'That peasant was positively revolting. I bet he bathes in water, not milk.'],
+      [0, 'I feel considerably safer with an armed guard protecting us.']
     ]);
     const fullRotation = Array.from({length: 17}, next);
     assert.equal(new Set(fullRotation).size, 17);
+    assert.ok(ropeRotation.every(exchange => fullRotation.includes(exchange)));
+  } finally {
+    guestEnclosure.active = false;
+  }
+});
+
+test('the second escort leads Pip two map squares east with the guard in tow', () => {
+  const baron = createBaron();
+  const guest = partyGuests[0];
+  const pip = {...createPlayer(), x: guest.x + 6, y: guest.y - 48};
+  const startX = pip.x;
+  const guard = {x: pip.x - 30, y: pip.y - 15, facing: 0, radius: 14, stride: 0};
+  const escort = {guest, guard, phase: 'warning'};
+  beginGuestEscort(escort, pip, baron, true);
+  assert.equal(escort.destination.x, startX + 2 * ROOM_WIDTH);
+  let ended = false;
+  for (let time = 0; time < 20 && !ended; time += 0.05) {
+    ended = advanceGuestEscort(escort, pip, baron, [guard], time, 0.05);
+  }
+  assert.equal(ended, true);
+  assert.ok(Math.abs(pip.x - (startX + 2 * ROOM_WIDTH)) <= 1);
+  assert.ok(Math.hypot(guard.x - pip.x, guard.y - pip.y) < 38);
+});
+
+test('the gate guard warns after two conversations, cancels when Pip leaves, and acts on the fourth return', () => {
+  const state = createRopeWarning();
+  const near = {...guestGateOutside};
+  const away = {...near, x: guestEnclosure.east + 70};
+  guestEnclosure.active = true;
+  try {
+    state.talks = 1;
+    assert.equal(updateRopeWarning(state, near, 4), false);
+    assert.equal(ropeWarningSpeech(state), null);
+    state.talks = 2;
+    assert.equal(updateRopeWarning(state, near, 3), false);
+    assert.equal(ropeWarningSpeech(state), null);
+    updateRopeWarning(state, near, 0.01);
+    assert.match(ropeWarningSpeech(state).text, /at least 5 steps/);
+    for (const [dt, number] of [[3, '5'], [1, '4'], [1, '3'], [1, '2'], [1, '1']]) {
+      assert.equal(updateRopeWarning(state, near, dt), false);
+      assert.equal(ropeWarningSpeech(state).text, number);
+    }
+    assert.equal(updateRopeWarning(state, away, 1), false);
+    assert.equal(ropeWarningSpeech(state), null);
+    for (const reaction of ["Oh maybe we'll get a live show!", 'Darling get ready for some entertainment']) {
+      assert.equal(updateRopeWarning(state, near, 3.01), false);
+      assert.equal(ropeWarningSpeech(state).guest, reaction);
+      updateRopeWarning(state, away, 1);
+    }
+    assert.equal(updateRopeWarning(state, near, 0.01), true);
+  } finally {
+    guestEnclosure.active = false;
+  }
+});
+
+test('ignoring the countdown triggers an approach, aim, fall, and game over', () => {
+  const state = createRopeWarning();
+  state.talks = 2;
+  guestEnclosure.active = true;
+  try {
+    const pip = {...createPlayer(), ...guestGateOutside};
+    updateRopeWarning(state, pip, 3.1);
+    assert.equal(updateRopeWarning(state, pip, 8), true);
+    const guard = {x: guestEnclosure.east + 22, y: guestEnclosure.gateY - 48, radius: 14, stride: 0};
+    beginRopeScene(state, guard, pip, createBaron());
+    const phases = new Set([state.scene.phase]);
+    for (let i = 0; i < 160 && state.scene.phase !== 'over'; i++) {
+      advanceRopeScene(state.scene, pip, 0.05);
+      phases.add(state.scene.phase);
+    }
+    assert.deepEqual([...phases], ['approach', 'aim', 'fall', 'over']);
+    assert.equal(Math.hypot(guard.x - pip.x, guard.y - pip.y), 60);
   } finally {
     guestEnclosure.active = false;
   }

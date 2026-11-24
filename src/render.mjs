@@ -1,3 +1,5 @@
+import {ropeWarningSpeech} from './rope-warning.mjs';
+import {drawPipFall, drawRopeAim} from './rope-scene-art.mjs';
 import {drawGuestRopes} from './guest-escort.mjs';
 import {createDancerSpeech, dancers, drawDancer} from './dancers.mjs';
 import {danceLayers, danceLyric, drawBaronDance, drawDanceBooth, drawDanceFloor} from './dance-floor.mjs';
@@ -244,7 +246,7 @@ export function createRenderer(canvas) {
   };
 
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -267,8 +269,10 @@ export function createRenderer(canvas) {
     const milkPose = usesMilkArm(milkScene) ? baronMilkPoses[milkScene.side] : null;
     const animateBaronArm = milkPose !== null && isReady(milkPose);
     const dancing = !milkScene && isReady(baronDancePose) && isBaronDancing(baron);
+    const ropeScene = ropeWarning?.scene;
+    const pipFalling = ropeScene?.phase === 'fall' || ropeScene?.phase === 'over';
     const actors = [
-      {depth: player.y + 22, draw: () => drawPip(ctx, player, elapsed)},
+      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene.time, drawPip) : drawPip(ctx, player, elapsed)},
       {depth: baron.y + 34, draw: () => {
         if (dancing) drawBaronDance(ctx, baronDancePose, baron, elapsed);
         else drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed);
@@ -276,7 +280,11 @@ export function createRenderer(canvas) {
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
     for (const guard of guards) {
-      actors.push({depth: guard.y + 22, draw: () => drawGuard(ctx, guard.posted ? armedGuard : guardSprite, guard, elapsed)});
+      actors.push({depth: guard.y + 22, draw: () => {
+        if (guard === ropeScene?.guard && ropeScene.phase !== 'approach' && isReady(guardSprite)) {
+          drawRopeAim(ctx, guardSprite, ropeScene, player);
+        } else drawGuard(ctx, guard.posted ? armedGuard : guardSprite, guard, elapsed);
+      }});
     }
     const refill = chatter?.refill;
     const pouring = refill && !refill.route.length;
@@ -292,7 +300,12 @@ export function createRenderer(canvas) {
         const fill = Math.max(0, Math.min(1, (progress - 0.29) / 0.46));
         milk += (0.85 - milk) * fill;
       }
-      actors.push({depth: guest.y, draw: () => drawPartyGuest(ctx, guest, partySprites[index], elapsed, milk, pouring)});
+      actors.push({depth: guest.y, draw: () => {
+        ctx.save();
+        if (pipFalling) ctx.translate(0, -Math.abs(Math.sin(elapsed * 9 + index * 1.8)) * 6);
+        drawPartyGuest(ctx, guest, partySprites[index], elapsed, milk, pouring || pipFalling);
+        ctx.restore();
+      }});
     });
     if (danceVisible) {
       actors.push({depth: DANCE_FLOOR.y - 175, draw: () => drawDanceBooth(ctx, danceArt, elapsed)});
@@ -331,7 +344,22 @@ export function createRenderer(canvas) {
       const guest = guestEscort.guest;
       drawSpeech(ctx, 'Guard, guard, a peasant is near me!', 1, guest.x, guest.y - 68, guest.y, cameraX, cameraY);
     }
-    const speech = !guestEscort && chatter && partySpeech(chatter, {x: cameraX, y: cameraY});
+    const warning = ropeWarning && ropeWarningSpeech(ropeWarning);
+    if (warning && gateGuard) {
+      drawSpeech(ctx, warning.text, 1, gateGuard.x, gateGuard.y - 64, gateGuard.y + 22, cameraX, cameraY);
+      if (warning.guest) {
+        const [guest] = partyGuests;
+        drawSpeech(ctx, warning.guest, 1, guest.x, guest.y - 68, guest.y, cameraX, cameraY);
+      }
+    }
+    if (pipFalling) {
+      partyGuests.forEach((guest, index) => {
+        if (guest.x > cameraX && guest.x < cameraX + ROOM_WIDTH) {
+          drawSpeech(ctx, index === 0 ? 'Bravo!' : 'Splendid!', 1, guest.x, guest.y - 75, guest.y, cameraX, cameraY);
+        }
+      });
+    }
+    const speech = !guestEscort && !warning && !ropeScene && chatter && partySpeech(chatter, {x: cameraX, y: cameraY});
     if (speech) drawSpeech(ctx, speech.text, speech.opacity,
       speech.guest.x, speech.guest.y - 68, speech.guest.y, cameraX, cameraY);
     ctx.restore();

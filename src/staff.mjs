@@ -1,5 +1,5 @@
 import {guardBlocks} from './guards.mjs';
-import {crossesDanceArea, EAST_EDGE, guestEnclosure, guestGateOutside, insideGuestEnclosure, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {crossesDanceArea, EAST_EDGE, guestEnclosure, guestGateInside, guestGateOutside, insideGuestEnclosure, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const uniforms = [
   {id: 'male-waiter', title: 'Waiter'},
@@ -59,7 +59,7 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
     if (guestEnclosure.active && !member.guestAccess && insideGuestEnclosure(member)) {
       member.guestAccess = true;
       member.target = guestGateOutside;
-      member.route = [{x: guestEnclosure.east - 24, y: guestEnclosure.gateY}, guestGateOutside];
+      member.route = [guestGateInside, guestGateOutside];
     }
     if (!member.target) {
       member.target = chooseTarget(member, baron, random);
