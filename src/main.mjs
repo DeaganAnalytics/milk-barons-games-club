@@ -150,6 +150,16 @@ const coinEvents = {
   chargeDanceFee: ['It turns out dancing was on the bill.', -3]
 };
 
+const creameryGuardEvents = {
+  buyGuardMilk: ['You buy the guard a glass of premium whole milk.', -5, 0],
+  rewardGuardMilk: ['The guard raises his glass to you.', 0, 1],
+  buyGuardCocktail: ['One Double Distilled Dairy Destroyer. The guard drinks it down.', -20, 0],
+  leaveDrunkGuard: ['The guard sways at his post. That drink lives up to its name.', 0, -1],
+  pickpocketDrunkGuard: ['You lift the guard’s wallet while he’s seeing double.', 25, -2],
+  guardRifleStrike: ['The guard hits Pip with his rifle. Pip loses two hearts.', 0, -1],
+  payGuardApology: ['The guard accepts your apology and takes his fine.', -10, 0]
+};
+
 const bartenderOrders = {
   whole: ['A glass of whole milk.', -3, 0.5],
   cocktail: ['The Piña Cow-lada lives up to the warning.', -5, -0.5],
@@ -181,6 +191,23 @@ const dialogue = createDialogue(baron, {
     if (coinEvent) {
       const [text, amount] = coinEvent;
       clubEvent(text, () => coinBalance.change(amount));
+    }
+    const guardEvent = creameryGuardEvents[action];
+    if (guardEvent && target.guard === creameryGuard) {
+      const [text, coins, karmaPoints] = guardEvent;
+      clubEvent(text, () => {
+        if (action === 'leaveDrunkGuard' || action === 'pickpocketDrunkGuard') {
+          creameryGuard.drunk = true;
+          creameryGuard.drunkSince ??= elapsed;
+        }
+        if (action === 'payGuardApology') creameryGuard.apologyRequired = false;
+        if (action === 'guardRifleStrike') {
+          creameryGuard.apologyRequired = true;
+          health.change(-2, 'The Creamery guard knocked you out.');
+        }
+        if (coins) coinBalance.change(coins);
+        if (karmaPoints) karma.change(karmaPoints);
+      });
     }
     if (action === 'bartenderDrink') {
       const [text, cost, hearts] = bartenderOrders[target.order];

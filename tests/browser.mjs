@@ -413,11 +413,15 @@ try {
   await activate('Bull Guard');
   const postedGreeting = 'If you have something to report, find one of the roving security officers';
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), postedGreeting);
+  await expressions('attentive', 'formal');
   await reply('Why do you have an assault rifle?', 'To guard the milk.');
+  await expressions('thinking', 'speaking');
   await closeConversation();
   await activate('Bull Guard');
   await reply('Are you a cow?', 'I am a guard.');
+  await expressions('thinking', 'suspicious');
   await reply('But you have horns.', 'I am a guard.');
+  await expressions('thinking', 'angry');
   await closeConversation();
   await hold('ArrowLeft', 170);
   await hold('ArrowDown', 1900);

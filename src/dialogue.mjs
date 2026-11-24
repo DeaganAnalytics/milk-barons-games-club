@@ -1,3 +1,4 @@
+import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
 import {bartenderExit, bartenderMoods, bartenderOpening} from './bartender-dialogue.mjs';
 import {baronDanceDialogue, baronGreetings, baronKarmaDialogue} from './baron-dialogue.mjs';
 import {isBaronDancing} from './baron.mjs';
@@ -281,6 +282,7 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
       || node.mustContinue
       || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.baronKarma) && !action));
     panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap');
+    panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
@@ -298,6 +300,7 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
     }
     const currentSpeaker = node.character ?? character;
     speaker.textContent = node.speaker ?? (currentSpeaker === elias.id ? elias.title
+      : currentSpeaker === bartender.id ? bartender.title
       : currentSpeaker === 'guard' ? 'Bull Guard'
       : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
     setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk);
@@ -418,6 +421,7 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
           mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
         }
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
+      : target.id === 'guard' && target.guard?.creamery ? creameryGuardDialogue(target.guard)
       : target.id === 'guard' ? {
           text: target.posted ? postedGuardOpening : guardOpening,
           replies: target.posted ? postedGuardReplies : reportingReplies(target),

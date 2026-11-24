@@ -9,7 +9,7 @@ import {drawPipFall, drawRopeAim} from './rope-scene-art.mjs';
 import {drawGuestRopes} from './guest-escort.mjs';
 import {createDancerSpeech, dancers, drawDancer} from './dancers.mjs';
 import {danceLayers, danceLyric, drawBaronDance, drawDanceBooth, drawDanceFloor} from './dance-floor.mjs';
-import {bartender, creameryHatch} from './creamery.mjs';
+import {bartender, creameryHatch, drunkGuardSpeech} from './creamery.mjs';
 import {attendantGlassPose, drawAttendantMilk, drawEmptyServiceGlass, drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
 import {partySpeech, refillProgress} from './party-chatter.mjs';
 import {drawGuestRefill, drawPartyGuest, partyGuests} from './party-guests.mjs';
@@ -178,7 +178,11 @@ function drawGuard(ctx, sprite, guard, elapsed) {
   ctx.fill();
 
   if (!guard.walking) {
-    if (guard.posted) {
+    if (guard.drunk) {
+      const sway = Math.sin(elapsed * 2.6) * 0.13 + Math.sin(elapsed * 4.1) * 0.035;
+      ctx.rotate(sway);
+      ctx.scale(1, 0.97 + Math.cos(elapsed * 3.2) * 0.02);
+    } else if (guard.posted) {
       // Anchor the shoes while the shoulders sway and rise slightly.
       const sway = Math.sin(elapsed * 1.05) * 0.022;
       const breath = Math.sin(elapsed * 1.85) * 0.012;
@@ -511,6 +515,14 @@ export function createRenderer(canvas, onCowGuardSeen) {
     if (guestEscort?.phase === 'waiting') {
       const guest = guestEscort.guest;
       drawSpeech(ctx, 'Guard, guard, a peasant is near me!', 1, guest.x, guest.y - 68, guest.y, cameraX, cameraY);
+    }
+    const creameryGuard = guards.find(guard => guard.creamery);
+    if (creameryGuard && !ropeScene && isReady(armedGuard)
+      && creameryGuard.x + 21 > cameraX && creameryGuard.x - 21 < cameraX + ROOM_WIDTH
+      && creameryGuard.y + 24 > cameraY && creameryGuard.y - 63 < cameraY + ROOM_HEIGHT) {
+      const remark = drunkGuardSpeech(creameryGuard, elapsed);
+      if (remark) drawSpeech(ctx, remark.text, remark.opacity, creameryGuard.x, creameryGuard.y - 63,
+        creameryGuard.y + 22, cameraX, cameraY);
     }
     const warning = ropeWarning && ropeWarningSpeech(ropeWarning);
     if (warning && gateGuard) {

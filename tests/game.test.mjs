@@ -1570,3 +1570,45 @@ test('the Creamery refusal uses the same animated guard phases without the ladie
   assert.equal(scene.celebrate, false);
   assert.equal(scene.deathMessage, 'Creamery refusal');
 });
+
+test('the Creamery guard offers both drinks and gates his regular replies behind the apology fine', async () => {
+  const {creameryGuardDialogue} = await import('../src/creamery-guard-dialogue.mjs');
+  const {bartender, createCreameryGuard} = await import('../src/creamery.mjs');
+  const guard = createCreameryGuard();
+  const opening = creameryGuardDialogue(guard);
+  assert.equal(guard.creamery, true);
+  const [cow, weapon, drink] = opening.replies;
+  assert.notEqual(opening.mood, weapon.next.mood);
+  assert.notEqual(cow.next.mood, cow.next.replies[0].next.mood);
+  const [buy, joke] = drink.next.replies;
+  assert.equal(joke.next.enterAction, 'guardRifleStrike');
+  const order = buy.next.replies[0].next;
+  assert.equal(order.character, bartender.id);
+  const [milk, cocktail] = order.replies;
+  assert.equal(milk.next.enterAction, 'buyGuardMilk');
+  assert.equal(milk.next.replies[0].next.enterAction, 'rewardGuardMilk');
+  assert.equal(cocktail.next.enterAction, 'buyGuardCocktail');
+  assert.deepEqual(cocktail.next.replies[0].next.replies.map(reply => reply.next.exitAction),
+    ['leaveDrunkGuard', 'pickpocketDrunkGuard']);
+  guard.apologyRequired = true;
+  const apology = creameryGuardDialogue(guard);
+  assert.equal(apology.text, 'Come to apologise?');
+  assert.deepEqual(apology.replies.map(reply => reply.next.action), ['payGuardApology', undefined, undefined]);
+  assert.equal(creameryGuardDialogue(guard), apology);
+  guard.apologyRequired = false;
+  assert.equal(creameryGuardDialogue(guard), opening);
+});
+
+test('the drunk Creamery guard starts after 20 seconds and wraps through all 18 remarks', async () => {
+  const {createCreameryGuard, drunkGuardSpeech} = await import('../src/creamery.mjs');
+  const guard = createCreameryGuard();
+  assert.equal(drunkGuardSpeech(guard, 200), null);
+  Object.assign(guard, {drunk: true, drunkSince: 50});
+  assert.equal(drunkGuardSpeech(guard, 69.9), null);
+  assert.equal(drunkGuardSpeech(guard, 70).text, 'Moooooo... I mean, move.');
+  assert.equal(drunkGuardSpeech(guard, 74), null);
+  assert.equal(drunkGuardSpeech(guard, 90).text, "Who's guarding the milk? Oh. That's me.");
+  const lines = Array.from({length: 18}, (_, i) => drunkGuardSpeech(guard, 70 + i * 20).text);
+  assert.equal(new Set(lines).size, 18);
+  assert.equal(drunkGuardSpeech(guard, 430).text, lines[0]);
+});
