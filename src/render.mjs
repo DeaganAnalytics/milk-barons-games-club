@@ -3,7 +3,7 @@ import {drawMilkBalloon, guardBalloonPose, milkBalloonHand} from './milk-balloon
 import {createPillorySpeech} from './pillory.mjs';
 import {createProfessorSpeech, drawProfessor, professorHeight} from './professor.mjs';
 import {drawMilkFountain, fountainHeight, fountainWidth} from './milk-fountain.mjs';
-import {createMilkPool, drawMilkPool, milkPoolSpeech} from './milk-pool.mjs';
+import {createMilkPool, drawMilkPool, milkPoolSpeech, remainingClothing} from './milk-pool.mjs';
 import {ropeWarningSpeech} from './rope-warning.mjs';
 import {drawPipFall, drawRopeAim} from './rope-scene-art.mjs';
 import {drawGuestRopes} from './guest-escort.mjs';
@@ -281,7 +281,11 @@ export function createRenderer(canvas) {
   const fountainArt = loadSprite('hall/milk-fountain', 'webp');
   const poolArt = loadSprite('pool/milk-pool', 'webp');
   const lifeguardArt = loadSprite('pool/lifeguard', 'webp');
-  const poolClothes = loadSprite('pool/clothes', 'webp');
+  const poolClothes = {
+    intact: loadSprite('pool/clothes', 'webp'),
+    man: loadSprite('pool/clothes-man', 'webp'),
+    women: loadSprite('pool/clothes-women', 'webp')
+  };
   const poolHeads = ['brunette', 'blonde'].map(id => loadSprite('pool/' + id, 'webp'));
   const idlePool = createMilkPool();
   const danceArt = Object.fromEntries(danceLayers.map(name => [name, loadSprite('dance/' + name, 'webp')]));
@@ -326,7 +330,10 @@ export function createRenderer(canvas) {
       && DANCE_FLOOR.x + 235 > cameraX && DANCE_FLOOR.x - 235 < cameraX + ROOM_WIDTH;
     const poolVisible = isReady(poolArt) && MILK_POOL.x + 239 > cameraX && MILK_POOL.x - 297 < cameraX + ROOM_WIDTH
       && MILK_POOL.y + 64 > cameraY && MILK_POOL.y - 202 < cameraY + ROOM_HEIGHT;
-    if (poolVisible) drawMilkPool(ctx, poolArt, elapsed, milkPool, poolHeads, poolClothes, lifeguardArt);
+    if (poolVisible) {
+      const clothes = milkPool.stolenClothing ? poolClothes[remainingClothing[milkPool.stolenClothing]] : poolClothes.intact;
+      drawMilkPool(ctx, poolArt, elapsed, milkPool, poolHeads, clothes, lifeguardArt);
+    }
     if (danceVisible) drawDanceFloor(ctx, danceArt);
     if (guestEnclosure.active) drawGuestRopes(ctx, guestEnclosure, false);
     if (world) drawBartender(ctx, bartenderSprite, elapsed);

@@ -1,6 +1,6 @@
 import {createProfessorConversation, professorMoods} from '../src/professor-dialogue.mjs';
 import {createProfessorSpeech, professor, professorPose} from '../src/professor.mjs';
-import {createMilkPool, lifeguard, milkPoolSpeech, updateMilkPool} from '../src/milk-pool.mjs';
+import {createMilkPool, lifeguard, milkPoolSpeech, poolClothing, remainingClothing, takePoolClothing, updateMilkPool} from '../src/milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
 import {partyGuests} from '../src/party-guests.mjs';
@@ -981,6 +981,28 @@ test('a random swimmer exchange plays both lines in order before a pending react
   updateMilkPool(pool, 3.55, 1.5);
   updateMilkPool(pool, 3.6, 0.05);
   assert.equal(milkPoolSpeech(pool, 3.6).text, 'Hey! That tickles!');
+});
+
+test('pool clothing is reachable, and each theft changes the pile and starts the corresponding chatter', async () => {
+  const {clothingReports, poolClothingDialogue} = await import('../src/lifeguard-dialogue.mjs');
+  const player = {x: poolClothing.x + 30, y: poolClothing.y};
+  assert.equal(nearestInteraction(player, createBaron(), null, [], [lifeguard, poolClothing]).id, poolClothing.id);
+  assert.deepEqual(poolClothingDialogue.replies.map(choice => choice.next?.selection ?? null), ['women', 'man', 'all', null]);
+  for (const [selection, left, line] of [
+    ['women', 'man', 'Good heavens! Where are my clothes?!'],
+    ['man', 'women', "Sir, I'm going to need you to remain in the pool."],
+    ['all', null, 'Good heavens! Where are my clothes?!']
+  ]) {
+    const pool = createMilkPool();
+    assert.equal(takePoolClothing(pool, selection), true);
+    assert.equal(takePoolClothing(pool, 'all'), false);
+    assert.equal(remainingClothing[pool.stolenClothing], left);
+    updateMilkPool(pool, 2, 2, () => 0);
+    assert.equal(milkPoolSpeech(pool, 2).text, line);
+  }
+  assert.equal(clothingReports.all, clothingReports.women);
+  assert.equal(clothingReports.women.next.replies[0].next.enterAction, 'rewardMissingDresses');
+  assert.deepEqual(clothingReports.man.next.replies.map(choice => choice.next.action), ['fineMissingSuit', 'dismissMissingSuit']);
 });
 
 test('only the two pool investigations dispatch a guard', () => {

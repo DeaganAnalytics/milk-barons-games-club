@@ -4,8 +4,8 @@ import {attendantMoods, createAttendantConversation} from './attendant-dialogue.
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
 import {createProfessorConversation, professorMoods} from './professor-dialogue.mjs';
 import {professor} from './professor.mjs';
-import {lifeguardDialogue, lifeguardMoods} from './lifeguard-dialogue.mjs';
-import {lifeguard} from './milk-pool.mjs';
+import {clothingReports, lifeguardDialogue, lifeguardMoods, poolClothingDialogue} from './lifeguard-dialogue.mjs';
+import {lifeguard, poolClothing} from './milk-pool.mjs';
 import {availableReports, injuredMiloReply, lifeguardQualificationReport, poolReports, unattendedClothes} from './report-dialogue.mjs';
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
@@ -152,6 +152,7 @@ function standalonePortraitUrl(id, withoutMilk = false, mood) {
   if (id === pilloryAttendant.id) return new URL('../assets/dialogue/attendant/' + mood + '.webp', import.meta.url);
   if (id === elias.id) return new URL('../assets/dialogue/elias/' + mood + '.webp', import.meta.url);
   if (id === professor.id) return new URL('../assets/dialogue/professor/' + mood + '.webp', import.meta.url);
+  if (id === poolClothing.id) return new URL('../assets/pool/clothes.webp', import.meta.url);
   if (id === lifeguard.id) return new URL('../assets/dialogue/lifeguard-' + mood + '.webp', import.meta.url);
   if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
   if (partyGuests.some(guest => guest.id === id)) {
@@ -169,7 +170,7 @@ function warmPortraits() {
     urls.push(standalonePortraitUrl(id));
     if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
-  urls.push(standalonePortraitUrl(bartender.id));
+  urls.push(standalonePortraitUrl(bartender.id), standalonePortraitUrl(poolClothing.id));
   for (const mood of commissionerMoods) urls.push(standalonePortraitUrl(pilloryCommissioner.id, false, mood));
   for (const mood of attendantMoods) urls.push(standalonePortraitUrl(pilloryAttendant.id, false, mood));
   for (const mood of eliasPortraits) urls.push(standalonePortraitUrl(elias.id, false, mood));
@@ -277,14 +278,20 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const currentSpeaker = node.character ?? character;
     speaker.textContent = currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title;
     setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk);
-    replyList.replaceChildren(...(node.replies ?? []).filter(reply => !usedReplies.has(reply.once)).map(reply => {
+    const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
+    const replies = report ? [report, ...node.replies] : node.replies ?? [];
+    replyList.replaceChildren(...replies.filter(reply => !usedReplies.has(reply.once)).map(reply => {
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = reply.label;
       button.addEventListener('click', () => {
         if (reply.once === 'lifeguardMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;
-        if (next === null) close();
+        if (next?.action === 'stealPoolClothing') {
+          activeTarget.selection = next.selection;
+          action = next.action;
+          close();
+        } else if (next === null) close();
         else {
           if (node.action === 'chargeProfessorFee') {
             action = null;
@@ -297,6 +304,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       return button;
     }));
     (replyList.firstElementChild ?? closeButton).focus();
+    if (node.enterAction) finishAction(node.enterAction, activeTarget);
   }
 
   closeButton.addEventListener('click', close);
@@ -353,6 +361,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       : target.id === elias.id && target.danceFee ? eliasDanceConversation
       : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)
       : target.id === professor.id ? professorOpening()
+      : target.id === poolClothing.id ? poolClothingDialogue
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.poolClothesThanks ? {
           text: "Thanks for the tip about the women skimmy-dipping in the milk pool. Best bloody shift I've had in months. Here, take a few coins for your troubles.",
