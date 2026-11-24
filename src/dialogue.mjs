@@ -185,7 +185,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, canReportMilo, canReportPool, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReportMilo, canReportPool, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -238,7 +238,8 @@ export function createDialogue(baron, {onAction, canReportMilo, canReportPool, t
 
   function show(node, character, playerMood, withoutMilk) {
     action = node.action ?? null;
-    closeButton.textContent = action === 'startMilkBalloon' ? 'Play' : 'End conversation';
+    closeButton.textContent = action === 'startMilkBalloon' ? 'Play'
+      : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
     line.textContent = node.text;
     line.hidden = !node.text;
     if (node.direction) {
@@ -250,7 +251,9 @@ export function createDialogue(baron, {onAction, canReportMilo, canReportPool, t
       drawPipPortrait(playerArt, playerMood);
       playerPortrait.dataset.expression = playerMood;
     }
-    setPortrait(npcPortrait, character, node.mood, withoutMilk);
+    const currentSpeaker = node.character ?? character;
+    speaker.textContent = currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title;
+    setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk);
     replyList.replaceChildren(...(node.replies ?? []).map(reply => {
       const button = document.createElement('button');
       button.type = 'button';
@@ -287,7 +290,7 @@ export function createDialogue(baron, {onAction, canReportMilo, canReportPool, t
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening()
-      : target.id === pilloryAttendant.id ? attendantOpening()
+      : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
       : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.postEscort ? postEscortWarning

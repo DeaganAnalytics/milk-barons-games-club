@@ -1,9 +1,9 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {MILK_BAG_BASKET, PILLORY, routeAroundBaron} from './room.mjs';
+import {MILK_BAG_BASKET, PILLORY, PILLORY_ATTENDANT, routeAroundBaron} from './room.mjs';
 
 const pickup = {x: MILK_BAG_BASKET.x + 37, y: MILK_BAG_BASKET.y + 25};
 const basket = {x: MILK_BAG_BASKET.x + 13, y: MILK_BAG_BASKET.y - 18};
-const target = {x: PILLORY.x, y: PILLORY.y - 50};
+const target = {x: PILLORY.x, y: PILLORY.y - 39};
 const release = 0.38;
 const impact = 0.9;
 
@@ -11,11 +11,8 @@ export function createMilkBalloon(player, baron) {
   return {phase: 'approach', time: 0, route: routeAroundBaron(player, pickup, baron)};
 }
 
-export function throwMilkBalloon(scene) {
-  if (scene.phase === 'ready') {
-    scene.phase = 'throw';
-    scene.time = 0;
-  }
+export function createAttendantThrow() {
+  return {phase: 'throw', time: 0, attendant: true};
 }
 
 export function updateMilkBalloon(scene, player, dt) {
@@ -40,7 +37,10 @@ export function updateMilkBalloon(scene, player, dt) {
     scene.phase = 'pickup';
   }
   scene.time += dt;
-  if (scene.phase === 'pickup' && scene.time >= 0.7) scene.phase = 'ready';
+  if (scene.phase === 'pickup' && scene.time >= 0.7) {
+    scene.phase = 'throw';
+    scene.time = 0;
+  }
   return scene.phase === 'throw' && scene.time >= 1.8;
 }
 
@@ -50,7 +50,6 @@ export function milkBalloonHand(scene, player) {
     const reach = Math.sin(Math.PI * Math.min(1, scene.time / 0.7));
     return {x: -9 + (basket.x - player.x + 9) * reach, y: -14 + (basket.y - player.y + 14) * reach};
   }
-  if (scene.phase === 'ready') return {x: -9, y: -14};
   const time = scene.time;
   if (time < release) return {x: -9, y: -14 - 23 * Math.sin(time / release * Math.PI / 2)};
   const follow = Math.max(0, 1 - (time - release) / 0.35);
@@ -59,6 +58,7 @@ export function milkBalloonHand(scene, player) {
 
 export function drawMilkBalloon(ctx, scene, player) {
   const {phase, time} = scene;
+  if (scene.attendant) player = {x: PILLORY_ATTENDANT.x, y: PILLORY_ATTENDANT.y - 12};
   if (phase === 'approach') return;
   ctx.save();
   if (phase !== 'throw' || time < impact) {
@@ -66,6 +66,15 @@ export function drawMilkBalloon(ctx, scene, player) {
     let x = player.x + hand.x;
     let y = player.y + hand.y;
     if (phase === 'pickup' && time < 0.35) ({x, y} = basket);
+    if (scene.attendant && time < release) {
+      ctx.strokeStyle = '#292226';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(player.x - 7, player.y - 18);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
     if (phase === 'throw' && time >= release) {
       const t = (time - release) / (impact - release);
       x = player.x - 9 + (target.x - player.x + 9) * t;

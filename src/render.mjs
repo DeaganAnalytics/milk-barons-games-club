@@ -260,7 +260,7 @@ export function createRenderer(canvas) {
   const professorSipping = loadSprite('hall/professor-sipping', 'webp');
   const pillorySpeech = createPillorySpeech();
   const pilloryProps = [
-    {id: 'commissioner', position: PILLORY, width: 112, height: 94, depth: 13,
+    {id: 'commissioner', position: PILLORY, width: 92, height: 78, depth: 13,
       art: loadSprite('hall/pillory-commissioner', 'webp'), fallback: loadSprite('hall/pillory', 'webp')},
     {id: 'attendant', position: PILLORY_ATTENDANT, width: 29, height: 86, depth: 10,
       art: loadSprite('hall/pillory-attendant', 'webp')},
@@ -325,7 +325,7 @@ export function createRenderer(canvas) {
     const ropeScene = ropeWarning?.scene;
     const pipFalling = ropeScene?.phase === 'fall' || ropeScene?.phase === 'over';
     const actors = [
-      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene.time, drawPip) : drawPip(ctx, player, elapsed, milkBalloon ? milkBalloonHand(milkBalloon, player) : null)},
+      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene.time, drawPip) : drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant ? milkBalloonHand(milkBalloon, player) : null)},
       {depth: baron.y + 34, draw: () => {
         if (dancing) drawBaronDance(ctx, baronDancePose, baron, elapsed);
         else drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed);

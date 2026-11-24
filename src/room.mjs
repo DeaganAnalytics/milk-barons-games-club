@@ -17,9 +17,9 @@ export const professorFeet = {x: MILK_FOUNTAIN.x - 158, y: MILK_FOUNTAIN.y + 59}
 const professorBounds = {x: professorFeet.x, y: professorFeet.y - 9, halfWidth: 24, halfHeight: 12};
 export const PILLORY = {x: WEST_EDGE + ROOM_WIDTH / 2, y: HALL_CENTER.y - ROOM_HEIGHT / 2 + 54};
 export const MILK_BAG_BASKET = {x: PILLORY.x, y: PILLORY.y + 81};
-export const PILLORY_ATTENDANT = {x: MILK_BAG_BASKET.x + 51, y: MILK_BAG_BASKET.y - 9};
+export const PILLORY_ATTENDANT = {x: PILLORY.x + 102, y: PILLORY.y + 144};
 const pilloryFixtures = [
-  {...PILLORY, halfWidth: 53, halfHeight: 13},
+  {...PILLORY, halfWidth: 44, halfHeight: 13},
   {...MILK_BAG_BASKET, halfWidth: 21, halfHeight: 10},
   {...PILLORY_ATTENDANT, halfWidth: 11, halfHeight: 10}
 ];
@@ -173,8 +173,8 @@ export function crossesFountainArea(from, to) {
 }
 
 export function crossesPilloryArea(from, to) {
-  return Math.min(from.x, to.x) < PILLORY.x + 105 && Math.max(from.x, to.x) > PILLORY.x - 105
-    && Math.min(from.y, to.y) < MILK_BAG_BASKET.y + 55 && Math.max(from.y, to.y) > PILLORY.y - 55;
+  return Math.min(from.x, to.x) < PILLORY_ATTENDANT.x + 55 && Math.max(from.x, to.x) > PILLORY.x - 105
+    && Math.min(from.y, to.y) < PILLORY_ATTENDANT.y + 55 && Math.max(from.y, to.y) > PILLORY.y - 55;
 }
 
 export function crossesScenery(from, to) {

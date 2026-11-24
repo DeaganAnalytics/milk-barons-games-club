@@ -1103,23 +1103,29 @@ test('the attendant introduces the stall once before offering the milk balloon g
     node = node.replies[0].next;
   }
   assert.equal(node.action, 'startMilkBalloon');
+  const replay = open(true).replies.find(reply => reply.label === 'Can I play?').next;
+  assert.equal(replay.text, 'Please, yes, please do. All the more fun for me and you!');
+  assert.equal(replay.action, 'startMilkBalloon');
+  assert.equal(replay.replies.length, 0);
 });
 
-test('Pip picks up a milk balloon, waits for the throw, then finishes the round', async () => {
-  const {createMilkBalloon, updateMilkBalloon, throwMilkBalloon, milkBalloonHand} = await import('../src/milk-balloon.mjs');
+test('Pip picks up and automatically throws a milk balloon, then finishes the round', async () => {
+  const {createMilkBalloon, createAttendantThrow, updateMilkBalloon, milkBalloonHand} = await import('../src/milk-balloon.mjs');
   const {pilloryAttendant} = await import('../src/pillory.mjs');
   const player = {...createPlayer(), x: pilloryAttendant.x + 36, y: pilloryAttendant.y};
   const scene = createMilkBalloon(player, createBaron());
-  throwMilkBalloon(scene);
   assert.equal(scene.phase, 'approach');
-  for (let i = 0; i < 240 && scene.phase !== 'ready'; i++) updateMilkBalloon(scene, player, 1 / 60);
-  assert.equal(scene.phase, 'ready');
-  assert.equal(updateMilkBalloon(scene, player, 5), false);
-  assert.ok(milkBalloonHand(scene, player));
-  throwMilkBalloon(scene);
+  for (let i = 0; i < 240 && scene.phase !== 'throw'; i++) updateMilkBalloon(scene, player, 1 / 60);
   assert.equal(scene.phase, 'throw');
+  assert.ok(milkBalloonHand(scene, player));
   assert.equal(updateMilkBalloon(scene, player, 1), false);
   assert.equal(updateMilkBalloon(scene, player, 1), true);
+
+  const position = {x: player.x, y: player.y};
+  const attendant = createAttendantThrow();
+  assert.ok(attendant.attendant);
+  assert.equal(updateMilkBalloon(attendant, player, 2), true);
+  assert.deepEqual({x: player.x, y: player.y}, position);
 });
 
 test('the Commissioner is reachable, greets Pip once, and has three ways to end the game conversation', async () => {
@@ -1138,12 +1144,17 @@ test('the Commissioner is reachable, greets Pip once, and has three ways to end 
   const branch = menu.replies[1].next;
   assert.equal(branch.replies[0].next, null);
   assert.ok(branch.replies.slice(1).every(reply => reply.next.replies.length === 0 && !reply.next.action));
+  const admission = menu.replies[2].next.replies[0].next;
+  assert.equal(admission.text, 'Yes.');
+  const warning = admission.replies[0].next;
+  assert.equal(warning.character, pilloryAttendant.id);
+  assert.equal(warning.replies[0].next.action, 'attendantMilkBalloon');
   const visited = new Set();
   const moods = new Set();
   function visit(node) {
     if (!node || visited.has(node)) return;
     visited.add(node);
-    moods.add(node.mood);
+    if (!node.character) moods.add(node.mood);
     for (const reply of node.replies) visit(reply.next);
   }
   visit(first);
