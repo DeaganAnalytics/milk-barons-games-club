@@ -173,7 +173,19 @@ function drawPipHead(ctx, x, y, angle, mood, portrait = false) {
       ellipse(ctx, eye, -1.25, 1.3, 2, ink);
     }
   }
-  if (mood === 'thinking') {
+  if (mood === 'worried' || mood === 'alarmed' || mood === 'sorry') {
+    for (const eye of eyes) {
+      stroke(ctx, 1.1, ink, c => {
+        c.moveTo(eye - 1.8, -4.4);
+        c.quadraticCurveTo(eye, -5.5, eye + 1.5, mood === 'sorry' ? -5.9 : -6.4);
+      });
+    }
+    if (mood === 'alarmed') ellipse(ctx, face + 0.7, 4.7, 2, 2.35, ink);
+    else stroke(ctx, 1.16, ink, c => {
+      c.moveTo(face - 2.6, 5.7);
+      c.quadraticCurveTo(face, 2.1, face + 2.7, 5.2);
+    });
+  } else if (mood === 'thinking') {
     const brow = eyes[0];
     stroke(ctx, 1.1, ink, c => {
       c.moveTo(brow - 2, -4.1);

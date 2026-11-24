@@ -47,12 +47,7 @@ function selectRoute(milo, baron, distance) {
   return [];
 }
 
-function startEscape(milo, baron, guards, elapsed) {
-  if (milo.fleeing || elapsed < milo.nextSpot) return false;
-  const spottedByBaron = sameSquare(milo, baron);
-  const threat = spottedByBaron ? baron : guards.find(guard => !guard.posted && sameSquare(milo, guard));
-  if (!threat) return false;
-
+export function fleeMilo(milo, threat, baron, guards) {
   const goEast = threat.x < HALL_CENTER.x;
   const goNorth = milo.y < HALL_CENTER.y;
   const preferred = goEast ? (goNorth ? 3 : 2) : (goNorth ? 0 : 1);
@@ -61,6 +56,15 @@ function startEscape(milo, baron, guards, elapsed) {
   milo.corner = preferredOccupied ? alternate : preferred;
   milo.route = routeToCorner(milo, CORNERS[milo.corner], baron);
   milo.fleeing = true;
+}
+
+function startEscape(milo, baron, guards, elapsed) {
+  if (milo.fleeing || elapsed < milo.nextSpot) return false;
+  const spottedByBaron = sameSquare(milo, baron);
+  const threat = spottedByBaron ? baron : guards.find(guard => !guard.posted && !guard.pursuit?.milo && sameSquare(milo, guard));
+  if (!threat) return false;
+
+  fleeMilo(milo, threat, baron, guards);
   return spottedByBaron;
 }
 

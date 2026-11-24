@@ -1,6 +1,6 @@
 import {runServiceStaff} from './milk-service.mjs';
 import {partyGuests} from './party-guests.mjs';
-import {ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
+import {guestEnclosure, guestGateOutside, insideGuestEnclosure, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
 
 const exchanges = [
   [[0, 'Oh, I just ADORE milk!'], [1, "Darling, it's simply divine!"]],
@@ -17,6 +17,18 @@ const exchanges = [
   [[1, 'Did you hear about Lady Butterworth?'], [0, "Don't tell me. Skim milk?"], [1, 'Worse. Oat milk!']],
   [[0, 'The price of milk has doubled again!'], [1, 'Wonderful! The Baron must be doing splendidly!']]
 ];
+const enclosedExchanges = [
+  [[0, 'The Baron is simply marvellous. These security arrangements are impeccable!'],
+    [1, 'Naturally, the cream of society deserves the finest protection.']],
+  [[0, "Aren't these velvet ropes simply beautiful?"],
+    [1, 'They must have cost a fortune. Thank goodness for taxpayers!']],
+  [[1, 'Finally, something to keep the riff-raff away!'],
+    [0, 'The Baron works remarkably fast when his milk is threatened.']],
+  [[1, 'That peasant was positively revolting. I bet he bathes in water, not milk.'],
+    [0, 'Good heavens! How was such a creature permitted entry?']],
+  [[0, 'I feel considerably safer with an armed guard protecting us.'],
+    [1, "An astute summation of my feelings, darling. One can finally enjoy one's milk in peace."]]
+];
 const [left, right] = partyGuests;
 const serviceSpot = {x: (left.x + right.x) / 2, y: left.y - 36};
 const pourDuration = 1.45;
@@ -26,7 +38,7 @@ const lineDuration = text => Math.max(2, 1.1 + text.length / 20);
 export function createPartyChatter() {
   return {
     remaining: 0.8, order: [], lastExchange: null, exchange: null, line: 0,
-    completed: 0, milk: [0.85, 0.85], refill: null
+    enclosed: false, completed: 0, milk: [0.85, 0.85], refill: null
   };
 }
 
@@ -43,8 +55,11 @@ export function partySpeech(chatter, camera) {
 }
 
 function nextExchange(chatter, random) {
-  if (!chatter.order.length) {
-    chatter.order = [...exchanges];
+  const justEnclosed = guestEnclosure.active && !chatter.enclosed;
+  if (!chatter.order.length || justEnclosed) {
+    if (!chatter.order.length) chatter.order = [...exchanges];
+    if (guestEnclosure.active) chatter.order.push(...enclosedExchanges);
+    chatter.enclosed = guestEnclosure.active;
     for (let i = chatter.order.length - 1; i > 0; i--) {
       const j = Math.floor(random() * (i + 1));
       [chatter.order[i], chatter.order[j]] = [chatter.order[j], chatter.order[i]];
@@ -59,6 +74,18 @@ function nextExchange(chatter, random) {
   chatter.line = 0;
 }
 
+function routeToGuests(server, baron) {
+  if (!guestEnclosure.active) return routeAroundBaron(server, serviceSpot, baron);
+  server.guestAccess = true;
+  if (insideGuestEnclosure(server)) return [serviceSpot];
+  const {east, gateY} = guestEnclosure;
+  return [...routeAroundBaron(server, guestGateOutside, baron), {x: east - 24, y: gateY}, serviceSpot];
+}
+
+function routeOutOfGuests() {
+  return [{x: guestEnclosure.east - 24, y: guestEnclosure.gateY}, guestGateOutside];
+}
+
 function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
   if (!chatter.refill) {
     const distance = member => Math.hypot(member.x - serviceSpot.x, member.y - serviceSpot.y);
@@ -67,10 +94,16 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
     if (!server) return;
     server.serviceDuty = true;
     server.target = null;
-    chatter.refill = {server, route: routeAroundBaron(server, serviceSpot, baron), blocked: 0, pour: 0, guest: 0};
+    chatter.refill = {server, route: routeToGuests(server, baron), enclosed: guestEnclosure.active, blocked: 0, pour: 0, guest: 0};
   }
   const refill = chatter.refill;
-  const {server, route} = refill;
+  const {server} = refill;
+  if (guestEnclosure.active && !refill.enclosed) {
+    refill.enclosed = true;
+    server.guestAccess = true;
+    if (refill.route.length) refill.route = routeToGuests(server, baron);
+  }
+  const {route} = refill;
   if (route.length) {
     const waypoint = route[0];
     const before = Math.hypot(server.x - waypoint.x, server.y - waypoint.y);
@@ -81,11 +114,18 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
       if (!route.length) {
         server.walking = false;
         server.facing = -1;
+        if (refill.exiting) {
+          server.guestAccess = false;
+          server.serviceDuty = false;
+          server.pauseUntil = elapsed + 0.5;
+          chatter.refill = null;
+          chatter.completed = 0;
+        }
       }
     } else if (before - Math.hypot(server.x - waypoint.x, server.y - waypoint.y) < dt * 30) {
       refill.blocked += dt;
       if (refill.blocked > 2) {
-        refill.route = routeAroundBaron(server, serviceSpot, baron);
+        refill.route = refill.exiting ? routeOutOfGuests() : routeToGuests(server, baron);
         refill.blocked = 0;
       }
     }
@@ -99,6 +139,9 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
     refill.guest = 1;
     refill.pour = 0;
     server.facing = 1;
+  } else if (guestEnclosure.active) {
+    refill.exiting = true;
+    refill.route = routeOutOfGuests();
   } else {
     server.serviceDuty = false;
     server.pauseUntil = elapsed + 0.5;

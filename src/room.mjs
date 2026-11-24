@@ -56,6 +56,42 @@ function overlaps(x, y, radius, obstacle) {
     && Math.abs(y - obstacle.y) < obstacle.halfHeight + radius;
 }
 
+export const guestEnclosure = {
+  active: false, west: WEST_EDGE + 99, east: WEST_EDGE + 260,
+  north: SOUTH_TRIM_Y - 104, south: SOUTH_TRIM_Y - 5,
+  gateY: SOUTH_TRIM_Y - 56, gateHalf: 25
+};
+
+export const guestGateOutside = {x: guestEnclosure.east + 30, y: guestEnclosure.gateY};
+const enclosureBounds = {
+  x: (guestEnclosure.west + guestEnclosure.east) / 2,
+  y: (guestEnclosure.north + guestEnclosure.south) / 2,
+  halfWidth: (guestEnclosure.east - guestEnclosure.west) / 2,
+  halfHeight: (guestEnclosure.south - guestEnclosure.north) / 2
+};
+
+export function insideGuestEnclosure(point) {
+  return overlaps(point.x, point.y, 0, enclosureBounds);
+}
+
+export function nearGuestGate(point) {
+  return guestEnclosure.active && point.x >= guestEnclosure.east
+    && point.x <= guestEnclosure.east + 43 && Math.abs(point.y - guestEnclosure.gateY) <= guestEnclosure.gateHalf;
+}
+
+function guestEnclosureBlocks(x, y, radius, from) {
+  if (!guestEnclosure.active || !overlaps(x, y, radius, enclosureBounds)) return false;
+  const {west, east, north, south, gateY, gateHalf} = guestEnclosure;
+  if (from?.guestAccess) {
+    const horizontalWall = Math.abs(y - north) < radius || Math.abs(y - south) < radius;
+    const westWall = Math.abs(x - west) < radius;
+    const eastWall = Math.abs(x - east) < radius && Math.abs(y - gateY) > gateHalf - radius;
+    return horizontalWall || westWall || eastWall;
+  }
+  // Actors caught inside when the rope goes up can step out.
+  return !from || !insideGuestEnclosure(from);
+}
+
 export function onDanceFloor(x, y, radius = 0) {
   return overlaps(x, y, radius, danceBounds);
 }
@@ -68,7 +104,8 @@ export function isBlocked(x, y, radius, baron, from) {
   if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < NORTH_EDGE + 160 || y > SOUTH_TRIM_Y - 16) return true;
   // The closed center door stands proud of the back wall.
   if (y < NORTH_EDGE + 190 && Math.abs(x - HALL_CENTER.x) < 75 + radius) return true;
-  if (danceFixtures.some(fixture => overlaps(x, y, radius, fixture))) return true;
+  if (danceFixtures.some(fixture => overlaps(x, y, radius, fixture))
+      || guestEnclosureBlocks(x, y, radius, from)) return true;
   const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};
   if (!overlaps(x, y, radius, baronObstacle)) return false;
   // The Baron can walk up to an occupied rug. Let a player he overlaps step away.
@@ -84,7 +121,7 @@ export function nearestInteraction(player, baron, milo, guards = [], guests = []
   const baronTargets = baron.x === BARON_DANCE_STOP.x && baron.y === BARON_DANCE_STOP.y && !baron.route?.length
     ? [] : [baronTarget];
   const targets = [...guests, ...baronTargets, ...guards.map(guard => ({
-    id: 'guard', x: guard.x, y: guard.y, radius: guard.radius, title: 'Bull Guard', posted: guard.posted
+    id: 'guard', x: guard.x, y: guard.y, radius: guard.radius, title: 'Bull Guard', posted: guard.posted, guestGate: guard.guestGate, guard
   }))];
   if (milo) {
     targets.push({
@@ -112,6 +149,7 @@ export function routeAroundBaron(member, target, baron) {
   const nearDanceFloor = Math.max(member.y, target.y) >= danceBounds.y - 340;
   const obstacles = [{x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35}];
   if (nearDanceFloor) obstacles.push(danceBounds, ...danceFixtures);
+  if (guestEnclosure.active) obstacles.push(enclosureBounds);
   const corners = obstacles.flatMap(obstacleCorners)
     .filter(point => !isNpcBlocked(point.x, point.y, member.radius, baron));
   const nodes = [member, target, ...corners];

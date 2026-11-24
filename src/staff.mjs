@@ -1,5 +1,5 @@
 import {guardBlocks} from './guards.mjs';
-import {crossesDanceArea, EAST_EDGE, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {crossesDanceArea, EAST_EDGE, guestEnclosure, guestGateOutside, insideGuestEnclosure, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const uniforms = [
   {id: 'male-waiter', title: 'Waiter'},
@@ -56,6 +56,11 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
     if (member.serviceDuty) continue;
     member.walking = false;
     if (dt <= 0 || elapsed < member.pauseUntil || Math.hypot(member.x - player.x, member.y - player.y) < 44) continue;
+    if (guestEnclosure.active && !member.guestAccess && insideGuestEnclosure(member)) {
+      member.guestAccess = true;
+      member.target = guestGateOutside;
+      member.route = [{x: guestEnclosure.east - 24, y: guestEnclosure.gateY}, guestGateOutside];
+    }
     if (!member.target) {
       member.target = chooseTarget(member, baron, random);
       member.route = member.target && crossesDanceArea(member, member.target)
@@ -75,7 +80,7 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
     const y = arrived ? targetY : member.y + dy * step / distance;
     if (isNpcBlocked(x, y, RADIUS, baron, member) || guardBlocks(x, y, member, guards)
         || guardBlocks(x, y, member, staff)) {
-      member.target = null;
+      if (!member.guestAccess) member.target = null;
       member.pauseUntil = elapsed + 0.5 + random();
       continue;
     }
@@ -87,6 +92,7 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
     if (arrived) {
       member.route?.shift();
       if (member.route?.length) continue;
+      member.guestAccess = false;
       member.target = null;
       member.pauseUntil = elapsed + (member.sweeps ? 1.8 : 0.75) + random() * 1.5;
     }

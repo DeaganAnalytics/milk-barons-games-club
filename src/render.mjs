@@ -1,3 +1,4 @@
+import {drawGuestRopes} from './guest-escort.mjs';
 import {createDancerSpeech, dancers, drawDancer} from './dancers.mjs';
 import {danceLayers, danceLyric, drawBaronDance, drawDanceBooth, drawDanceFloor} from './dance-floor.mjs';
 import {bartender, creameryHatch} from './creamery.mjs';
@@ -8,8 +9,8 @@ import {drawPip} from './pip-art.mjs';
 import {staffFrame, staffIds} from './staff.mjs';
 import {speechBubbleLayout} from './speech-layout.mjs';
 import {TURN} from './directions.mjs';
-import {isBaronDancing, speechOpacity} from './baron.mjs';
-import {DANCE_FLOOR, NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
+import {isBaronDancing, isOnscreen, speechOpacity} from './baron.mjs';
+import {DANCE_FLOOR, guestEnclosure, NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
 import {composeHall, loadHallArt} from './hall-art.mjs';
 
 function loadSprite(name, extension = "png") {
@@ -243,7 +244,7 @@ export function createRenderer(canvas) {
   };
 
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -260,6 +261,7 @@ export function createRenderer(canvas) {
       && DANCE_FLOOR.y + 175 > cameraY && DANCE_FLOOR.y - 345 < cameraY + ROOM_HEIGHT
       && DANCE_FLOOR.x + 235 > cameraX && DANCE_FLOOR.x - 235 < cameraX + ROOM_WIDTH;
     if (danceVisible) drawDanceFloor(ctx, danceArt);
+    if (guestEnclosure.active) drawGuestRopes(ctx, guestEnclosure, false);
     if (world) drawBartender(ctx, bartenderSprite, elapsed);
     if (milkScene) drawMilkShards(ctx, milkScene);
     const milkPose = usesMilkArm(milkScene) ? baronMilkPoses[milkScene.side] : null;
@@ -299,6 +301,9 @@ export function createRenderer(canvas) {
         if (isReady(sprite)) actors.push({depth: dancer.y, draw: () => drawDancer(ctx, sprite, dancer, elapsed)});
       });
     }
+    if (guestEnclosure.active) actors.push({
+      depth: guestEnclosure.south, draw: () => drawGuestRopes(ctx, guestEnclosure, true)
+    });
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
     if (milkScene) drawMilkAction(ctx, milkScene, baron, animateBaronArm);
@@ -311,7 +316,7 @@ export function createRenderer(canvas) {
       }
     }
     if (danceVisible) {
-      const speech = dancerSpeech(elapsed, baron);
+      const speech = dancerSpeech(elapsed, baron, isOnscreen(baron, cameraX, cameraY));
       if (speech && (!speech.dancer || isReady(dancerSprites[dancers.indexOf(speech.dancer)]))
           && speech.x >= cameraX && speech.x <= cameraX + ROOM_WIDTH
           && speech.feetY >= cameraY && speech.headY <= cameraY + ROOM_HEIGHT) {
@@ -322,7 +327,11 @@ export function createRenderer(canvas) {
       drawSpeech(ctx, baron.speech.text, speechOpacity(baron, cameraX, elapsed, cameraY),
         baron.x, baron.y - 61, baron.y + 34, cameraX, cameraY);
     }
-    const speech = chatter && partySpeech(chatter, {x: cameraX, y: cameraY});
+    if (guestEscort?.phase === 'waiting') {
+      const guest = guestEscort.guest;
+      drawSpeech(ctx, 'Guard, guard, a peasant is near me!', 1, guest.x, guest.y - 68, guest.y, cameraX, cameraY);
+    }
+    const speech = !guestEscort && chatter && partySpeech(chatter, {x: cameraX, y: cameraY});
     if (speech) drawSpeech(ctx, speech.text, speech.opacity,
       speech.guest.x, speech.guest.y - 68, speech.guest.y, cameraX, cameraY);
     ctx.restore();

@@ -55,32 +55,40 @@ function approaches(x, y, guard, actor, distance) {
 }
 
 export function summonGuard(guards, player) {
-  if (guards.some(guard => guard.pursuit)) return;
-  const guard = guards.filter(guard => !guard.posted).reduce((closest, candidate) =>
+  const alreadyComing = guards.find(guard => guard.pursuit && !guard.pursuit.milo);
+  if (alreadyComing) return alreadyComing;
+  const guard = guards.filter(guard => !guard.posted && !guard.pursuit).reduce((closest, candidate) =>
     !closest || Math.hypot(candidate.x - player.x, candidate.y - player.y)
       < Math.hypot(closest.x - player.x, closest.y - player.y) ? candidate : closest, null);
   if (guard) guard.pursuit = {destination: null, route: []};
+  return guard;
+}
+
+export function dispatchGuardToMilo(guard) {
+  if (guard && !guard.posted) guard.pursuit = {milo: true, destination: null, route: []};
 }
 
 export function updateGuards(guards, player, baron, milo, elapsed, dt) {
   let arrivedGuard = null;
   for (const guard of guards) {
-    if (guard.posted) continue;
+    if (guard.posted || guard.escorting) continue;
     guard.walking = false;
     const pursuit = guard.pursuit;
-    if (pursuit && Math.hypot(guard.x - player.x, guard.y - player.y) <= 44) {
-      guard.facing = Math.round(facingIndex(player.x - guard.x, player.y - guard.y) / 2) % 4;
+    const pursued = pursuit?.milo ? milo : player;
+    if (pursuit && Math.hypot(guard.x - pursued.x, guard.y - pursued.y) <= (pursuit.milo ? 30 : 44)) {
+      guard.facing = Math.round(facingIndex(pursued.x - guard.x, pursued.y - guard.y) / 2) % 4;
       guard.pursuit = null;
       guard.target = null;
       guard.pauseUntil = elapsed + 1;
-      arrivedGuard = guard;
+      if (pursuit.milo) milo.injuryPending = true;
+      else arrivedGuard = guard;
       continue;
     }
-    if (pursuit && onDanceFloor(player.x, player.y, RADIUS)) continue;
+    if (pursuit && onDanceFloor(pursued.x, pursued.y, RADIUS)) continue;
     if (pursuit && (!pursuit.destination || Math.hypot(
-      player.x - pursuit.destination.x, player.y - pursuit.destination.y
+      pursued.x - pursuit.destination.x, pursued.y - pursuit.destination.y
     ) >= 24)) {
-      pursuit.destination = {x: player.x, y: player.y};
+      pursuit.destination = {x: pursued.x, y: pursued.y};
       pursuit.route = routeAroundBaron(guard, pursuit.destination, baron);
     }
     // Let the player approach instead of constantly evading them.
@@ -96,7 +104,7 @@ export function updateGuards(guards, player, baron, milo, elapsed, dt) {
       guard.route = crossesDanceArea(guard, guard.target) ? routeAroundBaron(guard, guard.target, baron) : [];
     }
 
-    const target = pursuit ? (pursuit.route[0] ?? player) : (guard.route?.[0] ?? guard.target);
+    const target = pursuit ? (pursuit.route[0] ?? pursued) : (guard.route?.[0] ?? guard.target);
     const dx = target.x - guard.x;
     const dy = target.y - guard.y;
     const distance = Math.hypot(dx, dy);

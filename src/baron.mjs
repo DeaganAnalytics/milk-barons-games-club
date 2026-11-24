@@ -41,7 +41,7 @@ export function createBaron() {
   };
 }
 
-function isOnscreen(baron, cameraX, cameraY) {
+export function isOnscreen(baron, cameraX, cameraY) {
   // Include the full sprite, so a partly visible Baron does not start the timer.
   return baron.x + 33 > cameraX && baron.x - 33 < cameraX + ROOM_WIDTH
     && baron.y + 34 > cameraY && baron.y - 57 < cameraY + ROOM_HEIGHT;

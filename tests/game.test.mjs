@@ -1,3 +1,6 @@
+import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
+import {partyGuests} from '../src/party-guests.mjs';
+import {availableReports} from '../src/report-dialogue.mjs';
 import {createDancerSpeech} from '../src/dancers.mjs';
 import {danceLyric} from '../src/dance-floor.mjs';
 import {createPartyChatter, partySpeech, updatePartyChatter} from '../src/party-chatter.mjs';
@@ -5,14 +8,14 @@ import {bartender, createCreameryGuard} from '../src/creamery.mjs';
 import {createMilkService, milkCalls, updateMilkService} from '../src/milk-service.mjs';
 import {createStaff, faceStaffMovement, updateStaff, staffFrame} from '../src/staff.mjs';
 import {speechBubbleLayout} from '../src/speech-layout.mjs';
-import {createGuards, summonGuard, updateGuards} from '../src/guards.mjs';
-import {createMilo, updateMilo} from '../src/milo.mjs';
+import {createGuards, dispatchGuardToMilo, summonGuard, updateGuards} from '../src/guards.mjs';
+import {createMilo, fleeMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {callOutMilo, createBaron, isBaronDancing, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, HALL_CENTER, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
+import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, guestGateOutside, insideGuestEnclosure, HALL_CENTER, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -637,15 +640,15 @@ test('the Baron follows Pip to the dance stop and only dances after arrival', ()
   assert.equal(isBaronDancing(baron), false);
 });
 
-test('one randomly chosen dancer says one line every 20 seconds', () => {
-  const rolls = [0, 0.99, 0.26, 0, 0.51, 0.99, 0.99, 0.99];
+test('one randomly chosen dance-floor character says one line every 15 seconds', () => {
+  const rolls = [0, 0.99, 0.26, 0, 0.51, 0.99, 0.7, 0.99];
   const speechAt = createDancerSpeech(() => rolls.shift());
-  assert.equal(speechAt(19.9), null);
+  assert.equal(speechAt(14.9), null);
   for (const [time, id, line] of [
-    [20, 'mascot', 'Milk my cow! Milk her now!'],
-    [40, 'coral', 'I like to PARTAY!'],
-    [60, 'jade', 'That cow guard is kind of cute!!'],
-    [80, 'guard', 'God bless the Baron!']
+    [15, 'mascot', 'Milk my cow! Milk her now!'],
+    [30, 'coral', 'I like to PARTAY!'],
+    [45, 'jade', 'That cow guard is kind of cute!!'],
+    [60, 'guard', 'God bless the Baron!']
   ]) {
     const first = speechAt(time + 0.5);
     assert.equal(first.dancer.id, id);
@@ -667,9 +670,9 @@ test('the Baron pauses his milk countdown and joins the remarks while dancing', 
   assert.equal(baron.speech, null);
   const rolls = [0.99, 0.3];
   const speechAt = createDancerSpeech(() => rolls.shift());
-  assert.equal(speechAt(40.5, baron).text, 'Shake that belly, shake that belly');
+  assert.equal(speechAt(45.5, baron).text, 'Shake that belly, shake that belly');
   baron.x -= 1;
-  assert.equal(speechAt(41, baron), null);
+  assert.equal(speechAt(46, baron), null);
   updateMilkService(service, baron, [], [], camera, 42, 1, false);
   assert.equal(service.remaining, 44);
 });
@@ -701,5 +704,122 @@ test('NPC routes skirt the dance floor with room for the walker', () => {
         previous.y + (waypoint.y - previous.y) * i / 100, start.radius), false);
     }
     previous = waypoint;
+  }
+});
+
+test('reports unlock after two Baron trips or seeing Milo, and a Milo report cannot be repeated while pending', () => {
+  assert.equal(availableReports(1, false, false).length, 0);
+  assert.equal(availableReports(2, false, false)[0].label, 'The Baron keeps following me.');
+  assert.equal(availableReports(0, true, false)[0].label, "There's a man in rags wandering around the walls.");
+  assert.equal(availableReports(2, true, false).length, 2);
+  assert.equal(availableReports(2, true, true).length, 1);
+});
+
+test('the reporting guard runs to Milo, then Milo can flee from Pip after a confession', () => {
+  const baron = createBaron();
+  const milo = createMilo();
+  const pip = createPlayer();
+  const guard = {...createGuards(pip, baron, milo)[0], x: milo.x + 160, y: milo.y};
+  dispatchGuardToMilo(guard);
+  for (let i = 0; i < 40 && guard.pursuit; i++) {
+    assert.equal(updateGuards([guard], pip, baron, milo, i * 0.05, 0.05), null);
+  }
+  assert.ok(Math.hypot(guard.x - milo.x, guard.y - milo.y) <= 30);
+  assert.equal(guard.pursuit, null);
+  assert.equal(milo.injuryPending, true);
+  fleeMilo(milo, {...pip, x: milo.x + 30, y: milo.y}, baron, [guard]);
+  assert.equal(milo.fleeing, true);
+  assert.ok(milo.route.length > 0);
+});
+
+test('the DJ can call out the Baron only when he is visible', () => {
+  const rolls = [0.99, 0.99, 0.99, 0.99];
+  const speechAt = createDancerSpeech(() => rolls.shift());
+  const baron = createBaron();
+  const withoutBaron = speechAt(15.5, baron, false);
+  assert.equal(withoutBaron.text, 'Get that guard a drink! Of Milkkkk!');
+  assert.equal(withoutBaron.x, DANCE_FLOOR.x);
+  assert.ok(withoutBaron.headY < DANCE_FLOOR.y);
+  assert.equal(speechAt(30.5, baron, true).text, 'Shake those milk makers ladies. And you too Baron!');
+});
+
+test('the corner guest escort walks Pip beyond both guests before releasing him', () => {
+  const baron = createBaron();
+  const [guest, otherGuest] = partyGuests;
+  const pip = {...createPlayer(), x: guest.x + 6, y: guest.y - 19};
+  const guard = {x: pip.x - 20, y: pip.y - 30, facing: 0, radius: 14, stride: 0};
+  const escort = {guest, guard, phase: 'warning'};
+  beginGuestEscort(escort, pip, baron);
+  assert.equal(guard.escorting, true);
+  let ended = false;
+  for (let time = 0; time < 8 && !ended; time += 0.05) {
+    ended = advanceGuestEscort(escort, pip, baron, [guard], time, 0.05);
+  }
+  assert.equal(ended, true);
+  assert.ok(cameraLeft(pip.x) > otherGuest.x + 25);
+  assert.ok(Math.hypot(guard.x - pip.x, guard.y - pip.y) < 38);
+  assert.equal(guard.escorting, false);
+});
+
+test('the enclosure blocks Pip and milk staff enter and exit through the east gate', () => {
+  const baron = createBaron();
+  const pip = {...createPlayer(), ...guestGateOutside};
+  const camera = {x: WEST_EDGE, y: SOUTH_EDGE - ROOM_HEIGHT};
+  const server = {x: guestGateOutside.x + 60, y: guestGateOutside.y + 25, radius: 14, walkTime: 0};
+  const guard = {x: guestEnclosure.east + 22, y: guestEnclosure.gateY - 34, radius: 14};
+  const chatter = createPartyChatter();
+  chatter.completed = 4;
+  guestEnclosure.active = true;
+  try {
+    for (let i = 0; i < 20; i++) movePlayer(pip, baron, -5, 0, [guard]);
+    assert.ok(pip.x >= guestEnclosure.east + pip.radius);
+    let cameInside = false;
+    let movedOut = false;
+    for (let i = 0; i < 460 && chatter.completed; i++) {
+      const wasInside = insideGuestEnclosure(server);
+      updatePartyChatter(chatter, camera, [server], baron, [guard], i * 0.05, 0.05);
+      const inside = insideGuestEnclosure(server);
+      if (wasInside !== inside) {
+        assert.ok(Math.abs(server.x - guestEnclosure.east) < 12);
+        assert.ok(Math.abs(server.y - guestEnclosure.gateY) < 12);
+        cameInside ||= inside;
+        movedOut ||= !inside;
+      }
+    }
+    assert.ok(cameInside && movedOut);
+    assert.equal(server.guestAccess, false);
+    assert.equal(chatter.completed, 0);
+  } finally {
+    guestEnclosure.active = false;
+  }
+});
+
+test('the corner guests add the five security exchanges to their pending shuffle when the ropes go up', () => {
+  const chatter = createPartyChatter();
+  const camera = {x: WEST_EDGE, y: SOUTH_EDGE - ROOM_HEIGHT};
+  const baron = createBaron();
+  const next = () => {
+    chatter.exchange = null;
+    chatter.remaining = 0;
+    updatePartyChatter(chatter, camera, [], baron, [], 1, 0.05, () => 0.5);
+    return chatter.exchange;
+  };
+
+  next();
+  assert.equal(chatter.order.length, 11);
+  assert.ok(chatter.order.every(exchange => !exchange[0][1].includes('velvet ropes')));
+  guestEnclosure.active = true;
+  try {
+    const remaining = Array.from({length: 16}, next);
+    assert.equal(new Set(remaining).size, 16);
+    const ropeExchange = remaining.find(exchange => exchange[0][1].includes('velvet ropes'));
+    assert.deepEqual(ropeExchange, [
+      [0, "Aren't these velvet ropes simply beautiful?"],
+      [1, 'They must have cost a fortune. Thank goodness for taxpayers!']
+    ]);
+    const fullRotation = Array.from({length: 17}, next);
+    assert.equal(new Set(fullRotation).size, 17);
+  } finally {
+    guestEnclosure.active = false;
   }
 });

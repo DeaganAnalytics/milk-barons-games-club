@@ -9,7 +9,13 @@ export const dancers = [
   {id: 'guard', dx: 97, dy: -50, facing: 1, height: 76, tempo: 3.6, phase: 2.1, travel: 11, sway: 0.15, bounce: 1.5, shoulders: [[49, 105], [91, 109]]}
 ].map(dancer => ({...dancer, x: DANCE_FLOOR.x + dancer.dx, y: DANCE_FLOOR.y + dancer.dy}));
 
+const djBaronRemark = 'Shake those milk makers ladies. And you too Baron!';
 const remarks = {
+  dj: [
+    'DJ dairy in DA house!',
+    'You got it Milk Bottle Boy!',
+    'Get that guard a drink! Of Milkkkk!'
+  ],
   baron: [
     'Milk milk milk my cow!',
     'Shake that belly, shake that belly',
@@ -43,7 +49,7 @@ const remarks = {
   ]
 };
 
-const remarkInterval = 20;
+const remarkInterval = 15;
 const remarkDuration = 5;
 
 function dancerPose(dancer, elapsed) {
@@ -58,20 +64,29 @@ function dancerPose(dancer, elapsed) {
 
 export function createDancerSpeech(random = Math.random) {
   let lastSlot = 0;
-  let dancer;
+  let speaker;
   let text;
-  return (elapsed, baron) => {
+  return (elapsed, baron, baronVisible = false) => {
     const slot = Math.floor(elapsed / remarkInterval);
     const age = elapsed % remarkInterval;
     if (slot === 0 || age >= remarkDuration) return null;
     if (slot !== lastSlot) {
-      const count = dancers.length + Number(Boolean(baron && isBaronDancing(baron)));
-      dancer = dancers[Math.floor(random() * count)] ?? null;
-      const lines = remarks[dancer?.id ?? 'baron'];
+      const count = dancers.length + 1 + Number(Boolean(baron && isBaronDancing(baron)));
+      speaker = Math.floor(random() * count);
+      const id = dancers[speaker]?.id ?? (speaker === dancers.length ? 'dj' : 'baron');
+      const lines = id === 'dj' && baronVisible ? [...remarks.dj, djBaronRemark] : remarks[id];
       text = lines[Math.floor(random() * lines.length)];
       lastSlot = slot;
     }
     const opacity = Math.min(1, age / 0.22, (remarkDuration - age) / 0.45);
+    if (speaker === dancers.length) {
+      return {
+        dancer: null, text, x: DANCE_FLOOR.x,
+        headY: DANCE_FLOOR.y - 345 + Math.sin(elapsed * 5) * 1.9,
+        feetY: DANCE_FLOOR.y - 279, opacity
+      };
+    }
+    const dancer = dancers[speaker];
     if (!dancer) return baron && isBaronDancing(baron)
       ? {dancer: null, text, x: baron.x, headY: baron.y - 61, feetY: baron.y + 34, opacity} : null;
     const {x, bob, rotation} = dancerPose(dancer, elapsed);

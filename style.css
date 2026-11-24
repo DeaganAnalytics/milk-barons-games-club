@@ -221,3 +221,24 @@ canvas {
 #conversation-close {
   margin-top: 12px;
 }
+
+/* These marks share the portrait atlas' position and scale. */
+.conversation-portrait[data-injured="true"]::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 128%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 4.5% 3.2% at 39% 48%, #754b78a8, transparent 95%),
+    radial-gradient(ellipse 3.5% 2.9% at 58% 46%, #98566699, transparent 95%),
+    radial-gradient(ellipse 2.2% 1.4% at 43% 55%, #a8645c80, transparent 95%);
+}
+
+.conversation-portrait.report-portrait::before {
+  width: 110%;
+  height: 110%;
+}

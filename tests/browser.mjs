@@ -310,7 +310,7 @@ try {
   await closeConversation();
   await activate('Bull Guard');
   await reply('Ah yes, I do.', 'What is the problem.');
-  await expressions('happy', 'suspicious');
+  await expressions('attentive', 'suspicious');
   await reply('Actually nevermind.', '...');
   await expressions('thinking', 'deadpan');
   await closeConversation();

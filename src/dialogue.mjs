@@ -1,13 +1,32 @@
+import {availableReports, injuredMiloReply} from './report-dialogue.mjs';
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
 import {drawPipPortrait} from './pip-art.mjs';
 
+const partyGuestCallsGuard = {
+  text: 'Then get away from me! Guards!', mood: 'annoyed', action: 'callGuard'
+};
+
 const partyGuestOpening = {
   text: "Where's your milk waiter?", mood: 'attentive', replies: [
-    {label: "I'm not a waiter.", playerMood: 'thinking', next: {
-      text: 'Then get away from me! Guards!', mood: 'annoyed', callGuard: true
+    {label: "I'm not a waiter.", playerMood: 'thinking', next: partyGuestCallsGuard},
+    {label: "I'll go get it.", playerMood: 'attentive', next: {
+      text: "And hurry up with it. And where's your suit?", mood: 'annoyed', replies: [
+        {label: "I'm sorry.", playerMood: 'sorry', next: {
+          text: 'Unacceptable. I must raise a complaint with the Baron!', mood: 'annoyed'
+        }},
+        {label: "Actually I'm not a waiter.", playerMood: 'worried', next: partyGuestCallsGuard}
+      ]
     }}
+  ]
+};
+
+const guestGateWarning = {
+  text: "Sir, stop bothering the ladies. Please leave or I'll have to shoot you.", mood: 'formal', replies: [
+    {label: "You'll shoot me?", playerMood: 'alarmed', next: {text: "Yes. Baron's orders.", mood: 'deadpan'}},
+    {label: "You can't shoot me, that's illegal!", playerMood: 'worried',
+      next: {text: 'The Baron owns the courts. Try me.', mood: 'suspicious'}}
   ]
 };
 
@@ -41,7 +60,7 @@ const guardReplies = [
     next: {text: 'Then get out of my way!', mood: 'speaking'}
   },
   {
-    label: 'Ah yes, I do.', playerMood: 'happy',
+    label: 'Ah yes, I do.', playerMood: 'attentive',
     next: {text: 'What is the problem.', mood: 'suspicious', replies: [
       {label: 'Actually nevermind.', playerMood: 'thinking', next: {text: '...', mood: 'deadpan'}}
     ]}
@@ -103,12 +122,15 @@ const portraits = {
   guard: {row: 3, expressions: ['deadpan', 'suspicious', 'speaking']}
 };
 
+const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-formal', 'milo-angry'].map(name =>
+  [name, new URL('../assets/dialogue/' + name + '.webp', import.meta.url)]));
 const portraitCache = new Map();
 
-function standalonePortraitUrl(id, withoutMilk = false) {
+function standalonePortraitUrl(id, withoutMilk = false, mood) {
   if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
   if (partyGuests.some(guest => guest.id === id)) {
-    return new URL('../assets/guests/' + id + '-portrait.webp', import.meta.url);
+    const suffix = mood === 'annoyed' ? '-annoyed-portrait.webp' : '-portrait.webp';
+    return new URL('../assets/guests/' + id + suffix, import.meta.url);
   }
   const filename = id + (withoutMilk ? '-empty-portrait.webp' : '-portrait.webp');
   return new URL('../assets/waiters/' + filename, import.meta.url);
@@ -116,12 +138,15 @@ function standalonePortraitUrl(id, withoutMilk = false) {
 
 function warmPortraits() {
   if (portraitCache.size) return;
-  const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url)];
+  const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values()];
   for (const id of staffIds) {
     urls.push(standalonePortraitUrl(id));
     if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
-  urls.push(standalonePortraitUrl(bartender.id), ...partyGuests.map(guest => standalonePortraitUrl(guest.id)));
+  urls.push(standalonePortraitUrl(bartender.id));
+  for (const {id} of partyGuests) {
+    urls.push(standalonePortraitUrl(id), standalonePortraitUrl(id, false, 'annoyed'));
+  }
   // Keep the decoded images alive while the conversation panel is hidden.
   for (const url of urls) {
     const image = new Image();
@@ -132,7 +157,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, onCallGuard) {
+export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -147,13 +172,18 @@ export function createDialogue(baron, onCallGuard) {
   const playerArt = playerPortrait.querySelector('canvas');
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
-  let callGuard = false;
+  let action = null;
+  let activeTarget;
+  let injured = false;
 
   function setPortrait(element, character, mood, withoutMilk) {
-    if (!portraits[character]) {
+    const reportPortrait = reportPortraits.get(character + '-' + mood);
+    element.dataset.injured = String(character === 'milo' && injured && !reportPortrait);
+    element.classList.toggle('report-portrait', Boolean(reportPortrait));
+    element.dataset.portrait = character;
+    if (reportPortrait || !portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.dataset.portrait = character;
-      element.style.setProperty('--portrait-image', `url(${standalonePortraitUrl(character, withoutMilk)})`);
+      element.style.setProperty('--portrait-image', `url(${reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood)})`);
       element.dataset.expression = mood;
       return;
     }
@@ -167,15 +197,19 @@ export function createDialogue(baron, onCallGuard) {
     panel.hidden = true;
     map.hidden = info.hidden = controls.hidden = false;
     interact.focus({preventScroll: true});
-    if (callGuard) {
-      callGuard = false;
-      onCallGuard?.();
-    }
+    const finishedAction = action;
+    action = null;
+    if (finishedAction) onAction?.(finishedAction, activeTarget);
   }
 
   function show(node, character, playerMood, withoutMilk) {
-    callGuard = Boolean(node.callGuard);
+    action = node.action ?? null;
     line.textContent = node.text;
+    if (node.direction) {
+      const direction = document.createElement('em');
+      direction.textContent = '(' + node.direction + ') ';
+      line.prepend(direction);
+    }
     if (playerPortrait.dataset.expression !== playerMood) {
       drawPipPortrait(playerArt, playerMood);
       playerPortrait.dataset.expression = playerMood;
@@ -199,21 +233,39 @@ export function createDialogue(baron, onCallGuard) {
     }
   });
 
+  function reportingReplies() {
+    const report = guardReplies[2];
+    const status = canReportMilo?.() ?? {};
+    return [...guardReplies.slice(0, 2), {...report, next: {
+      ...report.next,
+      replies: [...availableReports(baron.completedRugTrips, status.seen, status.pending), ...report.next.replies]
+    }}];
+  }
+
   function open(target) {
+    activeTarget = target;
+    injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
-      : target.summoned ? {text: 'Sir I have to ask you to leave.', mood: 'speaking'}
+      : target.guestGate ? guestGateWarning
+      : target.summoned ? {
+          text: target.repeat ? 'Sir, please stop bothering the ladies.' : 'Sir I have to ask you to leave.',
+          mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
+        }
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
       : target.id === 'guard' ? {
           text: target.posted ? postedGuardOpening : guardOpening,
-          replies: target.posted ? postedGuardReplies : guardReplies,
+          replies: target.posted ? postedGuardReplies : reportingReplies(),
           mood: 'deadpan'
         }
-      : target.id === 'milo' ? {text: target.message, replies: miloReplies, mood: 'worried'}
+      : target.id === 'milo' ? {
+          text: injured ? "No, don't hurt me!" : target.message,
+          replies: injured ? [injuredMiloReply, ...miloReplies] : miloReplies, mood: 'worried'
+        }
         : {...baronGreetings[greetingIndex++ % baronGreetings.length], replies: availableBaronReplies(baron)};
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;
-    show(opening, target.id, 'attentive', target.withoutMilk);
+    show(opening, target.id, injured || target.summoned || target.guestGate ? 'worried' : 'attentive', target.withoutMilk);
   }
 
   return {open, isOpen: () => !panel.hidden};
