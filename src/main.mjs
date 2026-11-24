@@ -1,5 +1,5 @@
 import {createMilkBalloon, throwMilkBalloon, updateMilkBalloon} from './milk-balloon.mjs';
-import {pilloryAttendant} from './pillory.mjs';
+import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
 import {professor} from './professor.mjs';
 import {createMilkPool, lifeguard, updateMilkPool} from './milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} from './rope-warning.mjs';
@@ -24,7 +24,7 @@ const milo = createMilo();
 const guards = createGuards(player, baron, milo);
 guards.push(createCreameryGuard());
 const staff = createStaff(player, baron, milo, guards);
-const guests = [...staff, bartender, lifeguard, professor, pilloryAttendant, ...partyGuests.map(guest => ({
+const guests = [...staff, bartender, lifeguard, professor, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
 const milkService = createMilkService();

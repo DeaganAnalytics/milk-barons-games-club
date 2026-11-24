@@ -1121,3 +1121,32 @@ test('Pip picks up a milk balloon, waits for the throw, then finishes the round'
   assert.equal(updateMilkBalloon(scene, player, 1), false);
   assert.equal(updateMilkBalloon(scene, player, 1), true);
 });
+
+test('the Commissioner is reachable, greets Pip once, and has three ways to end the game conversation', async () => {
+  const {createCommissionerConversation, commissionerMoods} = await import('../src/commissioner-dialogue.mjs');
+  const {pilloryAttendant, pilloryCommissioner} = await import('../src/pillory.mjs');
+  const baron = createBaron();
+  const player = {...createPlayer(), x: pilloryCommissioner.x, y: pilloryCommissioner.y + 33};
+  assert.equal(isBlocked(player.x, player.y, player.radius, baron), false);
+  assert.equal(nearestInteraction(player, baron, null, [], [pilloryAttendant, pilloryCommissioner]).id, pilloryCommissioner.id);
+  const open = createCommissionerConversation();
+  const first = open();
+  const menu = open();
+  assert.equal(first.text, 'Please... help me.');
+  assert.equal(open(), menu);
+  assert.equal(menu.replies.length, 3);
+  const branch = menu.replies[1].next;
+  assert.equal(branch.replies[0].next, null);
+  assert.ok(branch.replies.slice(1).every(reply => reply.next.replies.length === 0 && !reply.next.action));
+  const visited = new Set();
+  const moods = new Set();
+  function visit(node) {
+    if (!node || visited.has(node)) return;
+    visited.add(node);
+    moods.add(node.mood);
+    for (const reply of node.replies) visit(reply.next);
+  }
+  visit(first);
+  assert.ok(visited.has(menu));
+  assert.deepEqual([...moods].sort(), [...commissionerMoods].sort());
+});

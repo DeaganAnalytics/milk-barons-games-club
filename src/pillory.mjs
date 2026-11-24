@@ -1,7 +1,11 @@
-import {PILLORY_ATTENDANT} from './room.mjs';
+import {PILLORY, PILLORY_ATTENDANT} from './room.mjs';
 
 export const pilloryAttendant = {
   id: 'pillory-attendant', title: 'Attendant', ...PILLORY_ATTENDANT, radius: 21
+};
+
+export const pilloryCommissioner = {
+  id: 'pillory-commissioner', title: 'Commissioner', ...PILLORY, radius: 23
 };
 
 const attendantLines = [
