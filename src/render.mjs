@@ -311,14 +311,14 @@ export function createRenderer(canvas) {
       }
     }
     if (danceVisible) {
-      const speech = dancerSpeech(elapsed);
-      if (speech && isReady(dancerSprites[dancers.indexOf(speech.dancer)])
+      const speech = dancerSpeech(elapsed, baron);
+      if (speech && (!speech.dancer || isReady(dancerSprites[dancers.indexOf(speech.dancer)]))
           && speech.x >= cameraX && speech.x <= cameraX + ROOM_WIDTH
-          && speech.dancer.y >= cameraY && speech.headY <= cameraY + ROOM_HEIGHT) {
-        drawSpeech(ctx, speech.text, speech.opacity, speech.x, speech.headY, speech.dancer.y, cameraX, cameraY);
+          && speech.feetY >= cameraY && speech.headY <= cameraY + ROOM_HEIGHT) {
+        drawSpeech(ctx, speech.text, speech.opacity, speech.x, speech.headY, speech.feetY, cameraX, cameraY);
       }
     }
-    if (baron.speech) {
+    if (baron.speech && !isBaronDancing(baron)) {
       drawSpeech(ctx, baron.speech.text, speechOpacity(baron, cameraX, elapsed, cameraY),
         baron.x, baron.y - 61, baron.y + 34, cameraX, cameraY);
     }

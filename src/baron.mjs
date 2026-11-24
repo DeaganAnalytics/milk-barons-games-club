@@ -55,7 +55,7 @@ export function isBaronDancing(baron) {
 function routeToDanceStop(from) {
   if (from.x <= BARON_DANCE_STOP.x) return [BARON_DANCE_STOP];
   // Approach from the open west side, skirting the booth and speaker cabinets.
-  const y = from.y < BARON_DANCE_STOP.y ? DANCE_FLOOR.y - 342 : DANCE_FLOOR.y - 160;
+  const y = from.y < BARON_DANCE_STOP.y ? DANCE_FLOOR.y - 342 : DANCE_FLOOR.y + 207;
   return [{x: from.x, y}, {x: BARON_DANCE_STOP.x, y}, BARON_DANCE_STOP];
 }
 
@@ -103,7 +103,10 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
       baron.x = target.x;
       baron.y = target.y;
       baron.route.shift();
-      if (!baron.route.length && step > 0) baron.completedRugTrips++;
+      if (!baron.route.length && step > 0) {
+        baron.completedRugTrips++;
+        if (target === BARON_DANCE_STOP) baron.speech = null;
+      }
     } else {
       baron.x += dx * step / distance;
       baron.y += dy * step / distance;
@@ -123,6 +126,7 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
 }
 
 export function callOutMilo(baron, milo, elapsed) {
+  if (isBaronDancing(baron)) return;
   const lines = baron.remainingMiloLines;
   if (lines.length === 0) {
     lines.push(...miloLines.filter(line => line !== baron.lastMiloLine));
@@ -156,7 +160,7 @@ export function updateBaronAttention(baron, player, elapsed, dt) {
 }
 
 export function updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed) {
-  if (elapsed < baron.nextIdleSpeech || baron.speech || baron.walking || baron.route.length
+  if (isBaronDancing(baron) || elapsed < baron.nextIdleSpeech || baron.speech || baron.walking || baron.route.length
       || !isOnscreen(baron, cameraX, cameraY)) return;
 
   const text = idleLines[Math.floor(Math.random() * idleLines.length)];

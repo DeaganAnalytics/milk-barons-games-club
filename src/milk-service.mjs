@@ -1,6 +1,7 @@
+import {isBaronDancing} from './baron.mjs';
 import {faceStaffMovement} from './staff.mjs';
 import {guardBlocks} from './guards.mjs';
-import {EAST_EDGE, isBlocked, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {EAST_EDGE, isNpcBlocked, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 export const milkCalls = [
   'MILK!',
@@ -31,7 +32,7 @@ function approachPoint(member, point, reach, baron, obstacles, angle) {
   for (const offset of [0, 0.6, -0.6, 1.2, -1.2, Math.PI / 2, -Math.PI / 2, Math.PI]) {
     const x = point.x + Math.cos(angle + offset) * reach;
     const y = point.y + Math.sin(angle + offset) * reach;
-    if (!isBlocked(x, y, member.radius, baron)
+    if (!isNpcBlocked(x, y, member.radius, baron)
         && obstacles.every(other => other === member || distance({x, y}, other) >= member.radius + other.radius)) {
       return {x, y};
     }
@@ -48,7 +49,7 @@ export function runServiceStaff(member, target, baron, obstacles, dt) {
     const dy = Math.sin(heading + offset) * stride;
     const x = member.x + dx;
     const y = member.y + dy;
-    if (isBlocked(x, y, member.radius, baron, member)
+    if (isNpcBlocked(x, y, member.radius, baron, member)
         || guardBlocks(x, y, member, obstacles)) continue;
     member.x = x;
     member.y = y;
@@ -90,7 +91,7 @@ export function updateMilkService(service, baron, staff, guards, camera, elapsed
   if (dt <= 0) return;
 
   if (!service.scene) {
-    if (traveling || baron.route.length) return;
+    if (traveling || baron.route.length || isBaronDancing(baron)) return;
     service.remaining = Math.max(0, service.remaining - dt);
     if (service.remaining > 1e-6) return;
     const cleaner = staff.find(member => member.sweeps);

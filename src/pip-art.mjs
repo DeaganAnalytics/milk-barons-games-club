@@ -4,8 +4,9 @@ export function drawPip(ctx, player, elapsed) {
   const x = Math.round(player.x);
   const y = Math.round(player.y);
   const breath = player.walking ? 0 : Math.sin(elapsed * 2.8 + 0.8) * 0.9;
-  if (!player.walking && player.facing === 0) {
-    drawFrontIdle(ctx, x, y, elapsed);
+  const dancing = !player.walking && player.danceIdle > 3;
+  if (dancing || (!player.walking && player.facing === 0)) {
+    drawFrontIdle(ctx, x, y, elapsed, dancing);
     return;
   }
 
@@ -82,29 +83,46 @@ function stroke(ctx, width, color, paint) {
   ctx.stroke();
 }
 
-function drawFrontIdle(ctx, x, y, elapsed) {
-  const breath = Math.sin(elapsed * 1.8) * 0.55;
-  const sway = Math.sin(elapsed * 1.15) * 0.4;
+function drawFrontIdle(ctx, x, y, elapsed, dancing) {
+  const beat = Math.sin(elapsed * 6);
+  const breath = dancing ? Math.abs(beat) * 1.7 : Math.sin(elapsed * 1.8) * 0.55;
+  const sway = dancing ? beat * 3.2 : Math.sin(elapsed * 1.15) * 0.4;
   const ink = '#100d0b';
   ctx.save();
   ctx.translate(x, y);
   ellipse(ctx, 0, 18.5, 13, 3.2, '#25202a80');
 
-  // The original planted stance: long legs, with each shoe pointing out slightly.
   for (const side of [-1, 1]) {
+    const step = dancing ? Math.max(0, side * beat) : 0;
+    const hipX = side * 3.2 + (dancing ? sway : 0);
+    const hipY = -5 - (dancing ? breath : 0);
+    const footX = side * (4.6 + step * 3.6);
+    const footY = 16.8 - step * 5;
+    const kneeX = dancing ? (hipX + footX) / 2 + side * (0.6 + step * 4) : side * 4.5;
+    const kneeY = 5 - step * 2;
     stroke(ctx, 4.4, ink, c => {
-      c.moveTo(side * 3.2, -5);
-      c.quadraticCurveTo(side * 4.5, 5, side * 4.6, 16.8);
+      c.moveTo(hipX, hipY);
+      c.quadraticCurveTo(kneeX, kneeY, footX, footY);
     });
-    ellipse(ctx, side * 6, 17.7, 4.1, 1.9, ink);
+    ellipse(ctx, footX + side * 1.4, footY + 0.9, 4.1, 1.9, ink);
     stroke(ctx, 0.65, '#30241e', c => {
-      c.moveTo(side * 4.9, 6);
-      c.lineTo(side * 5.1, 14.8);
+      c.moveTo(kneeX + side * 0.4, kneeY + 1);
+      c.lineTo(footX + side * 0.5, footY - 2);
     });
   }
 
   ctx.translate(sway, -breath);
   for (const side of [-1, 1]) {
+    if (dancing) {
+      const reach = side * (12 + side * beat * 2);
+      const handY = -15 - side * beat * 7;
+      stroke(ctx, 4, ink, c => {
+        c.moveTo(side * 4.1, -18.2);
+        c.quadraticCurveTo(side * 11, -6, reach, handY);
+      });
+      ellipse(ctx, reach, handY, 2.2, 2.5, ink);
+      continue;
+    }
     stroke(ctx, 4, ink, c => {
       c.moveTo(side * 4.1, -18.2);
       c.bezierCurveTo(side * 8.9, -16, side * 9.4, -7, side * (9.8 + breath * 0.27), -0.6);
