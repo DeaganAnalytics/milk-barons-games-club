@@ -1,4 +1,4 @@
-import {elias} from './elias.mjs';
+import {drawElias, elias} from './elias.mjs';
 import {drawMilkBalloon, guardBalloonPose, milkBalloonHand} from './milk-balloon.mjs';
 import {createPillorySpeech} from './pillory.mjs';
 import {createProfessorSpeech, drawProfessor, professorHeight} from './professor.mjs';
@@ -353,9 +353,7 @@ export function createRenderer(canvas) {
     const eliasHeight = 70;
     if (isReady(eliasArt) && eliasFeet >= cameraY && eliasFeet - eliasHeight <= cameraY + ROOM_HEIGHT
         && elias.x + 18 >= cameraX && elias.x - 18 <= cameraX + ROOM_WIDTH) {
-      const width = eliasHeight * eliasArt.naturalWidth / eliasArt.naturalHeight;
-      actors.push({depth: eliasFeet, draw: () => ctx.drawImage(eliasArt,
-        elias.x - width / 2, eliasFeet - eliasHeight, width, eliasHeight)});
+      actors.push({depth: eliasFeet, draw: () => drawElias(ctx, eliasArt, elias)});
     }
     const professorVisible = isReady(professorArt) && professorFeet.y >= cameraY
       && professorFeet.y - professorHeight <= cameraY + ROOM_HEIGHT

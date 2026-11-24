@@ -1254,3 +1254,40 @@ test('coin balance starts at 100 and locks on reaching either game outcome', asy
   assert.equal(otherRun.outcome, 'loss');
   assert.equal(otherRun.change(200), 0);
 });
+
+test('Elias’s regular dialogue pairs the cow and garlic reactions with the intended portraits', async () => {
+  const {eliasConversation, eliasPortraits} = await import('../src/elias.mjs');
+  const [cows, accountant, vampire] = eliasConversation.replies;
+  const walk = reply => {
+    const lines = [];
+    let node = reply.next;
+    while (node !== eliasConversation) {
+      assert.ok(eliasPortraits.includes(node.mood));
+      lines.push(node);
+      node = node.replies[0].next;
+    }
+    return lines;
+  };
+  assert.deepEqual([cows.label, accountant.label, vampire.label], [
+    'Why are the guards cows?', 'Who are you?', 'Are you a vampire?'
+  ]);
+  assert.equal(walk(cows).at(-1).mood, 'demonic-angry');
+  assert.equal(walk(accountant)[1].text, 'I am his accountant.');
+  const garlic = walk(vampire);
+  assert.equal(garlic[0].mood, 'worried');
+  assert.deepEqual([garlic[2].text, garlic[2].mood], ['VHO HAS GARLIC?!', 'worried']);
+});
+
+test('Elias trails the camera edge and stays put while Pip approaches', async () => {
+  const {updateEliasFollow} = await import('../src/elias.mjs');
+  const actor = {x: 666, y: 500, stride: 0};
+  const baron = {x: 0, y: 0};
+  updateEliasFollow(actor, {x: 350, y: 500}, baron, 0, 200, 0.1);
+  assert.equal(actor.x, 666);
+  updateEliasFollow(actor, {x: 625, y: 500}, baron, 280, 200, 0.1);
+  assert.equal(actor.x, 666);
+  assert.equal(actor.running, false);
+  updateEliasFollow(actor, {x: 300, y: 500}, baron, -45, 200, 0.1);
+  assert.ok(actor.x < 666);
+  assert.equal(actor.running, true);
+});

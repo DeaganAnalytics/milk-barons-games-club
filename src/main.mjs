@@ -1,4 +1,4 @@
-import {elias} from './elias.mjs';
+import {advanceEliasRun, elias, updateEliasFollow} from './elias.mjs';
 import {createCoinBalance, STARTING_COINS} from './coins.mjs';
 import {createAttendantMilk, updateAttendantMilk} from './attendant-milk.mjs';
 import {createAttendantThrow, createMilkBalloon, createPilloryReportScene, updateMilkBalloon} from './milk-balloon.mjs';
@@ -35,6 +35,7 @@ const attendantMilk = createAttendantMilk();
 const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
 const render = createRenderer(document.getElementById('game'));
+let eliasApproaching = true;
 let seenMilo = false;
 let seenPoolAndClothes = false;
 let seenPillory = false;
@@ -84,6 +85,10 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    if (action === 'finishEliasWelcome') {
+      document.getElementById('coin-counter').hidden = false;
+      elias.findingEdge = true;
+    }
     if (action === 'callGuard') {
       const guard = summonGuard(guards, player);
       const guest = partyGuests.find(guest => guest.id === target.id);
@@ -136,16 +141,18 @@ function warnAtGuestGate() {
 }
 
 const {readMovement, clearInput} = bindControls({
-  isPaused: () => !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
+  isPaused: () => eliasApproaching || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
   nudge: (dx, dy) => {
-    if (!gameOver.hidden || milkBalloon) return;
+    if (eliasApproaching || !gameOver.hidden || milkBalloon) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else movePlayer(player, baron, dx, dy, guards);
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
-    if (!gameOver.hidden || milkBalloon) return;
-    const target = nearestInteraction(player, baron, milo, guards, guestEnclosure.active ? guests.filter(guest => !insideGuestEnclosure(guest)) : guests);
+    if (eliasApproaching || !gameOver.hidden || milkBalloon) return;
+    const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
+      && !(guestEnclosure.active && insideGuestEnclosure(guest)));
+    const target = nearestInteraction(player, baron, milo, guards, nearbyGuests);
     if (target) {
       if (target.id === 'milo') seenMilo = true;
       if (target.guestGate) ropeWarning.talks++;
@@ -160,6 +167,17 @@ function frame(timestamp) {
   lastFrame = timestamp;
   if (!gameOver.hidden) return;
   if (dialogue.isOpen()) {
+    requestAnimationFrame(frame);
+    return;
+  }
+  if (eliasApproaching) {
+    const arrived = advanceEliasRun(elias, player, dt, 36);
+    render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed);
+    if (arrived) {
+      eliasApproaching = false;
+      clearInput();
+      dialogue.open({...elias, welcome: true});
+    }
     requestAnimationFrame(frame);
     return;
   }
@@ -226,6 +244,7 @@ function frame(timestamp) {
   }
   const cameraY = cameraTop(player.y);
   const cameraX = cameraLeft(player.x);
+  updateEliasFollow(elias, player, baron, cameraX, cameraY, dt);
   seenPillory ||= pilloryInView(cameraX, cameraY);
   seenPoolAndClothes ||= [
     MILK_POOL,

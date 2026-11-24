@@ -1,4 +1,4 @@
-import {elias, eliasPortraits} from './elias.mjs';
+import {elias, eliasConversation, eliasPortraits, eliasWelcome} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
@@ -241,7 +241,9 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
 
   function show(node, character, playerMood, withoutMilk) {
     action = node.action ?? null;
-    closeButton.textContent = action === 'startMilkBalloon' ? 'Play'
+    closeButton.hidden = Boolean(activeTarget.welcome && !action);
+    closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
+      : action === 'startMilkBalloon' ? 'Play'
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
     line.textContent = node.text;
     line.hidden = !node.text;
@@ -274,7 +276,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
   document.addEventListener('keydown', event => {
     if (event.code === 'Escape' && !panel.hidden) {
       event.preventDefault();
-      close();
+      if (!closeButton.hidden) close();
     }
   });
 
@@ -299,7 +301,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
-      : target.id === elias.id ? {text: target.message, mood: 'current-smile'}
+      : target.id === elias.id ? (target.welcome ? eliasWelcome : eliasConversation)
       : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.pilloryThanks ? {text: 'Thanks, I needed a laugh today.', mood: 'deadpan'}

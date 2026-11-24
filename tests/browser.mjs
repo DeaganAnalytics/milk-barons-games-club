@@ -104,6 +104,31 @@ async function load(width, height, mobile, name, url = site) {
   await send('Emulation.setTouchEmulationEnabled', {enabled: mobile});
   await send('Page.navigate', {url});
   await waitFor('window.hasGameFrame && document.readyState === "complete"');
+  await frames(65);
+  assert.equal(await evaluate('document.querySelector("#conversation-title").textContent'), 'Elias');
+  assert.equal(await evaluate('document.querySelector("#coin-counter").hidden'), true);
+  for (let i = 0; i < 8; i++) {
+    await evaluate('document.querySelector("#conversation-replies button").click()');
+  }
+  assert.equal(await evaluate('document.querySelector("#conversation-line").textContent'), 'Now, Master Pip, do you have any questions?');
+  if (name === 'desktop') {
+    await reply("I didn't do it!", 'Zat is not a question.');
+    await reply('Continue', 'Now, Master Pip, do you have any questions?');
+    await reply('How did I get here?', 'Ah... one of ze great secrets of ze universe.');
+    await reply('Continue', 'Now, Master Pip, do you have any questions?');
+    await reply('What is this place?', 'Ah! I am delighted you asked.');
+    await reply('Continue', "It is ze Baron's pride and joy. A place vere ze finest members of ze Milk Aristocracy come to mingle, to vheel and deal.");
+    await reply('Continue', 'A house of amusement, of profligate pleasure, of economic efficiency and, above all... profitability.');
+    await reply('I thought the Milk Baron made his money from milk?', 'Da! But he keeps his fortune by selling pleasure and amusement!');
+    await reply('Continue', 'Now, Master Pip, do you have any questions?');
+    await reply('How do I double my money?', 'As an aspiring capitalist, I am sure you vill figure it out. Zis establishment offers many delightful games through vich you may multiply your fortune.');
+    await reply('Continue', 'Now, Master Pip, do you have any questions?');
+  }
+  await reply('I have no more questions.', 'Vonderful. I vish you a most profitable evening, Master Pip.');
+  assert.equal(await evaluate('document.querySelector("#coin-counter").hidden'), true);
+  await closeConversation();
+  assert.equal(await evaluate('document.querySelector("#coin-counter").hidden'), false);
+
   const assets = await evaluate(`(async () => {
     const assets = new Set(performance.getEntriesByType('resource')
       .map(entry => entry.name)
