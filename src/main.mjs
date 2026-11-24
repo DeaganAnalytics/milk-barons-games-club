@@ -1,5 +1,7 @@
 import {advanceEliasRun, elias, routeEliasToPip, updateEliasFollow} from './elias.mjs';
 import {createCoinBalance, STARTING_COINS} from './coins.mjs';
+import {createHealth, MAX_HEARTS} from './health.mjs';
+import {createKarma} from './karma.mjs';
 import {createAttendantMilk, updateAttendantMilk} from './attendant-milk.mjs';
 import {createAttendantThrow, createMilkBalloon, createPilloryReportScene, updateMilkBalloon} from './milk-balloon.mjs';
 import {pilloryAttendant, pilloryCommissioner, pilloryInView} from './pillory.mjs';
@@ -68,6 +70,28 @@ function endGame(title, message) {
   restart.focus();
 }
 
+const healthDisplay = document.getElementById('health-display');
+const healthImages = Array.from({length: MAX_HEARTS * 2 + 1}, (_, index) => {
+  const image = new Image();
+  image.src = new URL(`../assets/health/${index}.webp`, import.meta.url);
+  return image;
+});
+
+export const health = createHealth((hearts, deathMessage) => {
+  if (!gameOver.hidden) return;
+  healthDisplay.src = healthImages[hearts * 2].src;
+  healthDisplay.alt = `${hearts} of ${MAX_HEARTS} hearts`;
+  if (hearts === 0) endGame('Game Over', deathMessage ?? 'You ran out of health.');
+});
+
+const clothingTheftKarma = {all: -2, man: -0.5, women: -1.5};
+const karmaMeter = document.getElementById('karma-meter');
+export const karma = createKarma((score, position) => {
+  karmaMeter.style.setProperty('--karma-position', `${position * 100}%`);
+  karmaMeter.setAttribute('aria-valuenow', score);
+  karmaMeter.setAttribute('aria-valuetext', score === 0 ? 'Neutral' : String(score));
+});
+
 export const coinBalance = createCoinBalance((count, outcome) => {
   if (!gameOver.hidden) return;
   coinCount.textContent = count;
@@ -94,9 +118,12 @@ const dialogue = createDialogue(baron, {
     if (action === 'finePoolLie') coinBalance.change(-10);
     if (action === 'chargeProfessorFee' || action === 'lifeguardMoneyPenalty') coinBalance.change(-5);
     if (action === 'lifeguardMoneyGift') coinBalance.change(3);
-    if (action === 'stealPoolClothing' && takePoolClothing(milkPool, target.selection, elapsed) && target.selection === 'man') {
-      info.textContent = 'Pip finds ₥10 in the suit pocket.';
-      coinBalance.change(10);
+    if (action === 'stealPoolClothing' && takePoolClothing(milkPool, target.selection, elapsed)) {
+      karma.change(clothingTheftKarma[target.selection]);
+      if (target.selection === 'man') {
+        info.textContent = 'Pip finds ₥10 in the suit pocket.';
+        coinBalance.change(10);
+      }
     }
     if (action === 'tellLifeguardAboutClothing') milkPool.clothingAmbientAt = Math.min(milkPool.clothingAmbientAt, elapsed);
     if (!milkPool.clothingReported && ['rewardMissingDresses', 'fineMissingSuit', 'dismissMissingSuit'].includes(action)) {
@@ -142,6 +169,7 @@ const dialogue = createDialogue(baron, {
     }
     if (action === 'reportPillory' && !reportedPillory) {
       reportedPillory = true;
+      karma.change(2);
       clearInput();
       milkBalloon = createPilloryReportScene(player, target.guard, baron);
       info.textContent = 'Pip leads the guard to the pillory.';
@@ -151,6 +179,7 @@ const dialogue = createDialogue(baron, {
     }
     if (action === 'reportMilo' && !reportedMilo) {
       reportedMilo = true;
+      karma.change(-2);
       dispatchGuardToMilo(target.guard);
       coinBalance.change(10);
     }
@@ -245,7 +274,7 @@ function frame(timestamp) {
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
       staff, null, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
     if (ended) {
-      endGame('Game Over', 'You have displeased the Baron!');
+      health.change(-MAX_HEARTS, 'You have displeased the Baron!');
     } else requestAnimationFrame(frame);
     return;
   }
@@ -263,6 +292,7 @@ function frame(timestamp) {
         return;
       }
       if (!attendant) {
+        karma.change(playedMilkBalloon ? -0.25 : -1);
         playedMilkBalloon = true;
         coinBalance.change(-1);
       }
