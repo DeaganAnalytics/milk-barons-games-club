@@ -793,3 +793,33 @@ test('the enclosure blocks Pip and milk staff enter and exit through the east ga
     guestEnclosure.active = false;
   }
 });
+
+test('the corner guests add the five security exchanges to their pending shuffle when the ropes go up', () => {
+  const chatter = createPartyChatter();
+  const camera = {x: WEST_EDGE, y: SOUTH_EDGE - ROOM_HEIGHT};
+  const baron = createBaron();
+  const next = () => {
+    chatter.exchange = null;
+    chatter.remaining = 0;
+    updatePartyChatter(chatter, camera, [], baron, [], 1, 0.05, () => 0.5);
+    return chatter.exchange;
+  };
+
+  next();
+  assert.equal(chatter.order.length, 11);
+  assert.ok(chatter.order.every(exchange => !exchange[0][1].includes('velvet ropes')));
+  guestEnclosure.active = true;
+  try {
+    const remaining = Array.from({length: 16}, next);
+    assert.equal(new Set(remaining).size, 16);
+    const ropeExchange = remaining.find(exchange => exchange[0][1].includes('velvet ropes'));
+    assert.deepEqual(ropeExchange, [
+      [0, "Aren't these velvet ropes simply beautiful?"],
+      [1, 'They must have cost a fortune. Thank goodness for taxpayers!']
+    ]);
+    const fullRotation = Array.from({length: 17}, next);
+    assert.equal(new Set(fullRotation).size, 17);
+  } finally {
+    guestEnclosure.active = false;
+  }
+});

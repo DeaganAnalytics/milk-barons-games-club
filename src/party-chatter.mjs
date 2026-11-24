@@ -17,6 +17,18 @@ const exchanges = [
   [[1, 'Did you hear about Lady Butterworth?'], [0, "Don't tell me. Skim milk?"], [1, 'Worse. Oat milk!']],
   [[0, 'The price of milk has doubled again!'], [1, 'Wonderful! The Baron must be doing splendidly!']]
 ];
+const enclosedExchanges = [
+  [[0, 'The Baron is simply marvellous. These security arrangements are impeccable!'],
+    [1, 'Naturally, the cream of society deserves the finest protection.']],
+  [[0, "Aren't these velvet ropes simply beautiful?"],
+    [1, 'They must have cost a fortune. Thank goodness for taxpayers!']],
+  [[1, 'Finally, something to keep the riff-raff away!'],
+    [0, 'The Baron works remarkably fast when his milk is threatened.']],
+  [[1, 'That peasant was positively revolting. I bet he bathes in water, not milk.'],
+    [0, 'Good heavens! How was such a creature permitted entry?']],
+  [[0, 'I feel considerably safer with an armed guard protecting us.'],
+    [1, "An astute summation of my feelings, darling. One can finally enjoy one's milk in peace."]]
+];
 const [left, right] = partyGuests;
 const serviceSpot = {x: (left.x + right.x) / 2, y: left.y - 36};
 const pourDuration = 1.45;
@@ -26,7 +38,7 @@ const lineDuration = text => Math.max(2, 1.1 + text.length / 20);
 export function createPartyChatter() {
   return {
     remaining: 0.8, order: [], lastExchange: null, exchange: null, line: 0,
-    completed: 0, milk: [0.85, 0.85], refill: null
+    enclosed: false, completed: 0, milk: [0.85, 0.85], refill: null
   };
 }
 
@@ -43,8 +55,11 @@ export function partySpeech(chatter, camera) {
 }
 
 function nextExchange(chatter, random) {
-  if (!chatter.order.length) {
-    chatter.order = [...exchanges];
+  const justEnclosed = guestEnclosure.active && !chatter.enclosed;
+  if (!chatter.order.length || justEnclosed) {
+    if (!chatter.order.length) chatter.order = [...exchanges];
+    if (guestEnclosure.active) chatter.order.push(...enclosedExchanges);
+    chatter.enclosed = guestEnclosure.active;
     for (let i = chatter.order.length - 1; i > 0; i--) {
       const j = Math.floor(random() * (i + 1));
       [chatter.order[i], chatter.order[j]] = [chatter.order[j], chatter.order[i]];
