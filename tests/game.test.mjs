@@ -1333,7 +1333,7 @@ test('the pool report sends both roving guards to separate cheering spots and le
   assert.equal(posted.pursuit, undefined);
 });
 
-test('Elias charges for a dance only after Pip dances and leaves, with either reply', async () => {
+test('Elias charges only on Pip’s first exit after dancing, with either reply', async () => {
   const {takeDanceExit} = await import('../src/player.mjs');
   const {eliasDanceConversation, routeEliasToPip} = await import('../src/elias.mjs');
   const player = {...createPlayer(), ...DANCE_FLOOR};
@@ -1346,6 +1346,12 @@ test('Elias charges for a dance only after Pip dances and leaves, with either re
   player.x -= 190;
   player.danceIdle = 0;
   assert.equal(takeDanceExit(player), true);
+  assert.equal(takeDanceExit(player), false);
+  player.x = DANCE_FLOOR.x;
+  player.danceIdle = 3.1;
+  assert.equal(takeDanceExit(player), false);
+  player.x -= 190;
+  player.danceIdle = 0;
   assert.equal(takeDanceExit(player), false);
   const actor = {x: DANCE_FLOOR.x + 240, y: DANCE_FLOOR.y};
   const route = routeEliasToPip(actor, player, createBaron());
