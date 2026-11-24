@@ -1,3 +1,4 @@
+import {availableReports} from '../src/report-dialogue.mjs';
 import {createDancerSpeech} from '../src/dancers.mjs';
 import {danceLyric} from '../src/dance-floor.mjs';
 import {createPartyChatter, partySpeech, updatePartyChatter} from '../src/party-chatter.mjs';
@@ -5,8 +6,8 @@ import {bartender, createCreameryGuard} from '../src/creamery.mjs';
 import {createMilkService, milkCalls, updateMilkService} from '../src/milk-service.mjs';
 import {createStaff, faceStaffMovement, updateStaff, staffFrame} from '../src/staff.mjs';
 import {speechBubbleLayout} from '../src/speech-layout.mjs';
-import {createGuards, summonGuard, updateGuards} from '../src/guards.mjs';
-import {createMilo, updateMilo} from '../src/milo.mjs';
+import {createGuards, dispatchGuardToMilo, summonGuard, updateGuards} from '../src/guards.mjs';
+import {createMilo, fleeMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {callOutMilo, createBaron, isBaronDancing, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
@@ -702,4 +703,29 @@ test('NPC routes skirt the dance floor with room for the walker', () => {
     }
     previous = waypoint;
   }
+});
+
+test('reports unlock after two Baron trips or seeing Milo, and a Milo report cannot be repeated while pending', () => {
+  assert.equal(availableReports(1, false, false).length, 0);
+  assert.equal(availableReports(2, false, false)[0].label, 'The Baron keeps following me.');
+  assert.equal(availableReports(0, true, false)[0].label, "There's a man in rags wandering around the walls.");
+  assert.equal(availableReports(2, true, false).length, 2);
+  assert.equal(availableReports(2, true, true).length, 1);
+});
+
+test('the reporting guard runs to Milo, then Milo can flee from Pip after a confession', () => {
+  const baron = createBaron();
+  const milo = createMilo();
+  const pip = createPlayer();
+  const guard = {...createGuards(pip, baron, milo)[0], x: milo.x + 160, y: milo.y};
+  dispatchGuardToMilo(guard);
+  for (let i = 0; i < 40 && guard.pursuit; i++) {
+    assert.equal(updateGuards([guard], pip, baron, milo, i * 0.05, 0.05), null);
+  }
+  assert.ok(Math.hypot(guard.x - milo.x, guard.y - milo.y) <= 30);
+  assert.equal(guard.pursuit, null);
+  assert.equal(milo.injuryPending, true);
+  fleeMilo(milo, {...pip, x: milo.x + 30, y: milo.y}, baron, [guard]);
+  assert.equal(milo.fleeing, true);
+  assert.ok(milo.route.length > 0);
 });
