@@ -1,4 +1,4 @@
-import {crossesDanceArea, HALL_CENTER, onDanceFloor, routeAroundBaron, EAST_EDGE, NORTH_EDGE, isNpcBlocked, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {crossesScenery, HALL_CENTER, onDanceFloor, routeAroundBaron, EAST_EDGE, NORTH_EDGE, isNpcBlocked, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 import {guardBlocks} from './guards.mjs';
 import {TURN} from './directions.mjs';
 
@@ -30,7 +30,7 @@ function distanceToSegment(point, start, end) {
 }
 
 function routeToCorner(milo, corner, baron) {
-  return crossesDanceArea(milo, corner)
+  return crossesScenery(milo, corner)
     ? routeAroundBaron({...milo, radius: 12}, corner, baron) : [corner];
 }
 

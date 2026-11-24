@@ -1,3 +1,4 @@
+import {createMilkPool, milkPoolSpeech, updateMilkPool} from '../src/milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
 import {partyGuests} from '../src/party-guests.mjs';
@@ -16,7 +17,7 @@ import {test} from 'node:test';
 import {callOutMilo, createBaron, isBaronDancing, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, guestGateOutside, insideGuestEnclosure, HALL_CENTER, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
+import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, guestGateOutside, insideGuestEnclosure, HALL_CENTER, MILK_POOL, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -898,4 +899,47 @@ test('ignoring the countdown triggers an approach, aim, fall, and game over', ()
   } finally {
     guestEnclosure.active = false;
   }
+});
+
+test('the milk pool sits between four rugs and NPC routes go around it', () => {
+  const surrounding = RUGS.filter(rug => Math.abs(rug.x - MILK_POOL.x) === ROOM_WIDTH / 2
+    && Math.abs(rug.y - MILK_POOL.y) === ROOM_HEIGHT / 2);
+  assert.equal(surrounding.length, 4);
+  assert.ok(surrounding.includes(closestRug(HALL_CENTER)));
+  const baron = createBaron();
+  assert.equal(isBlocked(MILK_POOL.x, MILK_POOL.y, 13, baron), true);
+  const start = {x: MILK_POOL.x, y: MILK_POOL.y - 210, radius: 14};
+  const end = {x: MILK_POOL.x, y: MILK_POOL.y + 135};
+  const route = routeAroundBaron(start, end, baron);
+  assert.equal(route.at(-1), end);
+  assert.ok(route.length > 1);
+  let from = start;
+  for (const waypoint of route) {
+    for (let step = 0; step <= 100; step++) {
+      const x = from.x + (waypoint.x - from.x) * step / 100;
+      const y = from.y + (waypoint.y - from.y) * step / 100;
+      assert.equal(isBlocked(x, y, start.radius, baron), false);
+    }
+    from = waypoint;
+  }
+});
+
+test('the snorkel touches alternate swimmers and reaches an edge between touches', () => {
+  const pool = createMilkPool();
+  const hits = [];
+  const edges = [];
+  const heard = new Set();
+  for (let frame = 1; frame <= 6000; frame++) {
+    const previous = pool.snorkel.returning;
+    updateMilkPool(pool, frame * 0.05, 0.05, () => 0.25);
+    if (!previous && pool.snorkel.returning) hits.push(pool.reaction.speaker);
+    if (previous && !pool.snorkel.returning) edges.push(Math.round(pool.snorkel.x));
+    const speech = milkPoolSpeech(pool, frame * 0.05);
+    if (speech) heard.add(speech.text);
+  }
+  assert.deepEqual(hits.slice(0, 4), [0, 1, 0, 1]);
+  assert.deepEqual(edges.slice(0, 4), [-204, 204, -204, 204]);
+  for (const text of ['He he he, caught me again.', 'This milk is sooo good for my skin!',
+    "I'm glad we don't share milk with peasants!", 'Milko', 'Polo!']) assert.ok(heard.has(text));
+  assert.ok([...heard].indexOf('Milko') < [...heard].indexOf('Polo!'));
 });

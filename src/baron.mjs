@@ -1,6 +1,6 @@
 import {guardBlocks} from './guards.mjs';
 import {facingIndex, TURN} from './directions.mjs';
-import {BARON_DANCE_STOP, DANCE_FLOOR, HALL_CENTER, closestRug, ROOM_HEIGHT, ROOM_WIDTH, sameSquare} from './room.mjs';
+import {BARON_DANCE_STOP, DANCE_FLOOR, HALL_CENTER, closestRug, crossesPoolArea, routeAroundBaron, ROOM_HEIGHT, ROOM_WIDTH, sameSquare} from './room.mjs';
 
 const OFFSCREEN_DELAY = 5;
 const WALK_SPEED = 146;
@@ -72,6 +72,8 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
             baron.route = routeToDanceStop(baron);
           } else if (isBaronDancing(baron)) {
             baron.route = [...routeToDanceStop(destination).slice(0, -1).reverse(), destination];
+          } else if (crossesPoolArea(baron, destination)) {
+            baron.route = routeAroundBaron({...baron, radius: 24}, destination, {x: -1000, y: 0});
           } else {
             baron.route = [destination];
           }

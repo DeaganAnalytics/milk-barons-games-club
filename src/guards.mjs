@@ -1,5 +1,5 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {crossesDanceArea, EAST_EDGE, onDanceFloor, isNpcBlocked, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {crossesScenery, EAST_EDGE, onDanceFloor, isNpcBlocked, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const RADIUS = 14;
 const SPEED = 71;
@@ -101,7 +101,7 @@ export function updateGuards(guards, player, baron, milo, elapsed, dt) {
         guard.target = null;
         continue;
       }
-      guard.route = crossesDanceArea(guard, guard.target) ? routeAroundBaron(guard, guard.target, baron) : [];
+      guard.route = crossesScenery(guard, guard.target) ? routeAroundBaron(guard, guard.target, baron) : [];
     }
 
     const target = pursuit ? (pursuit.route[0] ?? pursued) : (guard.route?.[0] ?? guard.target);

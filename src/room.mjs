@@ -10,6 +10,7 @@ export const HALL_CENTER = {x: ROOM_WIDTH / 2, y: (NORTH_EDGE + SOUTH_EDGE) / 2}
 export const DANCE_FLOOR = {x: HALL_CENTER.x, y: SOUTH_EDGE - ROOM_HEIGHT / 2 + 25};
 const danceBounds = {...DANCE_FLOOR, halfWidth: 177, halfHeight: 175};
 export const BARON_DANCE_STOP = {x: DANCE_FLOOR.x - 270, y: DANCE_FLOOR.y - 227};
+export const MILK_POOL = {x: HALL_CENTER.x + ROOM_WIDTH / 2, y: HALL_CENTER.y + ROOM_HEIGHT / 2};
 const columns = (EAST_EDGE - WEST_EDGE) / ROOM_WIDTH;
 const rows = MAP_HEIGHT / ROOM_HEIGHT;
 
@@ -23,8 +24,7 @@ export const RUGS = Array.from({length: columns * rows}, (_, index) => {
   };
 }).filter(rug => rug.x !== DANCE_FLOOR.x || rug.y !== DANCE_FLOOR.y - 25);
 
-const middleRowStart = Math.floor(rows / 2) * columns;
-export const SIDE_RUGS = [RUGS[middleRowStart], RUGS[middleRowStart + columns - 1]];
+export const SIDE_RUGS = RUGS.filter(rug => rug.y === HALL_CENTER.y && rug.x !== HALL_CENTER.x);
 
 export function closestRug(player) {
   const distance = rug => Math.hypot(rug.x - player.x, rug.y - player.y);
@@ -50,6 +50,14 @@ const danceFixtures = [
     x: DANCE_FLOOR.x + side * 191, y: DANCE_FLOOR.y - 227, halfWidth: 32, halfHeight: 23
   }))
 ];
+
+const poolFixtures = [
+  {dx: 0, dy: 0, halfWidth: 236, halfHeight: 62},
+  {dx: -263, dy: -8, halfWidth: 31, halfHeight: 37},
+  {dx: -37, dy: -100, halfWidth: 30, halfHeight: 17},
+  {dx: 58, dy: -109, halfWidth: 48, halfHeight: 18},
+  {dx: 170, dy: -70, halfWidth: 18, halfHeight: 11}
+].map(({dx, dy, ...bounds}) => ({x: MILK_POOL.x + dx, y: MILK_POOL.y + dy, ...bounds}));
 
 function overlaps(x, y, radius, obstacle) {
   return Math.abs(x - obstacle.x) < obstacle.halfWidth + radius
@@ -106,6 +114,7 @@ export function isBlocked(x, y, radius, baron, from) {
   // The closed center door stands proud of the back wall.
   if (y < NORTH_EDGE + 190 && Math.abs(x - HALL_CENTER.x) < 75 + radius) return true;
   if (danceFixtures.some(fixture => overlaps(x, y, radius, fixture))
+      || poolFixtures.some(fixture => overlaps(x, y, radius, fixture))
       || guestEnclosureBlocks(x, y, radius, from)) return true;
   const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};
   if (!overlaps(x, y, radius, baronObstacle)) return false;
@@ -136,8 +145,14 @@ export function nearestInteraction(player, baron, milo, guards = [], guests = []
     .sort((a, b) => a.distance - b.distance)[0];
 }
 
-export function crossesDanceArea(from, to) {
-  return Math.max(from.y, to.y) >= DANCE_FLOOR.y - 340
+export function crossesPoolArea(from, to) {
+  return Math.min(from.y, to.y) < MILK_POOL.y + 100
+    && Math.max(from.y, to.y) > MILK_POOL.y - 140
+    && Math.max(from.x, to.x) > MILK_POOL.x - 330;
+}
+
+export function crossesScenery(from, to) {
+  return crossesPoolArea(from, to) || Math.max(from.y, to.y) >= DANCE_FLOOR.y - 340
     && Math.min(from.x, to.x) < DANCE_FLOOR.x + 250
     && Math.max(from.x, to.x) > DANCE_FLOOR.x - 250;
 }
@@ -150,6 +165,7 @@ export function routeAroundBaron(member, target, baron) {
   const nearDanceFloor = Math.max(member.y, target.y) >= danceBounds.y - 340;
   const obstacles = [{x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35}];
   if (nearDanceFloor) obstacles.push(danceBounds, ...danceFixtures);
+  if (crossesPoolArea(member, target)) obstacles.push(...poolFixtures);
   if (guestEnclosure.active) obstacles.push(enclosureBounds);
   const corners = obstacles.flatMap(obstacleCorners)
     .filter(point => !isNpcBlocked(point.x, point.y, member.radius, baron));
