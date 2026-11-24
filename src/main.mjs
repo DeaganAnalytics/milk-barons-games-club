@@ -1,4 +1,4 @@
-import {createMilkPool, updateMilkPool} from './milk-pool.mjs';
+import {createMilkPool, lifeguard, updateMilkPool} from './milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} from './rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from './guest-escort.mjs';
 import {bartender, createCreameryGuard} from './creamery.mjs';
@@ -21,7 +21,7 @@ const milo = createMilo();
 const guards = createGuards(player, baron, milo);
 guards.push(createCreameryGuard());
 const staff = createStaff(player, baron, milo, guards);
-const guests = [...staff, bartender, ...partyGuests.map(guest => ({
+const guests = [...staff, bartender, lifeguard, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
 const milkService = createMilkService();

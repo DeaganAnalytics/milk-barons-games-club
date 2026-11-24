@@ -1,4 +1,4 @@
-import {createMilkPool, milkPoolSpeech, updateMilkPool} from '../src/milk-pool.mjs';
+import {createMilkPool, lifeguard, milkPoolSpeech, updateMilkPool} from '../src/milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
 import {partyGuests} from '../src/party-guests.mjs';
@@ -929,14 +929,31 @@ test('the snorkel touches alternate swimmers and reaches an edge between touches
   const hits = [];
   const edges = [];
   const heard = new Set();
-  for (let frame = 1; frame <= 6000; frame++) {
+  const guardRemarks = new Set();
+  let previousLine;
+  let awaitingPolo = false;
+  let firstHit;
+  for (let frame = 1; frame <= 12000; frame++) {
     const previous = pool.snorkel.returning;
     updateMilkPool(pool, frame * 0.05, 0.05, () => 0.25);
-    if (!previous && pool.snorkel.returning) hits.push(pool.reaction.speaker);
+    if (!previous && pool.snorkel.returning) {
+      firstHit ??= frame * 0.05;
+      hits.push(pool.snorkel.swimmer);
+    }
     if (previous && !pool.snorkel.returning) edges.push(Math.round(pool.snorkel.x));
     const speech = milkPoolSpeech(pool, frame * 0.05);
-    if (speech) heard.add(speech.text);
+    assert.ok(!pool.reaction || !pool.lines.length, 'touch reactions must wait for ambient lines');
+    if (!speech || speech.text === previousLine) continue;
+    if (awaitingPolo) assert.equal(speech.text, 'Polo!');
+    awaitingPolo = speech.text === 'Milko';
+    previousLine = speech.text;
+    heard.add(speech.text);
+    if (speech.x === lifeguard.x && speech.y === lifeguard.y) guardRemarks.add(speech.text);
   }
+  assert.ok(firstHit > 1, 'the first pursuit should take longer');
+  assert.equal(guardRemarks.size, 10);
+  assert.equal([...guardRemarks][0], 'God, I love this job.');
+  assert.equal([...guardRemarks].at(-1), 'What happens in the milk pool stays in the milk pool.');
   assert.deepEqual(hits.slice(0, 4), [0, 1, 0, 1]);
   assert.deepEqual(edges.slice(0, 4), [-204, 204, -204, 204]);
   for (const text of ['He he he, caught me again.', 'This milk is sooo good for my skin!',
