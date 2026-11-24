@@ -1,3 +1,4 @@
+import {createMilkPool, drawMilkPool, milkPoolSpeech} from './milk-pool.mjs';
 import {ropeWarningSpeech} from './rope-warning.mjs';
 import {drawPipFall, drawRopeAim} from './rope-scene-art.mjs';
 import {drawGuestRopes} from './guest-escort.mjs';
@@ -12,7 +13,7 @@ import {staffFrame, staffIds} from './staff.mjs';
 import {speechBubbleLayout} from './speech-layout.mjs';
 import {TURN} from './directions.mjs';
 import {isBaronDancing, isOnscreen, speechOpacity} from './baron.mjs';
-import {DANCE_FLOOR, guestEnclosure, NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
+import {DANCE_FLOOR, guestEnclosure, MILK_POOL, NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
 import {composeHall, loadHallArt} from './hall-art.mjs';
 
 function loadSprite(name, extension = "png") {
@@ -223,6 +224,10 @@ export function createRenderer(canvas) {
   ctx.setTransform(canvas.width / ROOM_WIDTH, 0, 0, canvas.height / ROOM_HEIGHT, 0, 0);
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
+  const poolArt = loadSprite('pool/milk-pool', 'webp');
+  const poolClothes = loadSprite('pool/clothes', 'webp');
+  const poolHeads = ['brunette', 'blonde'].map(id => loadSprite('pool/' + id, 'webp'));
+  const idlePool = createMilkPool();
   const danceArt = Object.fromEntries(danceLayers.map(name => [name, loadSprite('dance/' + name, 'webp')]));
   const danceImages = Object.values(danceArt);
   const dancerSpeech = createDancerSpeech();
@@ -246,7 +251,7 @@ export function createRenderer(canvas) {
   };
 
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -262,6 +267,9 @@ export function createRenderer(canvas) {
     const danceVisible = world && danceImages.every(isReady)
       && DANCE_FLOOR.y + 175 > cameraY && DANCE_FLOOR.y - 345 < cameraY + ROOM_HEIGHT
       && DANCE_FLOOR.x + 235 > cameraX && DANCE_FLOOR.x - 235 < cameraX + ROOM_WIDTH;
+    const poolVisible = isReady(poolArt) && MILK_POOL.x + 239 > cameraX && MILK_POOL.x - 297 < cameraX + ROOM_WIDTH
+      && MILK_POOL.y + 64 > cameraY && MILK_POOL.y - 202 < cameraY + ROOM_HEIGHT;
+    if (poolVisible) drawMilkPool(ctx, poolArt, elapsed, milkPool, poolHeads, poolClothes);
     if (danceVisible) drawDanceFloor(ctx, danceArt);
     if (guestEnclosure.active) drawGuestRopes(ctx, guestEnclosure, false);
     if (world) drawBartender(ctx, bartenderSprite, elapsed);
@@ -358,6 +366,13 @@ export function createRenderer(canvas) {
           drawSpeech(ctx, index === 0 ? 'Bravo!' : 'Splendid!', 1, guest.x, guest.y - 75, guest.y, cameraX, cameraY);
         }
       });
+    }
+    if (poolVisible) {
+      const speech = milkPoolSpeech(milkPool, elapsed);
+      if (speech && speech.x >= cameraX && speech.x <= cameraX + ROOM_WIDTH
+          && speech.y >= cameraY && speech.y - 30 <= cameraY + ROOM_HEIGHT) {
+        drawSpeech(ctx, speech.text, 1, speech.x, speech.y - 30, speech.y, cameraX, cameraY);
+      }
     }
     const speech = !guestEscort && !warning && !ropeScene && chatter && partySpeech(chatter, {x: cameraX, y: cameraY});
     if (speech) drawSpeech(ctx, speech.text, speech.opacity,

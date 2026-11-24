@@ -1,3 +1,4 @@
+import {createMilkPool, updateMilkPool} from './milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} from './rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from './guest-escort.mjs';
 import {bartender, createCreameryGuard} from './creamery.mjs';
@@ -25,6 +26,7 @@ const guests = [...staff, bartender, ...partyGuests.map(guest => ({
 }))];
 const milkService = createMilkService();
 const partyChatter = createPartyChatter();
+const milkPool = createMilkPool();
 const render = createRenderer(document.getElementById('game'));
 let seenMilo = false;
 let guestEscort = null;
@@ -106,7 +108,7 @@ function frame(timestamp) {
   if (ropeWarning.scene) {
     const ended = advanceRopeScene(ropeWarning.scene, player, dt);
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
-      staff, null, partyChatter, null, ropeWarning, gateGuard);
+      staff, null, partyChatter, null, ropeWarning, gateGuard, milkPool);
     if (ended) {
       gameOver.hidden = false;
       restart.focus();
@@ -163,8 +165,9 @@ function frame(timestamp) {
     return;
   }
   updatePartyChatter(partyChatter, {x: cameraX, y: cameraY}, staff, baron, guards, elapsed, dt);
+  updateMilkPool(milkPool, elapsed, dt);
   updateStaff(staff, player, baron, guards, elapsed, dt);
-  render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene, partyChatter, guestEscort, ropeWarning, gateGuard);
+  render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene, partyChatter, guestEscort, ropeWarning, gateGuard, milkPool);
   requestAnimationFrame(frame);
 }
 
