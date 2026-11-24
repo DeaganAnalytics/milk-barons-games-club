@@ -203,6 +203,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
   const playerArt = playerPortrait.querySelector('canvas');
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
+  let askedBaronForMoney = false;
   const closeButton = document.getElementById('conversation-close');
   let action = null;
   let activeTarget;
@@ -265,8 +266,9 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       button.type = 'button';
       button.textContent = reply.label;
       button.addEventListener('click', () => {
-        if (reply.next === null) close();
-        else show(reply.next, character, reply.playerMood, withoutMilk);
+        const next = typeof reply.next === 'function' ? reply.next() : reply.next;
+        if (next === null) close();
+        else show(next, character, reply.playerMood, withoutMilk);
       });
       return button;
     }));
@@ -280,6 +282,25 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       if (!closeButton.hidden) close();
     }
   });
+
+  function baronConversation() {
+    const replies = availableBaronReplies(baron);
+    if (!askedBaronForMoney) replies.push({
+      label: 'Can I have some money?',
+      playerMood: 'attentive',
+      next: () => {
+        askedBaronForMoney = true;
+        return Math.random() < 0.5 ? {
+          text: 'Of course, my boy! What is money to a man of my extraordinary wealth?!',
+          mood: 'laughing', action: 'baronMoneyGift'
+        } : {
+          text: 'I SMELL A COMMUNIST! Perhaps a small financial penalty will teach you the virtues of capitalism!',
+          mood: 'displeased', action: 'baronMoneyPenalty'
+        };
+      }
+    });
+    return {...baronGreetings[greetingIndex++ % baronGreetings.length], replies};
+  }
 
   function reportingReplies(target) {
     const report = guardReplies[2];
@@ -322,7 +343,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
           text: injured ? "No, don't hurt me!" : target.message,
           replies: injured ? [injuredMiloReply, ...miloReplies] : miloReplies, mood: 'worried'
         }
-        : {...baronGreetings[greetingIndex++ % baronGreetings.length], replies: availableBaronReplies(baron)};
+        : baronConversation();
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;
