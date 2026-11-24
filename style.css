@@ -242,3 +242,27 @@ canvas {
   width: 110%;
   height: 110%;
 }
+
+.viewport:has(#game-over) {
+  position: relative;
+}
+
+.game-over:not([hidden]) {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 0.7rem;
+  padding: 1rem;
+  text-align: center;
+  background: #111a16d9;
+}
+
+.game-over h2 {
+  font-size: clamp(1.8rem, 7vw, 3.5rem);
+}
+
+.game-over p {
+  color: #f5dfb3;
+}

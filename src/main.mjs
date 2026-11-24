@@ -1,3 +1,4 @@
+import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} from './rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from './guest-escort.mjs';
 import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
@@ -29,6 +30,11 @@ let seenMilo = false;
 let guestEscort = null;
 let completedGuestEscorts = 0;
 let gateWarned = false;
+let gateGuard;
+const ropeWarning = createRopeWarning();
+const gameOver = document.getElementById('game-over');
+const restart = document.getElementById('restart-game');
+restart.addEventListener('click', () => location.reload());
 const dialogue = createDialogue(baron, {
   canReportMilo: () => ({seen: seenMilo, pending: milo.injuryPending || guards.some(guard => guard.pursuit?.milo)}),
   takeMiloInjury: () => {
@@ -48,10 +54,11 @@ const dialogue = createDialogue(baron, {
     if (action === 'escortGuest' && guestEscort) beginGuestEscort(guestEscort, player, baron, completedGuestEscorts > 0);
     if (action === 'secureGuests' && !guestEnclosure.active) {
       guestEnclosure.active = true;
-      guards.push({
+      gateGuard = {
         x: guestEnclosure.east + 22, y: guestEnclosure.gateY - 48,
         radius: 14, facing: 0, walking: false, posted: true, guestGate: true
-      });
+      };
+      guards.push(gateGuard);
     }
     if (action === 'reportMilo') dispatchGuardToMilo(target.guard);
     if (action === 'fleeMilo') fleeMilo(milo, player, baron, guards);
@@ -65,20 +72,22 @@ function warnAtGuestGate() {
   if (gateWarned) return;
   gateWarned = true;
   clearInput();
+  ropeWarning.talks++;
   dialogue.open({id: 'guard', title: 'Bull Guard', guestGate: true});
 }
 
 const {readMovement, clearInput} = bindControls({
-  isPaused: () => dialogue.isOpen() || Boolean(guestEscort),
+  isPaused: () => dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
   nudge: (dx, dy) => {
-    if (dx < 0 && nearGuestGate(player)) warnAtGuestGate();
+    if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else movePlayer(player, baron, dx, dy, guards);
   },
   interact: () => {
-    if (dialogue.isOpen() || guestEscort) return;
+    if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
     const target = nearestInteraction(player, baron, milo, guards, guestEnclosure.active ? guests.filter(guest => !insideGuestEnclosure(guest)) : guests);
     if (target) {
       if (target.id === 'milo') seenMilo = true;
+      if (target.guestGate) ropeWarning.talks++;
       clearInput();
       dialogue.open(target);
     } else info.textContent = 'Nobody is close enough to talk to.';
@@ -93,6 +102,17 @@ function frame(timestamp) {
     return;
   }
   elapsed += dt;
+
+  if (ropeWarning.scene) {
+    const ended = advanceRopeScene(ropeWarning.scene, player, dt);
+    render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
+      staff, null, partyChatter, null, ropeWarning, gateGuard);
+    if (ended) {
+      gameOver.hidden = false;
+      restart.focus();
+    } else requestAnimationFrame(frame);
+    return;
+  }
 
   if (guestEscort?.phase === 'walking') {
     if (advanceGuestEscort(guestEscort, player, baron, guards, elapsed, dt)) {
@@ -109,12 +129,18 @@ function frame(timestamp) {
     const movement = guestEscort ? {dx: 0, dy: 0} : readMovement();
     const atGate = nearGuestGate(player);
     if (!atGate) gateWarned = false;
-    if (atGate && movement.dx < 0 && !gateWarned) {
+    if (atGate && movement.dx < 0 && !gateWarned && ropeWarning.talks < 2) {
       warnAtGuestGate();
       requestAnimationFrame(frame);
       return;
     }
     updatePlayer(player, baron, movement, dt, guards);
+  }
+  if (gateGuard && updateRopeWarning(ropeWarning, player, dt)) {
+    clearInput();
+    beginRopeScene(ropeWarning, gateGuard, player, baron);
+    requestAnimationFrame(frame);
+    return;
   }
   const cameraY = cameraTop(player.y);
   const cameraX = cameraLeft(player.x);
@@ -138,7 +164,7 @@ function frame(timestamp) {
   }
   updatePartyChatter(partyChatter, {x: cameraX, y: cameraY}, staff, baron, guards, elapsed, dt);
   updateStaff(staff, player, baron, guards, elapsed, dt);
-  render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene, partyChatter, guestEscort);
+  render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene, partyChatter, guestEscort, ropeWarning, gateGuard);
   requestAnimationFrame(frame);
 }
 

@@ -1,3 +1,4 @@
+import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
 import {partyGuests} from '../src/party-guests.mjs';
 import {availableReports} from '../src/report-dialogue.mjs';
@@ -844,4 +845,57 @@ test('the second escort leads Pip two map squares east with the guard in tow', (
   assert.equal(ended, true);
   assert.ok(Math.abs(pip.x - (startX + 2 * ROOM_WIDTH)) <= 1);
   assert.ok(Math.hypot(guard.x - pip.x, guard.y - pip.y) < 38);
+});
+
+test('the gate guard warns after two conversations, cancels when Pip leaves, and acts on the fourth return', () => {
+  const state = createRopeWarning();
+  const near = {...guestGateOutside};
+  const away = {...near, x: guestEnclosure.east + 70};
+  guestEnclosure.active = true;
+  try {
+    state.talks = 1;
+    assert.equal(updateRopeWarning(state, near, 4), false);
+    assert.equal(ropeWarningSpeech(state), null);
+    state.talks = 2;
+    assert.equal(updateRopeWarning(state, near, 3), false);
+    assert.equal(ropeWarningSpeech(state), null);
+    updateRopeWarning(state, near, 0.01);
+    assert.match(ropeWarningSpeech(state).text, /at least 5 steps/);
+    for (const [dt, number] of [[3, '5'], [1, '4'], [1, '3'], [1, '2'], [1, '1']]) {
+      assert.equal(updateRopeWarning(state, near, dt), false);
+      assert.equal(ropeWarningSpeech(state).text, number);
+    }
+    assert.equal(updateRopeWarning(state, away, 1), false);
+    assert.equal(ropeWarningSpeech(state), null);
+    for (const reaction of ["Oh maybe we'll get a live show!", 'Darling get ready for some entertainment']) {
+      assert.equal(updateRopeWarning(state, near, 3.01), false);
+      assert.equal(ropeWarningSpeech(state).guest, reaction);
+      updateRopeWarning(state, away, 1);
+    }
+    assert.equal(updateRopeWarning(state, near, 0.01), true);
+  } finally {
+    guestEnclosure.active = false;
+  }
+});
+
+test('ignoring the countdown triggers an approach, aim, fall, and game over', () => {
+  const state = createRopeWarning();
+  state.talks = 2;
+  guestEnclosure.active = true;
+  try {
+    const pip = {...createPlayer(), ...guestGateOutside};
+    updateRopeWarning(state, pip, 3.1);
+    assert.equal(updateRopeWarning(state, pip, 8), true);
+    const guard = {x: guestEnclosure.east + 22, y: guestEnclosure.gateY - 48, radius: 14, stride: 0};
+    beginRopeScene(state, guard, pip, createBaron());
+    const phases = new Set([state.scene.phase]);
+    for (let i = 0; i < 160 && state.scene.phase !== 'over'; i++) {
+      advanceRopeScene(state.scene, pip, 0.05);
+      phases.add(state.scene.phase);
+    }
+    assert.deepEqual([...phases], ['approach', 'aim', 'fall', 'over']);
+    assert.equal(Math.hypot(guard.x - pip.x, guard.y - pip.y), 60);
+  } finally {
+    guestEnclosure.active = false;
+  }
 });
