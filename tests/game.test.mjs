@@ -1,3 +1,5 @@
+import {createDancerSpeech} from '../src/dancers.mjs';
+import {danceLyric} from '../src/dance-floor.mjs';
 import {createPartyChatter, partySpeech, updatePartyChatter} from '../src/party-chatter.mjs';
 import {bartender, createCreameryGuard} from '../src/creamery.mjs';
 import {createMilkService, milkCalls, updateMilkService} from '../src/milk-service.mjs';
@@ -7,10 +9,10 @@ import {createGuards, summonGuard, updateGuards} from '../src/guards.mjs';
 import {createMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
-import {callOutMilo, createBaron, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
+import {callOutMilo, createBaron, isBaronDancing, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {cameraLeft, cameraTop, HALL_CENTER, isBlocked, nearestInteraction, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
+import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, HALL_CENTER, isBlocked, nearestInteraction, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -72,12 +74,12 @@ test('the camera clamps at the outer walls and the floor is open between the end
   assert.equal(isBlocked(1342, 451, 13, baron), true);
 });
 
-test('the 3×5 rectangle has fifteen reachable rugs and only perimeter walls', () => {
+test('the 3×5 rectangle has fourteen reachable rugs and perimeter walls', () => {
   const baron = createBaron();
-  assert.equal(RUGS.length, 15);
+  assert.equal(RUGS.length, 14);
   const occupiedSquares = new Set(RUGS.map(({x, y}) =>
     Math.floor(x / ROOM_WIDTH) + ',' + Math.floor((y - NORTH_EDGE) / ROOM_HEIGHT)));
-  assert.equal(occupiedSquares.size, 15);
+  assert.equal(occupiedSquares.size, 14);
   assert.equal(baron.y, (NORTH_EDGE + SOUTH_EDGE) / 2);
   const spawnRug = closestRug(baron);
   assert.deepEqual(spawnRug, {...HALL_CENTER, horizontal: false});
@@ -594,4 +596,62 @@ test('the nearest roving guard runs to Pip and reports one arrival', () => {
   assert.equal(result, guard);
   assert.equal(guard.pursuit, null);
   assert.equal(updateGuards(guards, pip, baron, milo, elapsed, 0.05), null);
+});
+
+test('the dance floor replaces the southern centre rug and its lyrics repeat in order', () => {
+  assert.ok(!RUGS.some(rug => rug.x === DANCE_FLOOR.x && Math.abs(rug.y - DANCE_FLOOR.y) < ROOM_HEIGHT / 2));
+  assert.equal(isBlocked(DANCE_FLOOR.x, DANCE_FLOOR.y, 13, createBaron()), false);
+  assert.equal(isBlocked(DANCE_FLOOR.x, DANCE_FLOOR.y - 246, 13, createBaron()), true);
+  const verse = ["Where's my milk mama?", "Where's my milk dada?", "Where's my milk nana?", "Where's my milk papa?"];
+  const expected = [...Array.from({length: 4}, () => ['Milk milk milk my cow', 'Milk milk milk her now']).flat(),
+    ...verse, ...verse, 'Milk milk milk my cow'];
+  for (const [index, line] of expected.entries()) {
+    const lyric = danceLyric(index * 2 + 0.5);
+    assert.equal(lyric.text, `♪ ${line} ♪`);
+    assert.equal(Math.sign(lyric.x - DANCE_FLOOR.x), index % 2 ? 1 : -1);
+    assert.equal(lyric.opacity, 1);
+  }
+});
+
+test('the Baron follows Pip to the dance stop and only dances after arrival', () => {
+  const baron = createBaron();
+  const cameraX = cameraLeft(DANCE_FLOOR.x);
+  const cameraY = cameraTop(DANCE_FLOOR.y);
+  updateBaronWalk(baron, DANCE_FLOOR, cameraX, 0, 0.05, cameraY);
+  updateBaronWalk(baron, DANCE_FLOOR, cameraX, 5, 0.05, cameraY);
+  assert.equal(baron.route.at(-1), BARON_DANCE_STOP);
+  assert.equal(isBaronDancing(baron), false);
+  let time = 5;
+  while (baron.route.length && time < 25) {
+    time += 0.05;
+    updateBaronWalk(baron, DANCE_FLOOR, cameraX, time, 0.05, cameraY);
+    assert.equal(isBlocked(baron.x, baron.y, 24, {x: 0, y: 0}), false);
+  }
+  updateBaronWalk(baron, DANCE_FLOOR, cameraX, time + 0.05, 0.05, cameraY);
+  assert.equal(isBaronDancing(baron), true);
+  assert.equal(isBaronDancing(createBaron()), false);
+  const nextY = cameraTop(HALL_CENTER.y);
+  updateBaronWalk(baron, HALL_CENTER, cameraX, time + 1, 0.05, nextY);
+  updateBaronWalk(baron, HALL_CENTER, cameraX, time + 6, 0.05, nextY);
+  assert.equal(baron.route.at(-1), closestRug(HALL_CENTER));
+  assert.equal(isBaronDancing(baron), false);
+});
+
+test('one randomly chosen dancer says one line every 20 seconds', () => {
+  const rolls = [0, 0.99, 0.26, 0, 0.51, 0.99, 0.99, 0.99];
+  const speechAt = createDancerSpeech(() => rolls.shift());
+  assert.equal(speechAt(19.9), null);
+  for (const [time, id, line] of [
+    [20, 'mascot', 'Milk my cow! Milk her now!'],
+    [40, 'coral', 'I like to PARTAY!'],
+    [60, 'jade', 'That cow guard is kind of cute!!'],
+    [80, 'guard', 'God bless the Baron!']
+  ]) {
+    const first = speechAt(time + 0.5);
+    assert.equal(first.dancer.id, id);
+    assert.equal(first.text, line);
+    assert.equal(speechAt(time + 4).text, line);
+    assert.equal(speechAt(time + 5), null);
+  }
+  assert.equal(rolls.length, 0);
 });

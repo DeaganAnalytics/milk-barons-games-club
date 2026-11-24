@@ -1,6 +1,6 @@
 import {guardBlocks} from './guards.mjs';
 import {facingIndex, TURN} from './directions.mjs';
-import {HALL_CENTER, closestRug, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {BARON_DANCE_STOP, DANCE_FLOOR, HALL_CENTER, closestRug, ROOM_HEIGHT, ROOM_WIDTH, sameSquare} from './room.mjs';
 
 const OFFSCREEN_DELAY = 5;
 const WALK_SPEED = 146;
@@ -47,6 +47,18 @@ function isOnscreen(baron, cameraX, cameraY) {
     && baron.y + 34 > cameraY && baron.y - 57 < cameraY + ROOM_HEIGHT;
 }
 
+export function isBaronDancing(baron) {
+  return !baron.walking && !baron.route.length
+    && baron.x === BARON_DANCE_STOP.x && baron.y === BARON_DANCE_STOP.y;
+}
+
+function routeToDanceStop(from) {
+  if (from.x <= BARON_DANCE_STOP.x) return [BARON_DANCE_STOP];
+  // Approach from the open west side, skirting the booth and speaker cabinets.
+  const y = from.y < BARON_DANCE_STOP.y ? DANCE_FLOOR.y - 342 : DANCE_FLOOR.y - 160;
+  return [{x: from.x, y}, {x: BARON_DANCE_STOP.x, y}, BARON_DANCE_STOP];
+}
+
 export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0, guards = []) {
   if (!baron.route.length) {
     if (isOnscreen(baron, cameraX, cameraY)) {
@@ -54,9 +66,15 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
     } else {
       baron.offscreenSince ??= elapsed;
       if (elapsed - baron.offscreenSince >= OFFSCREEN_DELAY) {
-        const rug = closestRug(player);
-        if (baron.x !== rug.x || baron.y !== rug.y) {
-          baron.route = [rug];
+        const destination = sameSquare(player, DANCE_FLOOR) ? BARON_DANCE_STOP : closestRug(player);
+        if (baron.x !== destination.x || baron.y !== destination.y) {
+          if (destination === BARON_DANCE_STOP) {
+            baron.route = routeToDanceStop(baron);
+          } else if (isBaronDancing(baron)) {
+            baron.route = [...routeToDanceStop(destination).slice(0, -1).reverse(), destination];
+          } else {
+            baron.route = [destination];
+          }
           baron.speech = {text: rugLines[baron.nextLine], visibleSince: null};
           baron.nextLine = (baron.nextLine + 1) % rugLines.length;
         }

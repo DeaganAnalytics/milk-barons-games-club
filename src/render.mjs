@@ -1,3 +1,5 @@
+import {createDancerSpeech, dancers, drawDancer} from './dancers.mjs';
+import {danceLayers, danceLyric, drawBaronDance, drawDanceBooth, drawDanceFloor} from './dance-floor.mjs';
 import {bartender, creameryHatch} from './creamery.mjs';
 import {drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
 import {partySpeech, refillProgress} from './party-chatter.mjs';
@@ -6,8 +8,8 @@ import {drawPip} from './pip-art.mjs';
 import {staffFrame, staffIds} from './staff.mjs';
 import {speechBubbleLayout} from './speech-layout.mjs';
 import {TURN} from './directions.mjs';
-import {speechOpacity} from './baron.mjs';
-import {NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
+import {isBaronDancing, speechOpacity} from './baron.mjs';
+import {DANCE_FLOOR, NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
 import {composeHall, loadHallArt} from './hall-art.mjs';
 
 function loadSprite(name, extension = "png") {
@@ -218,6 +220,11 @@ export function createRenderer(canvas) {
   ctx.setTransform(canvas.width / ROOM_WIDTH, 0, 0, canvas.height / ROOM_HEIGHT, 0, 0);
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
+  const danceArt = Object.fromEntries(danceLayers.map(name => [name, loadSprite('dance/' + name, 'webp')]));
+  const danceImages = Object.values(danceArt);
+  const dancerSpeech = createDancerSpeech();
+  const dancerSprites = dancers.map(({id}) => loadSprite('dance/dancers/' + id, 'webp'));
+  const baronDancePose = loadSprite('dance/baron', 'webp');
   const guardSprite = loadSprite('guards/concealed', 'webp');
   const bartenderSprite = loadSprite('hall/creamery-bartender-idle', 'webp');
   const armedGuard = loadSprite('guards/rifle', 'webp');
@@ -249,13 +256,21 @@ export function createRenderer(canvas) {
 
     ctx.save();
     ctx.translate(-cameraX, -cameraY);
+    const danceVisible = world && danceImages.every(isReady)
+      && DANCE_FLOOR.y + 175 > cameraY && DANCE_FLOOR.y - 345 < cameraY + ROOM_HEIGHT
+      && DANCE_FLOOR.x + 235 > cameraX && DANCE_FLOOR.x - 235 < cameraX + ROOM_WIDTH;
+    if (danceVisible) drawDanceFloor(ctx, danceArt);
     if (world) drawBartender(ctx, bartenderSprite, elapsed);
     if (milkScene) drawMilkShards(ctx, milkScene);
     const milkPose = usesMilkArm(milkScene) ? baronMilkPoses[milkScene.side] : null;
     const animateBaronArm = milkPose !== null && isReady(milkPose);
+    const dancing = !milkScene && isReady(baronDancePose) && isBaronDancing(baron);
     const actors = [
       {depth: player.y + 22, draw: () => drawPip(ctx, player, elapsed)},
-      {depth: baron.y + 34, draw: () => drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed)},
+      {depth: baron.y + 34, draw: () => {
+        if (dancing) drawBaronDance(ctx, baronDancePose, baron, elapsed);
+        else drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed);
+      }},
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
     for (const guard of guards) {
@@ -277,10 +292,32 @@ export function createRenderer(canvas) {
       }
       actors.push({depth: guest.y, draw: () => drawPartyGuest(ctx, guest, partySprites[index], elapsed, milk, pouring)});
     });
+    if (danceVisible) {
+      actors.push({depth: DANCE_FLOOR.y - 175, draw: () => drawDanceBooth(ctx, danceArt, elapsed)});
+      dancers.forEach((dancer, index) => {
+        const sprite = dancerSprites[index];
+        if (isReady(sprite)) actors.push({depth: dancer.y, draw: () => drawDancer(ctx, sprite, dancer, elapsed)});
+      });
+    }
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
     if (milkScene) drawMilkAction(ctx, milkScene, baron, animateBaronArm);
     if (pouring) drawGuestRefill(ctx, partyGuests[refill.guest], partySprites[refill.guest], refill.server, progress);
+    if (danceVisible) {
+      const lyric = danceLyric(elapsed);
+      if (lyric.x >= cameraX && lyric.x <= cameraX + ROOM_WIDTH
+          && lyric.y >= cameraY && lyric.y <= cameraY + ROOM_HEIGHT) {
+        drawSpeech(ctx, lyric.text, lyric.opacity, lyric.x, lyric.y, lyric.y + 110, cameraX, cameraY);
+      }
+    }
+    if (danceVisible) {
+      const speech = dancerSpeech(elapsed);
+      if (speech && isReady(dancerSprites[dancers.indexOf(speech.dancer)])
+          && speech.x >= cameraX && speech.x <= cameraX + ROOM_WIDTH
+          && speech.dancer.y >= cameraY && speech.headY <= cameraY + ROOM_HEIGHT) {
+        drawSpeech(ctx, speech.text, speech.opacity, speech.x, speech.headY, speech.dancer.y, cameraX, cameraY);
+      }
+    }
     if (baron.speech) {
       drawSpeech(ctx, baron.speech.text, speechOpacity(baron, cameraX, elapsed, cameraY),
         baron.x, baron.y - 61, baron.y + 34, cameraX, cameraY);
