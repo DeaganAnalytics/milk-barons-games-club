@@ -57,12 +57,13 @@ function overlaps(x, y, radius, obstacle) {
 }
 
 export const guestEnclosure = {
-  active: false, west: WEST_EDGE + 99, east: WEST_EDGE + 260,
-  north: SOUTH_TRIM_Y - 104, south: SOUTH_TRIM_Y - 5,
-  gateY: SOUTH_TRIM_Y - 56, gateHalf: 25
+  active: false, west: WEST_EDGE + 67, east: WEST_EDGE + 302,
+  north: SOUTH_TRIM_Y - 148, south: SOUTH_TRIM_Y - 5,
+  gateY: SOUTH_TRIM_Y - 56, gateHalf: 34
 };
 
-export const guestGateOutside = {x: guestEnclosure.east + 30, y: guestEnclosure.gateY};
+export const guestGateInside = {x: guestEnclosure.east - 34, y: guestEnclosure.gateY};
+export const guestGateOutside = {x: guestEnclosure.east + 48, y: guestEnclosure.gateY};
 const enclosureBounds = {
   x: (guestEnclosure.west + guestEnclosure.east) / 2,
   y: (guestEnclosure.north + guestEnclosure.south) / 2,

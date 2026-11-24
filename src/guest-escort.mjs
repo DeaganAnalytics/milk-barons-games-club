@@ -1,14 +1,16 @@
 import {movePlayer} from './player.mjs';
 import {partyGuests} from './party-guests.mjs';
-import {ROOM_WIDTH, routeAroundBaron} from './room.mjs';
+import {ROOM_WIDTH, SOUTH_TRIM_Y, routeAroundBaron} from './room.mjs';
 
 const speed = 125;
 const escortX = Math.max(...partyGuests.map(guest => guest.x)) + ROOM_WIDTH / 2 + 34;
 
-export function beginGuestEscort(escort, player, baron) {
+export function beginGuestEscort(escort, player, baron, repeat = false) {
   escort.phase = 'walking';
   escort.guard.escorting = true;
-  escort.destination = {x: escortX, y: player.y};
+  escort.destination = repeat
+    ? {x: player.x + 2 * ROOM_WIDTH, y: Math.max(player.y, SOUTH_TRIM_Y - 34)}
+    : {x: escortX, y: player.y};
   escort.route = routeAroundBaron(player, escort.destination, baron);
 }
 
@@ -18,9 +20,10 @@ export function advanceGuestEscort(escort, player, baron, guards, elapsed, dt) {
   const dx = target.x - player.x;
   const dy = target.y - player.y;
   const distance = Math.hypot(dx, dy);
-  const fraction = distance > 0 ? Math.min(1, speed * dt / distance) : 0;
+  const closeGuard = Math.hypot(player.x - guard.x, player.y - guard.y) <= 58;
+  const fraction = closeGuard && distance > 0 ? Math.min(1, speed * dt / distance) : 0;
   movePlayer(player, baron, dx * fraction, dy * fraction, guards.filter(candidate => candidate !== guard));
-  if (!player.walking && distance > 1) {
+  if (closeGuard && !player.walking && distance > 1) {
     escort.route = routeAroundBaron(player, destination, baron);
   } else if (Math.hypot(target.x - player.x, target.y - player.y) <= 1) {
     route.shift();
@@ -31,7 +34,12 @@ export function advanceGuestEscort(escort, player, baron, guards, elapsed, dt) {
   if (gap > 32) {
     const step = Math.min(gap - 32, 165 * dt);
     const facing = guard.facing;
-    movePlayer(guard, baron, (player.x - guard.x) * step / gap, (player.y - guard.y) * step / gap, guards);
+    const target = escort.guardRoute?.[0] ?? player;
+    const toTarget = Math.hypot(target.x - guard.x, target.y - guard.y);
+    const move = toTarget ? Math.min(1, step / toTarget) : 0;
+    movePlayer(guard, baron, (target.x - guard.x) * move, (target.y - guard.y) * move, guards);
+    if (!guard.walking && toTarget > 1) escort.guardRoute = routeAroundBaron(guard, player, baron);
+    else if (escort.guardRoute && Math.hypot(target.x - guard.x, target.y - guard.y) <= 1) escort.guardRoute.shift();
     guard.facing = guard.walking ? Math.round(guard.facing / 2) % 4 : facing;
   } else {
     guard.walking = false;

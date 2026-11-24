@@ -794,7 +794,7 @@ test('the enclosure blocks Pip and milk staff enter and exit through the east ga
   }
 });
 
-test('the corner guests add the five security exchanges to their pending shuffle when the ropes go up', () => {
+test('the five rope exchanges play in order before the combined shuffle', () => {
   const chatter = createPartyChatter();
   const camera = {x: WEST_EDGE, y: SOUTH_EDGE - ROOM_HEIGHT};
   const baron = createBaron();
@@ -810,16 +810,38 @@ test('the corner guests add the five security exchanges to their pending shuffle
   assert.ok(chatter.order.every(exchange => !exchange[0][1].includes('velvet ropes')));
   guestEnclosure.active = true;
   try {
-    const remaining = Array.from({length: 16}, next);
-    assert.equal(new Set(remaining).size, 16);
-    const ropeExchange = remaining.find(exchange => exchange[0][1].includes('velvet ropes'));
-    assert.deepEqual(ropeExchange, [
+    updatePartyChatter(chatter, {x: 0, y: 0}, [], baron, [], 1, 0.05);
+    assert.equal(chatter.exchange, null);
+    const ropeRotation = Array.from({length: 5}, next);
+    assert.deepEqual(ropeRotation.map(exchange => exchange[0]), [
+      [0, 'The Baron is simply marvellous. These security arrangements are impeccable!'],
       [0, "Aren't these velvet ropes simply beautiful?"],
-      [1, 'They must have cost a fortune. Thank goodness for taxpayers!']
+      [1, 'Finally, something to keep the riff-raff away!'],
+      [1, 'That peasant was positively revolting. I bet he bathes in water, not milk.'],
+      [0, 'I feel considerably safer with an armed guard protecting us.']
     ]);
     const fullRotation = Array.from({length: 17}, next);
     assert.equal(new Set(fullRotation).size, 17);
+    assert.ok(ropeRotation.every(exchange => fullRotation.includes(exchange)));
   } finally {
     guestEnclosure.active = false;
   }
+});
+
+test('the second escort leads Pip two map squares east with the guard in tow', () => {
+  const baron = createBaron();
+  const guest = partyGuests[0];
+  const pip = {...createPlayer(), x: guest.x + 6, y: guest.y - 48};
+  const startX = pip.x;
+  const guard = {x: pip.x - 30, y: pip.y - 15, facing: 0, radius: 14, stride: 0};
+  const escort = {guest, guard, phase: 'warning'};
+  beginGuestEscort(escort, pip, baron, true);
+  assert.equal(escort.destination.x, startX + 2 * ROOM_WIDTH);
+  let ended = false;
+  for (let time = 0; time < 20 && !ended; time += 0.05) {
+    ended = advanceGuestEscort(escort, pip, baron, [guard], time, 0.05);
+  }
+  assert.equal(ended, true);
+  assert.ok(Math.abs(pip.x - (startX + 2 * ROOM_WIDTH)) <= 1);
+  assert.ok(Math.hypot(guard.x - pip.x, guard.y - pip.y) < 38);
 });

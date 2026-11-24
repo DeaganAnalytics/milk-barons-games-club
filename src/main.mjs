@@ -45,7 +45,14 @@ const dialogue = createDialogue(baron, {
         guestEscort = {guard, guest, phase: 'waiting'};
       }
     }
-    if (action === 'escortGuest' && guestEscort) beginGuestEscort(guestEscort, player, baron);
+    if (action === 'escortGuest' && guestEscort) beginGuestEscort(guestEscort, player, baron, completedGuestEscorts > 0);
+    if (action === 'secureGuests' && !guestEnclosure.active) {
+      guestEnclosure.active = true;
+      guards.push({
+        x: guestEnclosure.east + 22, y: guestEnclosure.gateY - 48,
+        radius: 14, facing: 0, walking: false, posted: true, guestGate: true
+      });
+    }
     if (action === 'reportMilo') dispatchGuardToMilo(target.guard);
     if (action === 'fleeMilo') fleeMilo(milo, player, baron, guards);
   }
@@ -91,14 +98,12 @@ function frame(timestamp) {
     if (advanceGuestEscort(guestEscort, player, baron, guards, elapsed, dt)) {
       guestEscort = null;
       completedGuestEscorts++;
-      if (completedGuestEscorts === 2) {
-        guestEnclosure.active = true;
-        guards.push({
-          x: guestEnclosure.east + 22, y: guestEnclosure.gateY - 34,
-          radius: 14, facing: 0, walking: false, posted: true, guestGate: true
-        });
-      }
       clearInput();
+      if (completedGuestEscorts === 2) {
+        dialogue.open({id: 'guard', title: 'Bull Guard', postEscort: true});
+        requestAnimationFrame(frame);
+        return;
+      }
     }
   } else {
     const movement = guestEscort ? {dx: 0, dy: 0} : readMovement();
