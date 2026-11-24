@@ -1089,3 +1089,35 @@ test('Pip can meet the professor once and revisit all four topics', () => {
   assert.deepEqual(endings, ['Guards!']);
   assert.equal(open(), menu);
 });
+
+test('the attendant introduces the stall once before offering the milk balloon game', async () => {
+  const {createAttendantConversation, attendantMoods} = await import('../src/attendant-dialogue.mjs');
+  const open = createAttendantConversation();
+  assert.match(open().text, /^Welcome, welcome/);
+  const menu = open();
+  assert.equal(open(), menu);
+  assert.equal(menu.replies.length, 4);
+  let node = menu.replies.find(reply => reply.label === 'Can I play?').next;
+  while (node.replies.length) {
+    assert.ok(attendantMoods.includes(node.mood));
+    node = node.replies[0].next;
+  }
+  assert.equal(node.action, 'startMilkBalloon');
+});
+
+test('Pip picks up a milk balloon, waits for the throw, then finishes the round', async () => {
+  const {createMilkBalloon, updateMilkBalloon, throwMilkBalloon, milkBalloonHand} = await import('../src/milk-balloon.mjs');
+  const {pilloryAttendant} = await import('../src/pillory.mjs');
+  const player = {...createPlayer(), x: pilloryAttendant.x + 36, y: pilloryAttendant.y};
+  const scene = createMilkBalloon(player, createBaron());
+  throwMilkBalloon(scene);
+  assert.equal(scene.phase, 'approach');
+  for (let i = 0; i < 240 && scene.phase !== 'ready'; i++) updateMilkBalloon(scene, player, 1 / 60);
+  assert.equal(scene.phase, 'ready');
+  assert.equal(updateMilkBalloon(scene, player, 5), false);
+  assert.ok(milkBalloonHand(scene, player));
+  throwMilkBalloon(scene);
+  assert.equal(scene.phase, 'throw');
+  assert.equal(updateMilkBalloon(scene, player, 1), false);
+  assert.equal(updateMilkBalloon(scene, player, 1), true);
+});

@@ -1,3 +1,5 @@
+import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
+import {pilloryAttendant} from './pillory.mjs';
 import {createProfessorConversation, professorMoods} from './professor-dialogue.mjs';
 import {professor} from './professor.mjs';
 import {lifeguardDialogue, lifeguardMoods} from './lifeguard-dialogue.mjs';
@@ -144,6 +146,7 @@ const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-formal', '
 const portraitCache = new Map();
 
 function standalonePortraitUrl(id, withoutMilk = false, mood) {
+  if (id === pilloryAttendant.id) return new URL('../assets/dialogue/attendant/' + mood + '.webp', import.meta.url);
   if (id === professor.id) return new URL('../assets/dialogue/professor/' + mood + '.webp', import.meta.url);
   if (id === lifeguard.id) return new URL('../assets/dialogue/lifeguard-' + mood + '.webp', import.meta.url);
   if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
@@ -163,6 +166,7 @@ function warmPortraits() {
     if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
   urls.push(standalonePortraitUrl(bartender.id));
+  for (const mood of attendantMoods) urls.push(standalonePortraitUrl(pilloryAttendant.id, false, mood));
   for (const mood of professorMoods) urls.push(standalonePortraitUrl(professor.id, false, mood));
   for (const mood of lifeguardMoods) urls.push(standalonePortraitUrl(lifeguard.id, false, mood));
   for (const {id} of partyGuests) {
@@ -193,8 +197,10 @@ export function createDialogue(baron, {onAction, canReportMilo, canReportPool, t
   const playerArt = playerPortrait.querySelector('canvas');
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
+  const closeButton = document.getElementById('conversation-close');
   let action = null;
   let activeTarget;
+  const attendantOpening = createAttendantConversation();
   const professorOpening = createProfessorConversation();
   let injured = false;
 
@@ -228,6 +234,7 @@ export function createDialogue(baron, {onAction, canReportMilo, canReportPool, t
 
   function show(node, character, playerMood, withoutMilk) {
     action = node.action ?? null;
+    closeButton.textContent = action === 'startMilkBalloon' ? 'Play' : 'End conversation';
     line.textContent = node.text;
     line.hidden = !node.text;
     if (node.direction) {
@@ -247,10 +254,10 @@ export function createDialogue(baron, {onAction, canReportMilo, canReportPool, t
       button.addEventListener('click', () => show(reply.next, character, reply.playerMood, withoutMilk));
       return button;
     }));
-    (replyList.firstElementChild ?? document.getElementById('conversation-close')).focus();
+    (replyList.firstElementChild ?? closeButton).focus();
   }
 
-  document.getElementById('conversation-close').addEventListener('click', close);
+  closeButton.addEventListener('click', close);
   document.addEventListener('keydown', event => {
     if (event.code === 'Escape' && !panel.hidden) {
       event.preventDefault();
@@ -272,6 +279,7 @@ export function createDialogue(baron, {onAction, canReportMilo, canReportPool, t
     activeTarget = target;
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
+      : target.id === pilloryAttendant.id ? attendantOpening()
       : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.postEscort ? postEscortWarning

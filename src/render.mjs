@@ -1,3 +1,4 @@
+import {drawMilkBalloon, milkBalloonHand} from './milk-balloon.mjs';
 import {createPillorySpeech} from './pillory.mjs';
 import {createProfessorSpeech, drawProfessor, professorHeight} from './professor.mjs';
 import {drawMilkFountain, fountainHeight, fountainWidth} from './milk-fountain.mjs';
@@ -295,7 +296,7 @@ export function createRenderer(canvas) {
 
   const professorSpeech = createProfessorSpeech();
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool, milkBalloon = null) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -324,7 +325,7 @@ export function createRenderer(canvas) {
     const ropeScene = ropeWarning?.scene;
     const pipFalling = ropeScene?.phase === 'fall' || ropeScene?.phase === 'over';
     const actors = [
-      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene.time, drawPip) : drawPip(ctx, player, elapsed)},
+      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene.time, drawPip) : drawPip(ctx, player, elapsed, milkBalloon ? milkBalloonHand(milkBalloon, player) : null)},
       {depth: baron.y + 34, draw: () => {
         if (dancing) drawBaronDance(ctx, baronDancePose, baron, elapsed);
         else drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed);
@@ -456,7 +457,8 @@ export function createRenderer(canvas) {
         }
       });
     }
-    const stallRemark = pillorySpeech(elapsed, ropeScene ? {} : pillorySpeakers);
+    if (milkBalloon) drawMilkBalloon(ctx, milkBalloon, player);
+    const stallRemark = pillorySpeech(elapsed, ropeScene || milkBalloon ? {} : pillorySpeakers);
     if (stallRemark) {
       const {x, head, front} = pillorySpeakers[stallRemark.id];
       drawSpeech(ctx, stallRemark.text, stallRemark.opacity, x, head, front, cameraX, cameraY);

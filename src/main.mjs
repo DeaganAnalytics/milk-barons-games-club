@@ -1,3 +1,5 @@
+import {createMilkBalloon, throwMilkBalloon, updateMilkBalloon} from './milk-balloon.mjs';
+import {pilloryAttendant} from './pillory.mjs';
 import {professor} from './professor.mjs';
 import {createMilkPool, lifeguard, updateMilkPool} from './milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} from './rope-warning.mjs';
@@ -22,7 +24,7 @@ const milo = createMilo();
 const guards = createGuards(player, baron, milo);
 guards.push(createCreameryGuard());
 const staff = createStaff(player, baron, milo, guards);
-const guests = [...staff, bartender, lifeguard, professor, ...partyGuests.map(guest => ({
+const guests = [...staff, bartender, lifeguard, professor, pilloryAttendant, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
 const milkService = createMilkService();
@@ -32,6 +34,7 @@ const render = createRenderer(document.getElementById('game'));
 let seenMilo = false;
 let seenPoolAndClothes = false;
 let guestEscort = null;
+let milkBalloon = null;
 let completedGuestEscorts = 0;
 let gateWarned = false;
 let gateGuard;
@@ -65,6 +68,11 @@ const dialogue = createDialogue(baron, {
       };
       guards.push(gateGuard);
     }
+    if (action === 'startMilkBalloon') {
+      clearInput();
+      milkBalloon = createMilkBalloon(player, baron);
+      info.textContent = 'Pip is picking up a milk balloon.';
+    }
     if (action === 'inspectPool') dispatchGuardToPool(target.guard);
     if (action === 'reportMilo') dispatchGuardToMilo(target.guard);
     if (action === 'fleeMilo') fleeMilo(milo, player, baron, guards);
@@ -85,11 +93,19 @@ function warnAtGuestGate() {
 const {readMovement, clearInput} = bindControls({
   isPaused: () => dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
   nudge: (dx, dy) => {
+    if (milkBalloon) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else movePlayer(player, baron, dx, dy, guards);
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
+    if (milkBalloon) {
+      if (milkBalloon.phase === 'ready') {
+        throwMilkBalloon(milkBalloon);
+        info.textContent = 'Milk balloon away!';
+      }
+      return;
+    }
     const target = nearestInteraction(player, baron, milo, guards, guestEnclosure.active ? guests.filter(guest => !insideGuestEnclosure(guest)) : guests);
     if (target) {
       if (target.id === 'milo') seenMilo = true;
@@ -117,6 +133,22 @@ function frame(timestamp) {
       gameOver.hidden = false;
       restart.focus();
     } else requestAnimationFrame(frame);
+    return;
+  }
+
+  if (milkBalloon) {
+    const previous = milkBalloon.phase;
+    const done = updateMilkBalloon(milkBalloon, player, dt);
+    if (done) {
+      milkBalloon = null;
+      clearInput();
+      info.textContent = 'Splat! You hit the Commissioner.';
+    } else if (previous !== 'ready' && milkBalloon.phase === 'ready') {
+      info.textContent = 'Press E or tap Interact to throw the milk balloon.';
+    }
+    render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
+      staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, milkBalloon);
+    requestAnimationFrame(frame);
     return;
   }
 

@@ -1,3 +1,9 @@
+import {PILLORY_ATTENDANT} from './room.mjs';
+
+export const pilloryAttendant = {
+  id: 'pillory-attendant', title: 'Attendant', ...PILLORY_ATTENDANT, radius: 21
+};
+
 const attendantLines = [
   'Come one, come all! Throw a balloon of milk at this miserable bore!',
   "Mad at the bureaucracy? It's your lucky day!",
