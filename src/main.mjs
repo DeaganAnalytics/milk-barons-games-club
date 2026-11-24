@@ -1,4 +1,4 @@
-import {advanceEliasRun, elias, updateEliasFollow} from './elias.mjs';
+import {advanceEliasRun, elias, routeEliasToPip, updateEliasFollow} from './elias.mjs';
 import {createCoinBalance, STARTING_COINS} from './coins.mjs';
 import {createAttendantMilk, updateAttendantMilk} from './attendant-milk.mjs';
 import {createAttendantThrow, createMilkBalloon, createPilloryReportScene, updateMilkBalloon} from './milk-balloon.mjs';
@@ -11,12 +11,12 @@ import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
 import {callOutMilo, createBaron, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
-import {createGuards, dispatchGuardToMilo, dispatchGuardToPool, summonGuard, updateGuards} from './guards.mjs';
+import {createGuards, dispatchGuardToMilo, dispatchRovingGuardsToPool, summonGuard, updateGuards} from './guards.mjs';
 import {createMilo, fleeMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
 import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
 import {partyGuests} from './party-guests.mjs';
-import {createPlayer, movePlayer, updatePlayer} from './player.mjs';
+import {createPlayer, movePlayer, takeDanceExit, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
 import {cameraLeft, cameraTop, guestEnclosure, insideGuestEnclosure, MILK_POOL, nearGuestGate, nearestInteraction, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 import {createStaff, updateStaff} from './staff.mjs';
@@ -36,8 +36,10 @@ const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
 const render = createRenderer(document.getElementById('game'));
 let eliasApproaching = true;
+let eliasDanceRoute = null;
 let seenMilo = false;
 let seenPoolAndClothes = false;
+let poolClothesReport = null;
 let seenPillory = false;
 let reportedPillory = false;
 let guestEscort = null;
@@ -78,6 +80,7 @@ const dialogue = createDialogue(baron, {
   canReportPillory: guard => seenPillory && !reportedPillory && guard && !guard.pursuit
     && !guard.poolWatch && !pilloryInView(cameraLeft(player.x), cameraTop(player.y)),
   canReportPool: () => seenPoolAndClothes,
+  canReportPoolClothes: () => poolClothesReport === null,
   canReportMilo: () => ({seen: seenMilo, pending: milo.injuryPending || guards.some(guard => guard.pursuit?.milo)}),
   takeMiloInjury: () => {
     const injured = milo.injuryPending;
@@ -85,6 +88,9 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    if (action === 'awardPilloryTip' || action === 'baronMoneyGift' || action === 'awardPoolClothesTip') coinBalance.change(5);
+    if (action === 'baronMoneyPenalty') coinBalance.change(-25);
+    if (action === 'chargeDanceFee') coinBalance.change(-3);
     if (action === 'finishEliasWelcome') {
       document.getElementById('coin-counter').hidden = false;
       elias.findingEdge = true;
@@ -98,7 +104,7 @@ const dialogue = createDialogue(baron, {
       }
     }
     if (action === 'escortGuest' && guestEscort) beginGuestEscort(guestEscort, player, baron, completedGuestEscorts > 0);
-    if (action === 'secureGuests' && !guestEnclosure.active) {
+    if ((action === 'secureGuests' || action === 'fineAndSecureGuests') && !guestEnclosure.active) {
       guestEnclosure.active = true;
       gateGuard = {
         x: guestEnclosure.east + 22, y: guestEnclosure.gateY - 48,
@@ -106,6 +112,7 @@ const dialogue = createDialogue(baron, {
       };
       guards.push(gateGuard);
     }
+    if (action === 'fineAndSecureGuests') coinBalance.change(-20);
     if (action === 'startMilkBalloon') {
       clearInput();
       milkBalloon = createMilkBalloon(player, baron);
@@ -123,7 +130,9 @@ const dialogue = createDialogue(baron, {
       milkBalloon = createPilloryReportScene(player, target.guard, baron);
       info.textContent = 'Pip leads the guard to the pillory.';
     }
-    if (action === 'inspectPool') dispatchGuardToPool(target.guard);
+    if (action === 'inspectPool' && !poolClothesReport) {
+      poolClothesReport = {guards: dispatchRovingGuardsToPool(guards), thanked: false};
+    }
     if (action === 'reportMilo') dispatchGuardToMilo(target.guard);
     if (action === 'fleeMilo') fleeMilo(milo, player, baron, guards);
   }
@@ -141,21 +150,26 @@ function warnAtGuestGate() {
 }
 
 const {readMovement, clearInput} = bindControls({
-  isPaused: () => eliasApproaching || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
+  isPaused: () => eliasApproaching || Boolean(eliasDanceRoute) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
   nudge: (dx, dy) => {
-    if (eliasApproaching || !gameOver.hidden || milkBalloon) return;
+    if (eliasApproaching || eliasDanceRoute || !gameOver.hidden || milkBalloon) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else movePlayer(player, baron, dx, dy, guards);
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
-    if (eliasApproaching || !gameOver.hidden || milkBalloon) return;
+    if (eliasApproaching || eliasDanceRoute || !gameOver.hidden || milkBalloon) return;
     const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
       && !(guestEnclosure.active && insideGuestEnclosure(guest)));
     const target = nearestInteraction(player, baron, milo, guards, nearbyGuests);
     if (target) {
       if (target.id === 'milo') seenMilo = true;
       if (target.guestGate) ropeWarning.talks++;
+      if (target.guard && poolClothesReport?.guards.includes(target.guard) && !poolClothesReport.thanked
+          && poolClothesReport.guards.every(guard => !guard.poolReportPending)) {
+        poolClothesReport.thanked = true;
+        target.poolClothesThanks = true;
+      }
       clearInput();
       dialogue.open(target);
     } else info.textContent = 'Nobody is close enough to talk to.';
@@ -181,6 +195,17 @@ function frame(timestamp) {
     requestAnimationFrame(frame);
     return;
   }
+  if (eliasDanceRoute) {
+    if (advanceEliasRun(elias, eliasDanceRoute[0], dt, 0)) eliasDanceRoute.shift();
+    render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
+      staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
+    if (!eliasDanceRoute.length) {
+      eliasDanceRoute = null;
+      dialogue.open({...elias, danceFee: true});
+    }
+    requestAnimationFrame(frame);
+    return;
+  }
   elapsed += dt;
 
   if (ropeWarning.scene) {
@@ -197,7 +222,6 @@ function frame(timestamp) {
     const done = updateMilkBalloon(milkBalloon, player, dt);
     if (done) {
       const {attendant, guard} = milkBalloon;
-      playedMilkBalloon ||= !attendant && !guard;
       milkBalloon = null;
       clearInput();
       if (guard) {
@@ -206,7 +230,11 @@ function frame(timestamp) {
         requestAnimationFrame(frame);
         return;
       }
-      info.textContent = attendant ? 'Splat! The attendant hit the Commissioner.' : 'Splat! You hit the Commissioner.';
+      if (!attendant) {
+        playedMilkBalloon = true;
+        coinBalance.change(-1);
+      }
+      info.textContent = attendant ? 'Splat! The attendant hit the Commissioner.' : 'Splat! You hit the Commissioner. Milk fee: ₥1.';
     }
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
       staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, milkBalloon, attendantMilk.scene);
@@ -235,6 +263,13 @@ function frame(timestamp) {
       return;
     }
     updatePlayer(player, baron, movement, dt, guards);
+  }
+  if (!guestEscort && takeDanceExit(player)) {
+    clearInput();
+    player.walking = false;
+    eliasDanceRoute = routeEliasToPip(elias, player, baron);
+    requestAnimationFrame(frame);
+    return;
   }
   if (gateGuard && updateRopeWarning(ropeWarning, player, dt)) {
     clearInput();

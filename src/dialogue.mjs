@@ -1,4 +1,4 @@
-import {elias, eliasConversation, eliasPortraits, eliasWelcome} from './elias.mjs';
+import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasWelcome} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
@@ -6,7 +6,7 @@ import {createProfessorConversation, professorMoods} from './professor-dialogue.
 import {professor} from './professor.mjs';
 import {lifeguardDialogue, lifeguardMoods} from './lifeguard-dialogue.mjs';
 import {lifeguard} from './milk-pool.mjs';
-import {availableReports, injuredMiloReply, poolReports} from './report-dialogue.mjs';
+import {availableReports, injuredMiloReply, poolReports, unattendedClothes} from './report-dialogue.mjs';
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
@@ -36,7 +36,7 @@ const postEscortWarning = {
     {label: 'Continue', playerMood: 'worried', next: {
       text: 'You have been warned. They are out of league.', mood: 'formal', replies: [
         {label: 'I just wanted to...', playerMood: 'sorry', next: {
-          text: "Don't!", mood: 'angry'
+          text: "Don't! Actually, open your wallet! Yes, I'll take that!", mood: 'angry', action: 'fineAndSecureGuests'
         }}
       ]
     }}
@@ -188,7 +188,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReportMilo, canReportPillory, canReportPool, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -203,6 +203,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
   const playerArt = playerPortrait.querySelector('canvas');
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
+  let askedBaronForMoney = false;
   const closeButton = document.getElementById('conversation-close');
   let action = null;
   let activeTarget;
@@ -241,7 +242,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
 
   function show(node, character, playerMood, withoutMilk) {
     action = node.action ?? null;
-    closeButton.hidden = Boolean(activeTarget.welcome && !action);
+    closeButton.hidden = Boolean((activeTarget.welcome || activeTarget.danceFee) && !action);
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
@@ -252,9 +253,10 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       direction.textContent = '(' + node.direction + ') ';
       line.prepend(direction);
     }
-    if (playerPortrait.dataset.expression !== playerMood) {
-      drawPipPortrait(playerArt, playerMood);
-      playerPortrait.dataset.expression = playerMood;
+    const playerExpression = node.playerMood ?? playerMood;
+    if (playerPortrait.dataset.expression !== playerExpression) {
+      drawPipPortrait(playerArt, playerExpression);
+      playerPortrait.dataset.expression = playerExpression;
     }
     const currentSpeaker = node.character ?? character;
     speaker.textContent = currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title;
@@ -264,8 +266,9 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       button.type = 'button';
       button.textContent = reply.label;
       button.addEventListener('click', () => {
-        if (reply.next === null) close();
-        else show(reply.next, character, reply.playerMood, withoutMilk);
+        const next = typeof reply.next === 'function' ? reply.next() : reply.next;
+        if (next === null) close();
+        else show(next, character, reply.playerMood, withoutMilk);
       });
       return button;
     }));
@@ -280,11 +283,30 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     }
   });
 
+  function baronConversation() {
+    const replies = availableBaronReplies(baron);
+    if (!askedBaronForMoney) replies.push({
+      label: 'Can I have some money?',
+      playerMood: 'attentive',
+      next: () => {
+        askedBaronForMoney = true;
+        return Math.random() < 0.5 ? {
+          text: 'Of course, my boy! What is money to a man of my extraordinary wealth?!',
+          mood: 'laughing', action: 'baronMoneyGift'
+        } : {
+          text: 'I SMELL A COMMUNIST! Perhaps a small financial penalty will teach you the virtues of capitalism!',
+          mood: 'displeased', action: 'baronMoneyPenalty'
+        };
+      }
+    });
+    return {...baronGreetings[greetingIndex++ % baronGreetings.length], replies};
+  }
+
   function reportingReplies(target) {
     const report = guardReplies[2];
     const status = canReportMilo?.() ?? {};
     const reports = [...availableReports(baron.completedRugTrips, status.seen, status.pending),
-      ...(canReportPool?.() ? poolReports : [])];
+      ...(canReportPool?.() ? poolReports.filter(report => report !== unattendedClothes || canReportPoolClothes?.() !== false) : [])];
     if (canReportPillory?.(target.guard)) reports.push({
       label: 'Someone has the Stickman Rights Commissioner in a pillory!',
       playerMood: 'alarmed',
@@ -301,10 +323,15 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
-      : target.id === elias.id ? (target.welcome ? eliasWelcome : eliasConversation)
+      : target.id === elias.id && target.danceFee ? eliasDanceConversation
+      : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)
       : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue
-      : target.pilloryThanks ? {text: 'Thanks, I needed a laugh today.', mood: 'deadpan'}
+      : target.poolClothesThanks ? {
+          text: "Thanks for the tip about the women skimmy-dipping in the milk pool. Best bloody shift I've had in months. Here, take a few coins for your troubles.",
+          mood: 'speaking', action: 'awardPoolClothesTip'
+        }
+      : target.pilloryThanks ? {text: 'Thanks, I needed a laugh today. Have ₥5 as a tip.', mood: 'deadpan', action: 'awardPilloryTip'}
       : target.postEscort ? postEscortWarning
       : target.guestGate ? guestGateWarning
       : target.summoned ? {
@@ -321,7 +348,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
           text: injured ? "No, don't hurt me!" : target.message,
           replies: injured ? [injuredMiloReply, ...miloReplies] : miloReplies, mood: 'worried'
         }
-        : {...baronGreetings[greetingIndex++ % baronGreetings.length], replies: availableBaronReplies(baron)};
+        : baronConversation();
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;

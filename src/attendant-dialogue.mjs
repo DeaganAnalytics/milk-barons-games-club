@@ -56,9 +56,14 @@ menu.replies.push(
 
 export function createAttendantConversation() {
   let met = false;
+  const replayBack = {label: 'Continue', playerMood: 'attentive', next: null};
   const replayMenu = {...menu, replies: [...menu.replies.slice(0, -1),
-    exchange([['Can I play?', 'Please, yes, please do. All the more fun for me and you!', exuberant]], [], 'startMilkBalloon')
+    exchange([['Can I play?', 'Please, yes, please do. All the more fun for me and you!', exuberant]], [], 'startMilkBalloon'),
+    exchange([['Hey! You said not a penny, not a dime. Yet you took a coin. What gives?',
+      'The game is free, just as I said! The fee is for the milk you shed!', assured, 'alarmed']],
+      [replayBack])
   ]};
+  replayBack.next = replayMenu;
   return (played = false) => {
     const node = met ? (played ? replayMenu : menu) : opening;
     met = true;

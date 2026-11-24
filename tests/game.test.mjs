@@ -1107,6 +1107,12 @@ test('the attendant introduces the stall once before offering the milk balloon g
   assert.equal(replay.text, 'Please, yes, please do. All the more fun for me and you!');
   assert.equal(replay.action, 'startMilkBalloon');
   assert.equal(replay.replies.length, 0);
+  const complaint = 'Hey! You said not a penny, not a dime. Yet you took a coin. What gives?';
+  assert.equal(menu.replies.some(reply => reply.label === complaint), false);
+  const replayMenu = open(true);
+  const response = replayMenu.replies.find(reply => reply.label === complaint).next;
+  assert.equal(response.text, 'The game is free, just as I said! The fee is for the milk you shed!');
+  assert.equal(response.replies[0].next, replayMenu);
 });
 
 test('Pip picks up and automatically throws a milk balloon, then finishes the round', async () => {
@@ -1279,7 +1285,7 @@ test('Elias’s regular dialogue pairs the cow and garlic reactions with the int
 });
 
 test('Elias trails the camera edge and stays put while Pip approaches', async () => {
-  const {updateEliasFollow} = await import('../src/elias.mjs');
+  const {eliasConversation, eliasFollowingConversation, updateEliasFollow} = await import('../src/elias.mjs');
   const actor = {x: 666, y: 500, stride: 0};
   const baron = {x: 0, y: 0};
   updateEliasFollow(actor, {x: 350, y: 500}, baron, 0, 200, 0.1);
@@ -1287,7 +1293,73 @@ test('Elias trails the camera edge and stays put while Pip approaches', async ()
   updateEliasFollow(actor, {x: 625, y: 500}, baron, 280, 200, 0.1);
   assert.equal(actor.x, 666);
   assert.equal(actor.running, false);
+  assert.equal(actor.hasFollowedPip, undefined);
   updateEliasFollow(actor, {x: 300, y: 500}, baron, -45, 200, 0.1);
   assert.ok(actor.x < 666);
   assert.equal(actor.running, true);
+  assert.equal(actor.hasFollowedPip, true);
+  assert.ok(!eliasConversation.replies.some(reply => reply.label === 'Are you following me?'));
+  const reply = eliasFollowingConversation.replies.find(reply => reply.label === 'Are you following me?');
+  assert.equal(reply.next.text, 'Da.');
+  assert.equal(reply.next.replies[0].label, 'Wait, what?!');
+  const explanation = reply.next.replies[0].next;
+  assert.match(explanation.text, /every single coin you earn or lose/);
+  assert.equal(explanation.replies[0].next, eliasFollowingConversation);
+});
+
+test('the pool report sends both roving guards to separate cheering spots and leaves posted guards alone', async () => {
+  const {dispatchRovingGuardsToPool} = await import('../src/guards.mjs');
+  const player = createPlayer();
+  const baron = createBaron();
+  const milo = createMilo();
+  const roving = createGuards(player, baron, milo);
+  roving.forEach((guard, i) => {
+    guard.x = MILK_POOL.x + (i ? -100 : 100);
+    guard.y = MILK_POOL.y + 135;
+  });
+  const posted = {...roving[0], x: MILK_POOL.x + 250, posted: true};
+  const guards = [...roving, posted];
+  assert.deepEqual(dispatchRovingGuardsToPool(guards), roving);
+  assert.ok(roving.every(guard => guard.pursuit?.pool));
+  const cheering = new Map();
+  for (let frame = 1; frame <= 1000; frame++) {
+    updateGuards(guards, player, baron, milo, frame / 20, 0.05);
+    for (const guard of roving) if (guard.poolWatch) cheering.set(guard, guard.x);
+    if (roving.every(guard => !guard.poolReportPending)) break;
+  }
+  assert.equal(cheering.size, 2);
+  assert.ok(Math.abs(cheering.get(roving[0]) - cheering.get(roving[1])) > 40);
+  assert.ok(roving.every(guard => !guard.poolReportPending));
+  assert.equal(posted.pursuit, undefined);
+});
+
+test('Elias charges only on Pip’s first exit after dancing, with either reply', async () => {
+  const {takeDanceExit} = await import('../src/player.mjs');
+  const {eliasDanceConversation, routeEliasToPip} = await import('../src/elias.mjs');
+  const player = {...createPlayer(), ...DANCE_FLOOR};
+  assert.equal(takeDanceExit(player), false);
+  player.x -= 190;
+  assert.equal(takeDanceExit(player), false);
+  player.x = DANCE_FLOOR.x;
+  player.danceIdle = 3.1;
+  assert.equal(takeDanceExit(player), false);
+  player.x -= 190;
+  player.danceIdle = 0;
+  assert.equal(takeDanceExit(player), true);
+  assert.equal(takeDanceExit(player), false);
+  player.x = DANCE_FLOOR.x;
+  player.danceIdle = 3.1;
+  assert.equal(takeDanceExit(player), false);
+  player.x -= 190;
+  player.danceIdle = 0;
+  assert.equal(takeDanceExit(player), false);
+  const actor = {x: DANCE_FLOOR.x + 240, y: DANCE_FLOOR.y};
+  const route = routeEliasToPip(actor, player, createBaron());
+  assert.ok(route.length > 1);
+  assert.ok(Math.hypot(route.at(-1).x - player.x, route.at(-1).y - player.y) <= 38);
+  for (const reply of eliasDanceConversation.replies) {
+    const fee = reply.next.replies[0];
+    assert.equal(fee.label, 'Dancing fee?! What dancing fee?');
+    assert.equal(fee.next.action, 'chargeDanceFee');
+  }
 });

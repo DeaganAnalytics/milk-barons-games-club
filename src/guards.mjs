@@ -74,6 +74,15 @@ export function dispatchGuardToPool(guard) {
   }
 }
 
+export function dispatchRovingGuardsToPool(guards) {
+  const roving = guards.filter(guard => !guard.posted);
+  for (const guard of roving) {
+    guard.poolReportPending = true;
+    dispatchGuardToPool(guard);
+  }
+  return roving;
+}
+
 export function updateGuards(guards, player, baron, milo, elapsed, dt) {
   let arrivedGuard = null;
   for (const guard of guards) {
@@ -82,15 +91,20 @@ export function updateGuards(guards, player, baron, milo, elapsed, dt) {
     if (guard.poolWatch) {
       if (elapsed < guard.poolWatch.until) continue;
       guard.poolWatch = null;
+      guard.poolReportPending = false;
     }
+    if (guard.poolReportPending && !guard.pursuit) dispatchGuardToPool(guard);
     const pursuit = guard.pursuit;
     let pursued = pursuit?.milo ? milo : player;
     if (pursuit?.pool) {
       // The north deck is outside the pool collision bounds and faces the swimmers.
-      const spots = [0, -105, 105, -185, 185].map(offset => ({x: MILK_POOL.x + offset, y: MILK_POOL.y - 81}));
+      const side = guard.side === -1 ? -1 : 1;
+      const spots = [side * 105, 0, -side * 105, side * 185, -side * 185].map(offset => ({x: MILK_POOL.x + offset, y: MILK_POOL.y - 81}));
       const isClear = spot => !isNpcBlocked(spot.x, spot.y, RADIUS, baron)
         && [player, milo, ...guards.filter(other => other !== guard)].every(actor =>
-          Math.hypot(spot.x - actor.x, spot.y - actor.y) > 40);
+          Math.hypot(spot.x - actor.x, spot.y - actor.y) > 40
+            && (!actor.pursuit?.pool || !actor.pursuit.destination
+              || Math.hypot(spot.x - actor.pursuit.destination.x, spot.y - actor.pursuit.destination.y) > 40));
       pursued = pursuit.destination && isClear(pursuit.destination)
         ? pursuit.destination : spots.find(isClear);
       if (!pursued) continue;
