@@ -1,3 +1,5 @@
+import {lifeguardDialogue, lifeguardMoods} from './lifeguard-dialogue.mjs';
+import {lifeguard} from './milk-pool.mjs';
 import {availableReports, injuredMiloReply} from './report-dialogue.mjs';
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
@@ -140,6 +142,7 @@ const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-formal', '
 const portraitCache = new Map();
 
 function standalonePortraitUrl(id, withoutMilk = false, mood) {
+  if (id === lifeguard.id) return new URL('../assets/dialogue/lifeguard-' + mood + '.webp', import.meta.url);
   if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
   if (partyGuests.some(guest => guest.id === id)) {
     const suffix = mood === 'annoyed' ? '-annoyed-portrait.webp' : '-portrait.webp';
@@ -157,6 +160,7 @@ function warmPortraits() {
     if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
   urls.push(standalonePortraitUrl(bartender.id));
+  for (const mood of lifeguardMoods) urls.push(standalonePortraitUrl(lifeguard.id, false, mood));
   for (const {id} of partyGuests) {
     urls.push(standalonePortraitUrl(id), standalonePortraitUrl(id, false, 'annoyed'));
   }
@@ -220,6 +224,7 @@ export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} 
   function show(node, character, playerMood, withoutMilk) {
     action = node.action ?? null;
     line.textContent = node.text;
+    line.hidden = !node.text;
     if (node.direction) {
       const direction = document.createElement('em');
       direction.textContent = '(' + node.direction + ') ';
@@ -261,6 +266,7 @@ export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} 
     activeTarget = target;
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
+      : target.id === lifeguard.id ? lifeguardDialogue
       : target.postEscort ? postEscortWarning
       : target.guestGate ? guestGateWarning
       : target.summoned ? {

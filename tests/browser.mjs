@@ -520,6 +520,41 @@ try {
   await hold('ArrowRight', 55);
   assert.notEqual(await evaluate('window.milkTrace.baron[0]'), 'baron-0.png');
 
+  await evaluate(`(async () => {
+    const [{createDialogue}, {lifeguard}, {nearestInteraction}] = await Promise.all(
+      ['dialogue', 'milk-pool', 'room'].map(name => import('./src/' + name + '.mjs'))
+    );
+    const player = {x: lifeguard.x - 43, y: lifeguard.y};
+    const target = nearestInteraction(player, {x: 0, y: 0}, null, [], [lifeguard]);
+    createDialogue().open(target);
+  })()`, true);
+  assert.equal(await evaluate('document.getElementById("conversation-title").textContent'), 'Bull Lifeguard');
+  assert.equal(await evaluate('document.querySelectorAll("#conversation-replies button").length'), 7);
+  await reply('Can I go in?', 'Are you a beautiful woman or a wealthy man?');
+  await expressions('thinking', 'thinking');
+  await reply('Well... no.', "Well, there's your answer.");
+  await reply('Continue', '');
+  await reply('Can you swim?', 'Nope.');
+  await expressions('thinking', 'deadpan');
+  await reply('Then what are you doing up there?', 'Enjoying the view!');
+  await expressions('thinking', 'big-excited-smile');
+  await reply('Continue', '');
+  await reply('I see piles of clothes everywhere.', 'And?');
+  await reply('Are they skinny dipping?', "No, they're skimmy dipping. It's skim milk, you see!");
+  await reply('Is that allowed in here?', "Don't question the Dairy Aristocracy. Their customs may seem profligate to your peasant mind, but it's all perfectly above board... almost.");
+  await expressions('thinking', 'frown');
+  await reply('Almost?', "As long as you don't go in.");
+  await reply('Continue', '');
+  await reply('What happens if someone starts drowning?', 'In this economy? Do you have any idea how much that milk costs?');
+  await reply('What about the person?', 'I suppose we could fish them out eventually.');
+  await reply('Continue', '');
+  await reply('Is the milk fresh?', 'Fresh every morning. The Baron insists upon it.');
+  await reply("What happens to yesterday's milk?", "I wouldn't order the complimentary milkshake if I were you.");
+  await reply('Continue', '');
+  await reply("I'll leave you to it.", "Excellent. You're obstructing my view.");
+  assert.equal(await evaluate('document.querySelectorAll("#conversation-replies button").length'), 0);
+  await closeConversation();
+
   const plankUrl = new URL(site);
   plankUrl.searchParams.set('floor', 'planks');
   await load(1100, 950, false, 'wide-plank', plankUrl.href);

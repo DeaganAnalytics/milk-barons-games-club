@@ -225,6 +225,7 @@ export function createRenderer(canvas) {
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
   const poolArt = loadSprite('pool/milk-pool', 'webp');
+  const lifeguardArt = loadSprite('pool/lifeguard', 'webp');
   const poolClothes = loadSprite('pool/clothes', 'webp');
   const poolHeads = ['brunette', 'blonde'].map(id => loadSprite('pool/' + id, 'webp'));
   const idlePool = createMilkPool();
@@ -269,7 +270,7 @@ export function createRenderer(canvas) {
       && DANCE_FLOOR.x + 235 > cameraX && DANCE_FLOOR.x - 235 < cameraX + ROOM_WIDTH;
     const poolVisible = isReady(poolArt) && MILK_POOL.x + 239 > cameraX && MILK_POOL.x - 297 < cameraX + ROOM_WIDTH
       && MILK_POOL.y + 64 > cameraY && MILK_POOL.y - 202 < cameraY + ROOM_HEIGHT;
-    if (poolVisible) drawMilkPool(ctx, poolArt, elapsed, milkPool, poolHeads, poolClothes);
+    if (poolVisible) drawMilkPool(ctx, poolArt, elapsed, milkPool, poolHeads, poolClothes, lifeguardArt);
     if (danceVisible) drawDanceFloor(ctx, danceArt);
     if (guestEnclosure.active) drawGuestRopes(ctx, guestEnclosure, false);
     if (world) drawBartender(ctx, bartenderSprite, elapsed);
@@ -370,8 +371,8 @@ export function createRenderer(canvas) {
     if (poolVisible) {
       const speech = milkPoolSpeech(milkPool, elapsed);
       if (speech && speech.x >= cameraX && speech.x <= cameraX + ROOM_WIDTH
-          && speech.y >= cameraY && speech.y - 30 <= cameraY + ROOM_HEIGHT) {
-        drawSpeech(ctx, speech.text, 1, speech.x, speech.y - 30, speech.y, cameraX, cameraY);
+          && speech.y >= cameraY && speech.headY <= cameraY + ROOM_HEIGHT) {
+        drawSpeech(ctx, speech.text, 1, speech.x, speech.headY, speech.y, cameraX, cameraY);
       }
     }
     const speech = !guestEscort && !warning && !ropeScene && chatter && partySpeech(chatter, {x: cameraX, y: cameraY});
