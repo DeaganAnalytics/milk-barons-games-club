@@ -155,7 +155,10 @@ export function nearestInteraction(player, baron, milo, guards = [], guests = []
     });
   }
   return targets
-    .map(target => ({...target, distance: Math.hypot(player.x - target.x, player.y - target.y)}))
+    .map(target => {
+      const dx = Math.max(0, Math.abs(player.x - target.x) - (target.interactionHalfWidth ?? 0));
+      return {...target, distance: Math.hypot(dx, player.y - target.y)};
+    })
     .filter(target => target.distance < target.radius + 27)
     .sort((a, b) => a.distance - b.distance)[0];
 }

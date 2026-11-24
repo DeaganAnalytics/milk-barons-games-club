@@ -985,8 +985,12 @@ test('a random swimmer exchange plays both lines in order before a pending react
 
 test('pool clothing is reachable, and each theft changes the pile and starts the corresponding chatter', async () => {
   const {clothingReports, poolClothingDialogue} = await import('../src/lifeguard-dialogue.mjs');
-  const player = {x: poolClothing.x + 30, y: poolClothing.y};
-  assert.equal(nearestInteraction(player, createBaron(), null, [], [lifeguard, poolClothing]).id, poolClothing.id);
+  const baron = createBaron();
+  for (const [dx, dy] of [[68, 0], [-63, -28]]) {
+    const player = {x: poolClothing.x + dx, y: poolClothing.y + dy, radius: 13};
+    assert.equal(isBlocked(player.x, player.y, player.radius, baron), false);
+    assert.equal(nearestInteraction(player, baron, null, [], [lifeguard, poolClothing]).id, poolClothing.id);
+  }
   assert.deepEqual(poolClothingDialogue.replies.map(choice => choice.next?.selection ?? null), ['women', 'man', 'all', null]);
   for (const [selection, left, line] of [
     ['women', 'man', 'Good heavens! Where are my clothes?!'],
@@ -994,12 +998,22 @@ test('pool clothing is reachable, and each theft changes the pile and starts the
     ['all', null, 'Good heavens! Where are my clothes?!']
   ]) {
     const pool = createMilkPool();
-    assert.equal(takePoolClothing(pool, selection), true);
-    assert.equal(takePoolClothing(pool, 'all'), false);
+    assert.equal(takePoolClothing(pool, selection, 10), true);
+    assert.equal(takePoolClothing(pool, 'all', 10), false);
     assert.equal(remainingClothing[pool.stolenClothing], left);
-    updateMilkPool(pool, 2, 2, () => 0);
-    assert.equal(milkPoolSpeech(pool, 2).text, line);
+    pool.remaining = 0;
+    updateMilkPool(pool, 69.99, 0.01, () => 0);
+    assert.equal(milkPoolSpeech(pool, 69.99).text, 'God, I love this job.');
+    updateMilkPool(pool, 70, 0.01, () => 0);
+    assert.equal(milkPoolSpeech(pool, 70).text, line);
   }
+  const reportedPool = createMilkPool();
+  takePoolClothing(reportedPool, 'man', 10);
+  reportedPool.clothingAmbientAt = 15; // Pip reports the theft to the lifeguard.
+  updateMilkPool(reportedPool, 15, 0.01);
+  assert.equal(milkPoolSpeech(reportedPool, 15).text, "Sir, I'm going to need you to remain in the pool.");
+  assert.equal(clothingReports.women.next.enterAction, 'tellLifeguardAboutClothing');
+  assert.equal(clothingReports.man.next.enterAction, 'tellLifeguardAboutClothing');
   assert.equal(clothingReports.all, clothingReports.women);
   assert.equal(clothingReports.women.next.replies[0].next.enterAction, 'rewardMissingDresses');
   assert.deepEqual(clothingReports.man.next.replies.map(choice => choice.next.action), ['fineMissingSuit', 'dismissMissingSuit']);

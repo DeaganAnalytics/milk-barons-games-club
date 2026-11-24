@@ -94,10 +94,11 @@ const dialogue = createDialogue(baron, {
     if (action === 'finePoolLie') coinBalance.change(-10);
     if (action === 'chargeProfessorFee' || action === 'lifeguardMoneyPenalty') coinBalance.change(-5);
     if (action === 'lifeguardMoneyGift') coinBalance.change(3);
-    if (action === 'stealPoolClothing' && takePoolClothing(milkPool, target.selection) && target.selection === 'man') {
+    if (action === 'stealPoolClothing' && takePoolClothing(milkPool, target.selection, elapsed) && target.selection === 'man') {
       info.textContent = 'Pip finds ₥10 in the suit pocket.';
       coinBalance.change(10);
     }
+    if (action === 'tellLifeguardAboutClothing') milkPool.clothingAmbientAt = Math.min(milkPool.clothingAmbientAt, elapsed);
     if (!milkPool.clothingReported && ['rewardMissingDresses', 'fineMissingSuit', 'dismissMissingSuit'].includes(action)) {
       milkPool.clothingReported = true;
       target.missingClothing = null;

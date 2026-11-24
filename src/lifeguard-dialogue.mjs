@@ -96,28 +96,32 @@ lifeguardDialogue.replies.push(
   reply("I'll leave you to it.", 'attentive', say("Excellent. You're obstructing my view.", deadpan))
 );
 
-const reportMissingDresses = reply("Hey, the women's clothing is gone.", 'attentive', say(
-  'Oh, yes. Yes, yes, YES! Thank the Baron! Here, have ₥15.', grin, [
-    reply('Continue', 'attentive', {
-      ...say("I'm gonna see some aristocratic bunnies tonight!", grin, [
-        reply("I didn't do it.", 'thinking', say("Then consider it a reward for bringing me news that's made my bloody day!", grin)),
-        reply('I did it.', 'attentive', say("Don't tell me that! Of course you bloody did! Now get out of here before someone sees us talking. Take the money and keep your mouth shut!", frown))
-      ]),
-      enterAction: 'rewardMissingDresses'
-    })
-  ]
-));
+const reportMissingDresses = reply("Hey, the women's clothing is gone.", 'attentive', {
+  enterAction: 'tellLifeguardAboutClothing',
+  ...say(
+    'Oh, yes. Yes, yes, YES! Thank the Baron! Here, have ₥15.', grin, [
+      reply('Continue', 'attentive', {
+        ...say("I'm gonna see some aristocratic bunnies tonight!", grin, [
+          reply("I didn't do it.", 'thinking', say("Then consider it a reward for bringing me news that's made my bloody day!", grin)),
+          reply('I did it.', 'attentive', say("Don't tell me that! Of course you bloody did! Now get out of here before someone sees us talking. Take the money and keep your mouth shut!", frown))
+        ]),
+        enterAction: 'rewardMissingDresses'
+      })
+    ])
+});
 
-const reportMissingSuit = reply("Hey, the man's clothing is gone.", 'attentive', say(
-  "Oh, shit. What the fuck?! I don't wanna see him getting out of that pool! Did you take it?", frown, [
-    reply('Yes.', 'sorry', {
-      ...say("Give it here! And I'm fining you ₥10 for pissing me off.", frown), action: 'fineMissingSuit'
-    }),
-    reply('No.', 'worried', {
-      ...say("God damn it. Now I've gotta deal with this. MOOOVE IT!", frown), action: 'dismissMissingSuit'
-    })
-  ]
-));
+const reportMissingSuit = reply("Hey, the man's clothing is gone.", 'attentive', {
+  enterAction: 'tellLifeguardAboutClothing',
+  ...say(
+    "Oh, shit. What the fuck?! I don't wanna see him getting out of that pool! Did you take it?", frown, [
+      reply('Yes.', 'sorry', {
+        ...say("Give it here! And I'm fining you ₥10 for pissing me off.", frown), action: 'fineMissingSuit'
+      }),
+      reply('No.', 'worried', {
+        ...say("God damn it. Now I've gotta deal with this. MOOOVE IT!", frown), action: 'dismissMissingSuit'
+      })
+    ])
+});
 
 export const clothingReports = {women: reportMissingDresses, all: reportMissingDresses, man: reportMissingSuit};
 
