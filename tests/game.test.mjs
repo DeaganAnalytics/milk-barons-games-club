@@ -1472,3 +1472,22 @@ test('health starts full, changes in half hearts, and stays at zero after death'
   assert.deepEqual(changes.map(([hearts]) => hearts), [2.5, 2, 1.5, 1, 0.5, 0]);
   assert.deepEqual(changes.at(-1), [0, 'Game over test']);
 });
+
+test('karma starts neutral and moves proportionally between its capped endpoints', async () => {
+  const {createKarma} = await import('../src/karma.mjs');
+  const changes = [];
+  const karma = createKarma((score, position) => changes.push([score, position]));
+  assert.equal(karma.score, 0);
+  assert.equal(karma.change(-5), -5);
+  assert.equal(karma.change(-100), -10);
+  assert.equal(karma.change(-1), -10);
+  assert.equal(karma.change(10), 0);
+  assert.equal(karma.change(5), 5);
+  assert.equal(karma.change(100), 10);
+  assert.deepEqual(changes, [[-5, 0.25], [-10, 0], [0, 0.5], [5, 0.75], [10, 1]]);
+  assert.equal(karma.change(-0.5), 9.5);
+  assert.equal(karma.change(-1.5), 8);
+  assert.equal(karma.change(-0.25), 7.75);
+  assert.deepEqual(changes.at(-1), [7.75, 0.8875]);
+  assert.throws(() => karma.change(0.1), TypeError);
+});

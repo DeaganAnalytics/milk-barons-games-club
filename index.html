@@ -14,12 +14,18 @@
     </header>
     <section class="viewport">
       <canvas id="game" width="1380" height="1370" aria-label="Milk Baron's club"></canvas>
-      <div class="health-meter" role="status" aria-label="Health">
-        <img id="health-display" src="./assets/health/6.webp" width="512" height="224" alt="3 of 3 hearts">
-      </div>
-      <div id="coin-counter" class="coin-counter" hidden role="status" aria-label="Coin balance">
-        <span aria-hidden="true">×<span id="coin-count">100</span></span>
-        <span id="coin-announcement" class="visually-hidden">100 coins</span>
+      <div class="game-hud" role="group" aria-label="Game status">
+        <div class="health-meter" role="status" aria-label="Health">
+          <img id="health-display" src="./assets/health/6.webp" width="512" height="224" alt="3 of 3 hearts">
+        </div>
+        <div id="karma-meter" class="karma-meter" role="meter" aria-label="Karma" aria-valuemin="-10" aria-valuemax="10" aria-valuenow="0" aria-valuetext="Neutral">
+          <img src="./assets/hall/karma-meter.webp" alt="">
+          <span class="karma-marker" aria-hidden="true"></span>
+        </div>
+        <div id="coin-counter" class="coin-counter" hidden role="status" aria-label="Coin balance">
+          <span aria-hidden="true">×<span id="coin-count">100</span></span>
+          <span id="coin-announcement" class="visually-hidden">100 coins</span>
+        </div>
       </div>
       <div id="game-over" class="game-over" role="alert" hidden>
         <h2 id="end-title">Game Over</h2>

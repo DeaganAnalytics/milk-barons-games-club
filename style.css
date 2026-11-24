@@ -273,32 +273,63 @@ canvas {
   color: #f5dfb3;
 }
 
-.health-meter {
+.game-hud {
   position: absolute;
-  top: 2%;
-  left: 2%;
-  width: min(38%, 210px);
+  inset: 0 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: clamp(4px, 1.4vw, 10px);
+  padding: clamp(4px, 1vw, 8px) 2%;
+  background: linear-gradient(#2a3e30, #17251d);
+  border-bottom: 2px solid #a17d42;
+  box-shadow: 0 2px 6px #15100c80;
   pointer-events: none;
 }
 
-.health-meter img {
+.health-meter {
+  grid-column: 1;
+  width: min(100%, 210px);
+}
+
+.health-meter img,
+.karma-meter img {
   display: block;
   width: 100%;
   height: auto;
 }
 
-.coin-counter {
+.karma-meter {
+  position: relative;
+  grid-column: 2;
+  justify-self: center;
+  width: min(100%, 224px);
+}
+
+.karma-marker {
   position: absolute;
-  top: 2%;
-  right: 2%;
-  width: clamp(100px, 29%, 174px);
+  top: 55%;
+  left: calc(23.7% + var(--karma-position, 50%) * 0.526);
+  width: 7%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 1px solid #39200d;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #fff5cf, #ffd353 56%, #b8671c);
+  box-shadow: 0 1px 1px #39200d;
+}
+
+.coin-counter {
+  position: relative;
+  grid-column: 3;
+  justify-self: end;
+  width: min(100%, 174px);
   aspect-ratio: 3.02;
   background: url('./assets/hall/coin-counter.webp') center / 100% 100% no-repeat;
   color: #352117;
   display: grid;
   align-items: center;
-  pointer-events: none;
-  font: bold clamp(14px, 3.8vw, 24px)/1 Georgia, serif;
+  font: bold clamp(12px, 3.5vw, 24px)/1 Georgia, serif;
   font-variant-numeric: tabular-nums;
 }
 
