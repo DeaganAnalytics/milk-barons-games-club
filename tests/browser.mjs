@@ -107,7 +107,8 @@ async function load(width, height, mobile, name, url = site) {
   await frames(65);
   assert.equal(await evaluate('document.querySelector("#conversation-title").textContent'), 'Elias');
   assert.equal(await evaluate('document.querySelector("#coin-counter").hidden'), true);
-  for (let i = 0; i < 8; i++) {
+  for (const mood of ['attentive', 'thinking', 'worried', 'alarmed', 'thinking', 'attentive', 'alarmed', 'worried']) {
+    assert.equal(await evaluate('document.querySelector("#conversation-player").dataset.expression'), mood);
     await evaluate('document.querySelector("#conversation-replies button").click()');
   }
   assert.equal(await evaluate('document.querySelector("#conversation-line").textContent'), 'Now, Master Pip, do you have any questions?');

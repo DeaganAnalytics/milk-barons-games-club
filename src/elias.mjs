@@ -13,14 +13,14 @@ export const eliasPortraits = [
 ];
 
 const welcomeLines = [
-  ["Velcome, velcome to ze Milk Baron's Games Club! Ah, Master Pip. Ve have been expecting you.", 'current-smile'],
-  ['His Excellency, ze Milk Baron, has taken a most considerable interest in you. Your activism at Milk University has not gone unnoticed.', 'thinking'],
-  ['You are a most intriguing young stickman. Ambitious, resourceful, and, if I may be so bold... delightfully impressionable.', 'devious'],
-  ["Unfortunately, your most recent protest resulted in considerable damage to ze Baron's property holdings. You are now indebted to His Excellency to ze sum of ₥100.", 'insulted'],
-  ['But ze Baron is a generous man. Rather than demand immediate repayment, he vishes to play a little game.', 'self-assured-smirk'],
-  ['Here is a sum of ₥100. If you can double zis investment to ₥200, you vill have proven yourself a true capitalist.', 'current-smile'],
-  ['But should you lose ze money... vell, it is off to ze dairy for you, as an indentured servant.', 'demonic-angry'],
-  ['Consider it a most generous opportunity for professional development, Master Pip.', 'self-assured-smirk']
+  ["Velcome, velcome to ze Milk Baron's Games Club! Ah, Master Pip. Ve have been expecting you.", 'current-smile', 'attentive'],
+  ['His Excellency, ze Milk Baron, has taken a most considerable interest in you. Your activism at Milk University has not gone unnoticed.', 'thinking', 'thinking'],
+  ['You are a most intriguing young stickman. Ambitious, resourceful, and, if I may be so bold... delightfully impressionable.', 'devious', 'worried'],
+  ["Unfortunately, your most recent protest resulted in considerable damage to ze Baron's property holdings. You are now indebted to His Excellency to ze sum of ₥100.", 'insulted', 'alarmed'],
+  ['But ze Baron is a generous man. Rather than demand immediate repayment, he vishes to play a little game.', 'self-assured-smirk', 'thinking'],
+  ['Here is a sum of ₥100. If you can double zis investment to ₥200, you vill have proven yourself a true capitalist.', 'current-smile', 'attentive'],
+  ['But should you lose ze money... vell, it is off to ze dairy for you, as an indentured servant.', 'demonic-angry', 'alarmed'],
+  ['Consider it a most generous opportunity for professional development, Master Pip.', 'self-assured-smirk', 'worried']
 ];
 
 const questions = {text: 'Now, Master Pip, do you have any questions?', mood: 'current-smile', replies: []};
@@ -57,8 +57,8 @@ questions.replies.push(
   }}
 );
 
-export const eliasWelcome = welcomeLines.reduceRight((next, [text, mood]) => ({
-  text, mood, replies: [continueTo(next)]
+export const eliasWelcome = welcomeLines.reduceRight((next, [text, mood, playerMood]) => ({
+  text, mood, playerMood, replies: [continueTo(next)]
 }), questions);
 
 export const eliasConversation = {text: elias.message, mood: 'current-smile', replies: []};

@@ -252,9 +252,10 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       direction.textContent = '(' + node.direction + ') ';
       line.prepend(direction);
     }
-    if (playerPortrait.dataset.expression !== playerMood) {
-      drawPipPortrait(playerArt, playerMood);
-      playerPortrait.dataset.expression = playerMood;
+    const playerExpression = node.playerMood ?? playerMood;
+    if (playerPortrait.dataset.expression !== playerExpression) {
+      drawPipPortrait(playerArt, playerExpression);
+      playerPortrait.dataset.expression = playerExpression;
     }
     const currentSpeaker = node.character ?? character;
     speaker.textContent = currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title;
