@@ -1,4 +1,4 @@
-import {PILLORY, PILLORY_ATTENDANT} from './room.mjs';
+import {PILLORY, PILLORY_ATTENDANT, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 
 export const pilloryAttendant = {
   id: 'pillory-attendant', title: 'Attendant', ...PILLORY_ATTENDANT, radius: 21
@@ -7,6 +7,11 @@ export const pilloryAttendant = {
 export const pilloryCommissioner = {
   id: 'pillory-commissioner', title: 'Commissioner', ...PILLORY, radius: 23
 };
+
+export function pilloryInView(cameraX, cameraY) {
+  return PILLORY.x + 46 > cameraX && PILLORY.x - 46 < cameraX + ROOM_WIDTH
+    && PILLORY.y + 13 > cameraY && PILLORY.y - 65 < cameraY + ROOM_HEIGHT;
+}
 
 const attendantLines = [
   'Come one, come all! Have a ball! Make the Commissioner bawl!',

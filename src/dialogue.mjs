@@ -80,7 +80,7 @@ const guardReplies = [
     next: {text: 'Then get out of my way!', mood: 'speaking'}
   },
   {
-    label: 'Ah, yes, I do.', playerMood: 'attentive',
+    label: 'Yes I do.', playerMood: 'attentive',
     next: {text: "Well? What's the problem?", mood: 'suspicious', replies: [
       {label: 'Actually, never mind.', playerMood: 'thinking', next: {text: 'Excellent. A problem that resolves itself. My favourite kind.', mood: 'deadpan'}}
     ]}
@@ -185,7 +185,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReportMilo, canReportPool, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReportMilo, canReportPillory, canReportPool, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -275,14 +275,19 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     }
   });
 
-  function reportingReplies() {
+  function reportingReplies(target) {
     const report = guardReplies[2];
     const status = canReportMilo?.() ?? {};
-    return [...guardReplies.slice(0, 2), {...report, next: {
-      ...report.next,
-      replies: [...availableReports(baron.completedRugTrips, status.seen, status.pending),
-        ...(canReportPool?.() ? poolReports : []), ...report.next.replies]
-    }}];
+    const reports = [...availableReports(baron.completedRugTrips, status.seen, status.pending),
+      ...(canReportPool?.() ? poolReports : [])];
+    if (canReportPillory?.(target.guard)) reports.push({
+      label: 'Someone has the Stickman Rights Commissioner in a pillory!',
+      playerMood: 'alarmed',
+      next: {text: 'What?! Unacceptable. Show me where this is!', mood: 'speaking', action: 'reportPillory'}
+    });
+    const replies = guardReplies.slice(0, 2);
+    if (reports.length) replies.push({...report, next: {...report.next, replies: [...reports, ...report.next.replies]}});
+    return replies;
   }
 
   function open(target) {
@@ -293,6 +298,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
       : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue
+      : target.pilloryThanks ? {text: 'Thanks, I needed a laugh today.', mood: 'deadpan'}
       : target.postEscort ? postEscortWarning
       : target.guestGate ? guestGateWarning
       : target.summoned ? {
@@ -302,7 +308,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
       : target.id === 'guard' ? {
           text: target.posted ? postedGuardOpening : guardOpening,
-          replies: target.posted ? postedGuardReplies : reportingReplies(),
+          replies: target.posted ? postedGuardReplies : reportingReplies(target),
           mood: 'deadpan'
         }
       : target.id === 'milo' ? {

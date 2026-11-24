@@ -18,26 +18,62 @@ export function createAttendantThrow() {
   };
 }
 
+const leadSpot = {x: pickup.x + 60, y: pickup.y + 15};
+const guardWait = {x: pickup.x + 35, y: pickup.y + 35};
+const returnSpot = {x: leadSpot.x + 25, y: leadSpot.y - 15};
+
+export function createPilloryReportScene(player, guard, baron) {
+  guard.target = null;
+  guard.route = [];
+  guard.pursuit = null;
+  guard.walking = false;
+  return {phase: 'lead', time: 0, guard, baron,
+    playerRoute: routeAroundBaron(player, leadSpot, baron),
+    route: routeAroundBaron(guard, guardWait, baron)};
+}
+
+function walkRoute(actor, route, dt, guard = false) {
+  if (!route.length) return true;
+  const next = route[0];
+  const dx = next.x - actor.x;
+  const dy = next.y - actor.y;
+  const distance = Math.hypot(dx, dy);
+  const step = Math.min(distance, 115 * dt);
+  if (step > 0) {
+    actor.x += dx / distance * step;
+    actor.y += dy / distance * step;
+    const facing = facingIndex(dx, dy);
+    actor.facing = guard ? Math.round(facing / 2) % 4 : facing;
+    actor.stride = (actor.stride + step * TURN / 25) % TURN;
+    actor.walking = true;
+  }
+  if (step === distance) route.shift();
+  if (!route.length) actor.walking = false;
+  return !route.length;
+}
+
 export function updateMilkBalloon(scene, player, dt) {
-  const actor = scene.attendant ?? player;
+  const actor = scene.guard ?? scene.attendant ?? player;
+  if (scene.phase === 'lead') {
+    scene.time += dt;
+    const playerArrived = walkRoute(player, scene.playerRoute, dt);
+    const guardArrived = scene.time >= 0.45 && walkRoute(actor, scene.route, dt, true);
+    if (!(playerArrived && guardArrived)) return false;
+    scene.phase = 'approach';
+    scene.route = routeAroundBaron(actor, pickup, scene.baron);
+    scene.time = 0;
+  }
   if (scene.phase === 'approach' || scene.phase === 'return') {
-    const next = scene.route[0];
-    const dx = next.x - actor.x;
-    const dy = next.y - actor.y;
-    const distance = Math.hypot(dx, dy);
-    const step = Math.min(distance, 115 * dt);
-    if (step > 0) {
-      actor.x += dx / distance * step;
-      actor.y += dy / distance * step;
-      actor.facing = facingIndex(dx, dy);
-      actor.stride = (actor.stride + step * TURN / 25) % TURN;
-      actor.walking = true;
+    if (!walkRoute(actor, scene.route, dt, Boolean(scene.guard))) return false;
+    if (scene.phase === 'return') {
+      if (scene.guard) {
+        actor.facing = Math.round(facingIndex(player.x - actor.x, player.y - actor.y) / 2) % 4;
+        player.facing = facingIndex(actor.x - player.x, actor.y - player.y);
+      }
+      return true;
     }
-    if (step === distance) scene.route.shift();
-    if (scene.route.length) return false;
-    actor.walking = false;
-    actor.facing = facingIndex(target.x - actor.x, target.y - actor.y);
-    if (scene.phase === 'return') return true;
+    const facing = facingIndex(target.x - actor.x, target.y - actor.y);
+    actor.facing = scene.guard ? Math.round(facing / 2) % 4 : facing;
     actor.danceIdle = 0;
     scene.phase = 'pickup';
   }
@@ -47,9 +83,9 @@ export function updateMilkBalloon(scene, player, dt) {
     scene.time = 0;
   }
   if (scene.phase !== 'throw' || scene.time < 1.8) return false;
-  if (!scene.attendant) return true;
+  if (!scene.attendant && !scene.guard) return true;
   scene.phase = 'return';
-  scene.route = [PILLORY_ATTENDANT];
+  scene.route = scene.guard ? routeAroundBaron(actor, returnSpot, scene.baron) : [PILLORY_ATTENDANT];
   return false;
 }
 
@@ -67,15 +103,16 @@ export function milkBalloonHand(scene, player) {
 
 export function drawMilkBalloon(ctx, scene, player) {
   const {phase, time} = scene;
-  if (scene.attendant) player = {x: scene.attendant.x, y: scene.attendant.y - 12};
-  if (phase === 'approach' || phase === 'return') return;
+  const thrower = scene.guard ?? scene.attendant;
+  if (thrower) player = {x: thrower.x, y: thrower.y - 12};
+  if (phase === 'lead' || phase === 'approach' || phase === 'return') return;
   ctx.save();
   if (phase !== 'throw' || time < impact) {
     const hand = milkBalloonHand(scene, player);
     let x = player.x + hand.x;
     let y = player.y + hand.y;
     if (phase === 'pickup' && time < 0.35) ({x, y} = basket);
-    if (scene.attendant && time < release) {
+    if (thrower && (phase === 'pickup' || time < release)) {
       ctx.strokeStyle = '#292226';
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';

@@ -1215,3 +1215,26 @@ test('the attendant drinks once a minute from a free server who refills offscree
   assert.equal(baronServer.serviceDuty, true);
   assert.equal(ladiesServer.serviceDuty, true);
 });
+
+test('Pip leads a roving guard to the pillory and the guard returns after throwing', async () => {
+  const {createPilloryReportScene, updateMilkBalloon} = await import('../src/milk-balloon.mjs');
+  const {pilloryInView, pilloryCommissioner} = await import('../src/pillory.mjs');
+  const baron = createBaron();
+  const player = createPlayer();
+  const guard = {x: player.x + 32, y: player.y, radius: 14, stride: 0};
+  assert.equal(pilloryInView(cameraLeft(player.x), cameraTop(player.y)), false);
+  assert.equal(pilloryInView(cameraLeft(pilloryCommissioner.x), cameraTop(pilloryCommissioner.y)), true);
+  const scene = createPilloryReportScene(player, guard, baron);
+  const phases = new Set();
+  let done = false;
+  for (let frame = 0; frame < 1400 && !done; frame++) {
+    phases.add(scene.phase);
+    done = updateMilkBalloon(scene, player, 1 / 60);
+    assert.equal(isBlocked(player.x, player.y, player.radius, baron), false);
+    assert.equal(isBlocked(guard.x, guard.y, guard.radius, baron), false);
+  }
+  assert.ok(done);
+  assert.deepEqual([...phases], ['lead', 'approach', 'pickup', 'throw', 'return']);
+  assert.ok(Math.hypot(guard.x - player.x, guard.y - player.y) < 35);
+  assert.equal(guard.walking, false);
+});

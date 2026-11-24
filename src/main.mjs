@@ -1,6 +1,6 @@
 import {createAttendantMilk, updateAttendantMilk} from './attendant-milk.mjs';
-import {createAttendantThrow, createMilkBalloon, updateMilkBalloon} from './milk-balloon.mjs';
-import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
+import {createAttendantThrow, createMilkBalloon, createPilloryReportScene, updateMilkBalloon} from './milk-balloon.mjs';
+import {pilloryAttendant, pilloryCommissioner, pilloryInView} from './pillory.mjs';
 import {professor} from './professor.mjs';
 import {createMilkPool, lifeguard, updateMilkPool} from './milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} from './rope-warning.mjs';
@@ -35,6 +35,8 @@ const milkPool = createMilkPool();
 const render = createRenderer(document.getElementById('game'));
 let seenMilo = false;
 let seenPoolAndClothes = false;
+let seenPillory = false;
+let reportedPillory = false;
 let guestEscort = null;
 let milkBalloon = null;
 let playedMilkBalloon = false;
@@ -47,6 +49,8 @@ const restart = document.getElementById('restart-game');
 restart.addEventListener('click', () => location.reload());
 const dialogue = createDialogue(baron, {
   hasPlayedMilkBalloon: () => playedMilkBalloon,
+  canReportPillory: guard => seenPillory && !reportedPillory && guard && !guard.pursuit
+    && !guard.poolWatch && !pilloryInView(cameraLeft(player.x), cameraTop(player.y)),
   canReportPool: () => seenPoolAndClothes,
   canReportMilo: () => ({seen: seenMilo, pending: milo.injuryPending || guards.some(guard => guard.pursuit?.milo)}),
   takeMiloInjury: () => {
@@ -82,6 +86,12 @@ const dialogue = createDialogue(baron, {
       player.walking = false;
       milkBalloon = createAttendantThrow();
       info.textContent = 'The attendant throws a milk balloon.';
+    }
+    if (action === 'reportPillory' && !reportedPillory) {
+      reportedPillory = true;
+      clearInput();
+      milkBalloon = createPilloryReportScene(player, target.guard, baron);
+      info.textContent = 'Pip leads the guard to the pillory.';
     }
     if (action === 'inspectPool') dispatchGuardToPool(target.guard);
     if (action === 'reportMilo') dispatchGuardToMilo(target.guard);
@@ -143,10 +153,16 @@ function frame(timestamp) {
   if (milkBalloon) {
     const done = updateMilkBalloon(milkBalloon, player, dt);
     if (done) {
-      const {attendant} = milkBalloon;
-      playedMilkBalloon ||= !attendant;
+      const {attendant, guard} = milkBalloon;
+      playedMilkBalloon ||= !attendant && !guard;
       milkBalloon = null;
       clearInput();
+      if (guard) {
+        guard.pauseUntil = elapsed + 1;
+        dialogue.open({id: 'guard', title: 'Bull Guard', pilloryThanks: true});
+        requestAnimationFrame(frame);
+        return;
+      }
       info.textContent = attendant ? 'Splat! The attendant hit the Commissioner.' : 'Splat! You hit the Commissioner.';
     }
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
@@ -185,6 +201,7 @@ function frame(timestamp) {
   }
   const cameraY = cameraTop(player.y);
   const cameraX = cameraLeft(player.x);
+  seenPillory ||= pilloryInView(cameraX, cameraY);
   seenPoolAndClothes ||= [
     MILK_POOL,
     {x: MILK_POOL.x + 58, y: MILK_POOL.y - 109}

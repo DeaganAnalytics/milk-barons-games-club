@@ -309,10 +309,7 @@ try {
   await expressions('attentive', 'speaking');
   await closeConversation();
   await activate('Bull Guard');
-  await reply('Ah, yes, I do.', "Well? What's the problem?");
-  await expressions('attentive', 'suspicious');
-  await reply('Actually, never mind.', 'Excellent. A problem that resolves itself. My favourite kind.');
-  await expressions('thinking', 'deadpan');
+  assert.equal(await evaluate("[...document.querySelectorAll('#conversation-replies button')].some(button => button.textContent === 'Yes I do.')"), false);
   await closeConversation();
 
   await load(1100, 950, false, 'expanded-center');
