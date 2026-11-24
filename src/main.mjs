@@ -5,14 +5,14 @@ import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
 import {callOutMilo, createBaron, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
-import {createGuards, dispatchGuardToMilo, summonGuard, updateGuards} from './guards.mjs';
+import {createGuards, dispatchGuardToMilo, dispatchGuardToPool, summonGuard, updateGuards} from './guards.mjs';
 import {createMilo, fleeMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
 import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {createPlayer, movePlayer, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
-import {cameraLeft, cameraTop, guestEnclosure, insideGuestEnclosure, nearGuestGate, nearestInteraction, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {cameraLeft, cameraTop, guestEnclosure, insideGuestEnclosure, MILK_POOL, nearGuestGate, nearestInteraction, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 import {createStaff, updateStaff} from './staff.mjs';
 
 const player = createPlayer();
@@ -29,6 +29,7 @@ const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
 const render = createRenderer(document.getElementById('game'));
 let seenMilo = false;
+let seenPoolAndClothes = false;
 let guestEscort = null;
 let completedGuestEscorts = 0;
 let gateWarned = false;
@@ -38,6 +39,7 @@ const gameOver = document.getElementById('game-over');
 const restart = document.getElementById('restart-game');
 restart.addEventListener('click', () => location.reload());
 const dialogue = createDialogue(baron, {
+  canReportPool: () => seenPoolAndClothes,
   canReportMilo: () => ({seen: seenMilo, pending: milo.injuryPending || guards.some(guard => guard.pursuit?.milo)}),
   takeMiloInjury: () => {
     const injured = milo.injuryPending;
@@ -62,6 +64,7 @@ const dialogue = createDialogue(baron, {
       };
       guards.push(gateGuard);
     }
+    if (action === 'inspectPool') dispatchGuardToPool(target.guard);
     if (action === 'reportMilo') dispatchGuardToMilo(target.guard);
     if (action === 'fleeMilo') fleeMilo(milo, player, baron, guards);
   }
@@ -146,6 +149,11 @@ function frame(timestamp) {
   }
   const cameraY = cameraTop(player.y);
   const cameraX = cameraLeft(player.x);
+  seenPoolAndClothes ||= [
+    MILK_POOL,
+    {x: MILK_POOL.x + 58, y: MILK_POOL.y - 109}
+  ].every(({x, y}) => x >= cameraX && x <= cameraX + ROOM_WIDTH
+    && y >= cameraY && y <= cameraY + ROOM_HEIGHT);
   const wasTraveling = baron.route.length > 0;
   const serviceWasActive = Boolean(milkService.scene);
   if (!serviceWasActive) updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY, guards);

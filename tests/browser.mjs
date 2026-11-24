@@ -294,7 +294,7 @@ try {
 
   await activate('Bull Guard');
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'),
-    'Do you have a problem to report? Otherwise get out of my way.');
+    'Do you have a problem to report? Otherwise, get out of my way.');
   if (process.env.SCREENSHOT_PREFIX) {
     await evaluate(`(() => { const image = new Image(); image.src = './assets/dialogue/portraits.webp'; return image.decode(); })()`, true);
     const shot = await send('Page.captureScreenshot', {format: 'png'});
@@ -305,13 +305,13 @@ try {
   await expressions('thinking', 'deadpan');
   await closeConversation();
   await activate('Bull Guard');
-  await reply("No I don't have anything to report.", 'Then get out of my way!');
+  await reply("No, I don't have anything to report.", 'Then get out of my way!');
   await expressions('attentive', 'speaking');
   await closeConversation();
   await activate('Bull Guard');
-  await reply('Ah yes, I do.', 'What is the problem.');
+  await reply('Ah, yes, I do.', "Well? What's the problem?");
   await expressions('attentive', 'suspicious');
-  await reply('Actually nevermind.', '...');
+  await reply('Actually, never mind.', 'Excellent. A problem that resolves itself. My favourite kind.');
   await expressions('thinking', 'deadpan');
   await closeConversation();
 

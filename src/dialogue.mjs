@@ -1,6 +1,6 @@
 import {lifeguardDialogue, lifeguardMoods} from './lifeguard-dialogue.mjs';
 import {lifeguard} from './milk-pool.mjs';
-import {availableReports, injuredMiloReply} from './report-dialogue.mjs';
+import {availableReports, injuredMiloReply, poolReports} from './report-dialogue.mjs';
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
@@ -45,7 +45,7 @@ const guestGateWarning = {
   ]
 };
 
-const guardOpening = 'Do you have a problem to report? Otherwise get out of my way.';
+const guardOpening = 'Do you have a problem to report? Otherwise, get out of my way.';
 const baronGreetings = [
   {text: 'Welcome, welcome to my establishment!', mood: 'pleased'},
   {text: 'Pip! Good to see you!', mood: 'laughing'},
@@ -71,13 +71,13 @@ const postedGuardReplies = [
 const guardReplies = [
   cowReply,
   {
-    label: "No I don't have anything to report.", playerMood: 'attentive',
+    label: "No, I don't have anything to report.", playerMood: 'attentive',
     next: {text: 'Then get out of my way!', mood: 'speaking'}
   },
   {
-    label: 'Ah yes, I do.', playerMood: 'attentive',
-    next: {text: 'What is the problem.', mood: 'suspicious', replies: [
-      {label: 'Actually nevermind.', playerMood: 'thinking', next: {text: '...', mood: 'deadpan'}}
+    label: 'Ah, yes, I do.', playerMood: 'attentive',
+    next: {text: "Well? What's the problem?", mood: 'suspicious', replies: [
+      {label: 'Actually, never mind.', playerMood: 'thinking', next: {text: 'Excellent. A problem that resolves itself. My favourite kind.', mood: 'deadpan'}}
     ]}
   }
 ];
@@ -174,7 +174,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, canReportMilo, canReportPool, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -258,7 +258,8 @@ export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} 
     const status = canReportMilo?.() ?? {};
     return [...guardReplies.slice(0, 2), {...report, next: {
       ...report.next,
-      replies: [...availableReports(baron.completedRugTrips, status.seen, status.pending), ...report.next.replies]
+      replies: [...availableReports(baron.completedRugTrips, status.seen, status.pending),
+        ...(canReportPool?.() ? poolReports : []), ...report.next.replies]
     }}];
   }
 

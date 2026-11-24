@@ -171,7 +171,35 @@ function drawGuard(ctx, sprite, guard, elapsed) {
       ctx.transform(1, 0, sway, 1 + breath, 0, 0);
       ctx.translate(0, -2);
     }
-    ctx.drawImage(sprite, frameX, 0, 100, 200, -21, -84, 42, 86);
+    if (guard.poolWatch && (elapsed - guard.poolWatch.start) % 2.5 < 1.35) {
+      const pump = Math.sin((elapsed - guard.poolWatch.start) * 15);
+      ctx.translate(0, -Math.max(0, pump) * 3);
+      // Replace the resting sleeves with raised arms, then draw the suit over the shoulders.
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (const side of [-1, 1]) {
+        const fistY = -61 - pump * 5;
+        ctx.beginPath();
+        ctx.moveTo(side * 9, -52);
+        ctx.lineTo(side * 19, -46);
+        ctx.lineTo(side * 21, fistY);
+        ctx.lineWidth = 8;
+        ctx.strokeStyle = '#211a17';
+        ctx.stroke();
+        ctx.lineWidth = 5;
+        ctx.strokeStyle = '#38404b';
+        ctx.stroke();
+        ctx.fillStyle = '#b27953';
+        ctx.beginPath();
+        ctx.arc(side * 21, fistY - 2, 3.5, 0, TURN);
+        ctx.fill();
+      }
+      for (const [x, y, width, height] of [[0, 0, 100, 60], [31, 60, 38, 80], [0, 140, 100, 60]]) {
+        ctx.drawImage(sprite, frameX + x, y, width, height, -21 + x * 0.42, -84 + y * 0.43, width * 0.42, height * 0.43);
+      }
+    } else {
+      ctx.drawImage(sprite, frameX, 0, 100, 200, -21, -84, 42, 86);
+    }
   } else {
     const step = Math.sin(guard.stride);
     const sideView = guard.facing % 2 === 1;

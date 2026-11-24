@@ -1,5 +1,5 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {crossesScenery, EAST_EDGE, onDanceFloor, isNpcBlocked, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {crossesScenery, EAST_EDGE, onDanceFloor, isNpcBlocked, MILK_POOL, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const RADIUS = 14;
 const SPEED = 71;
@@ -55,7 +55,7 @@ function approaches(x, y, guard, actor, distance) {
 }
 
 export function summonGuard(guards, player) {
-  const alreadyComing = guards.find(guard => guard.pursuit && !guard.pursuit.milo);
+  const alreadyComing = guards.find(guard => guard.pursuit && !guard.pursuit.milo && !guard.pursuit.pool);
   if (alreadyComing) return alreadyComing;
   const guard = guards.filter(guard => !guard.posted && !guard.pursuit).reduce((closest, candidate) =>
     !closest || Math.hypot(candidate.x - player.x, candidate.y - player.y)
@@ -68,14 +68,42 @@ export function dispatchGuardToMilo(guard) {
   if (guard && !guard.posted) guard.pursuit = {milo: true, destination: null, route: []};
 }
 
+export function dispatchGuardToPool(guard) {
+  if (guard && !guard.posted && !guard.pursuit && !guard.poolWatch && !guard.escorting) {
+    guard.pursuit = {pool: true, destination: null, route: []};
+  }
+}
+
 export function updateGuards(guards, player, baron, milo, elapsed, dt) {
   let arrivedGuard = null;
   for (const guard of guards) {
     if (guard.posted || guard.escorting) continue;
     guard.walking = false;
+    if (guard.poolWatch) {
+      if (elapsed < guard.poolWatch.until) continue;
+      guard.poolWatch = null;
+    }
     const pursuit = guard.pursuit;
-    const pursued = pursuit?.milo ? milo : player;
-    if (pursuit && Math.hypot(guard.x - pursued.x, guard.y - pursued.y) <= (pursuit.milo ? 30 : 44)) {
+    let pursued = pursuit?.milo ? milo : player;
+    if (pursuit?.pool) {
+      // The north deck is outside the pool collision bounds and faces the swimmers.
+      const spots = [0, -105, 105, -185, 185].map(offset => ({x: MILK_POOL.x + offset, y: MILK_POOL.y - 81}));
+      const isClear = spot => !isNpcBlocked(spot.x, spot.y, RADIUS, baron)
+        && [player, milo, ...guards.filter(other => other !== guard)].every(actor =>
+          Math.hypot(spot.x - actor.x, spot.y - actor.y) > 40);
+      pursued = pursuit.destination && isClear(pursuit.destination)
+        ? pursuit.destination : spots.find(isClear);
+      if (!pursued) continue;
+      if (Math.hypot(guard.x - pursued.x, guard.y - pursued.y) < 8) {
+        guard.pursuit = null;
+        guard.target = null;
+        guard.route = [];
+        guard.poolWatch = {start: elapsed, until: elapsed + 15};
+        guard.facing = 0;
+        continue;
+      }
+    }
+    if (pursuit && !pursuit.pool && Math.hypot(guard.x - pursued.x, guard.y - pursued.y) <= (pursuit.milo ? 30 : 44)) {
       guard.facing = Math.round(facingIndex(pursued.x - guard.x, pursued.y - guard.y) / 2) % 4;
       guard.pursuit = null;
       guard.target = null;
