@@ -1,6 +1,6 @@
 import {FACING_STEP, TURN} from './directions.mjs';
 
-export function drawPip(ctx, player, elapsed) {
+export function drawPip(ctx, player, elapsed, milkBalloonHand = null) {
   const x = Math.round(player.x);
   const y = Math.round(player.y);
   const breath = player.walking ? 0 : Math.sin(elapsed * 2.8 + 0.8) * 0.9;
@@ -46,8 +46,13 @@ export function drawPip(ctx, player, elapsed) {
     const armX = leg * shoulder - step * (side * 6 + front * 2);
     ctx.beginPath();
     ctx.moveTo(leg * shoulder, -18);
-    ctx.lineTo((leg * shoulder + armX) / 2, -10);
-    ctx.lineTo(armX + leg, -2 - step * 3);
+    if (leg === -1 && milkBalloonHand) {
+      ctx.lineTo(milkBalloonHand.x * 0.65, (milkBalloonHand.y - 18) / 2 + 4);
+      ctx.lineTo(milkBalloonHand.x, milkBalloonHand.y);
+    } else {
+      ctx.lineTo((leg * shoulder + armX) / 2, -10);
+      ctx.lineTo(armX + leg, -2 - step * 3);
+    }
     ctx.stroke();
   }
 

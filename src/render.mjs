@@ -1,3 +1,5 @@
+import {drawMilkBalloon, milkBalloonHand} from './milk-balloon.mjs';
+import {createPillorySpeech} from './pillory.mjs';
 import {createProfessorSpeech, drawProfessor, professorHeight} from './professor.mjs';
 import {drawMilkFountain, fountainHeight, fountainWidth} from './milk-fountain.mjs';
 import {createMilkPool, drawMilkPool, milkPoolSpeech} from './milk-pool.mjs';
@@ -15,7 +17,7 @@ import {staffFrame, staffIds} from './staff.mjs';
 import {speechBubbleLayout} from './speech-layout.mjs';
 import {TURN} from './directions.mjs';
 import {isBaronDancing, isOnscreen, speechOpacity} from './baron.mjs';
-import {DANCE_FLOOR, guestEnclosure, MILK_FOUNTAIN, MILK_POOL, NORTH_EDGE, professorFeet, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
+import {DANCE_FLOOR, guestEnclosure, MILK_BAG_BASKET, MILK_FOUNTAIN, MILK_POOL, NORTH_EDGE, PILLORY, PILLORY_ATTENDANT, professorFeet, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
 import {composeHall, loadHallArt} from './hall-art.mjs';
 
 function loadSprite(name, extension = "png") {
@@ -256,6 +258,14 @@ export function createRenderer(canvas) {
   const hallImages = Object.values(hallArt);
   const professorArt = loadSprite('hall/professor', 'webp');
   const professorSipping = loadSprite('hall/professor-sipping', 'webp');
+  const pillorySpeech = createPillorySpeech();
+  const pilloryProps = [
+    {id: 'commissioner', position: PILLORY, width: 112, height: 94, depth: 13,
+      art: loadSprite('hall/pillory-commissioner', 'webp'), fallback: loadSprite('hall/pillory', 'webp')},
+    {id: 'attendant', position: PILLORY_ATTENDANT, width: 29, height: 86, depth: 10,
+      art: loadSprite('hall/pillory-attendant', 'webp')},
+    {position: MILK_BAG_BASKET, width: 46, height: 50, depth: 10, art: loadSprite('hall/milk-bag-basket', 'webp')}
+  ];
   const fountainArt = loadSprite('hall/milk-fountain', 'webp');
   const poolArt = loadSprite('pool/milk-pool', 'webp');
   const lifeguardArt = loadSprite('pool/lifeguard', 'webp');
@@ -286,7 +296,7 @@ export function createRenderer(canvas) {
 
   const professorSpeech = createProfessorSpeech();
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool, milkBalloon = null) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -315,7 +325,7 @@ export function createRenderer(canvas) {
     const ropeScene = ropeWarning?.scene;
     const pipFalling = ropeScene?.phase === 'fall' || ropeScene?.phase === 'over';
     const actors = [
-      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene.time, drawPip) : drawPip(ctx, player, elapsed)},
+      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene.time, drawPip) : drawPip(ctx, player, elapsed, milkBalloon ? milkBalloonHand(milkBalloon, player) : null)},
       {depth: baron.y + 34, draw: () => {
         if (dancing) drawBaronDance(ctx, baronDancePose, baron, elapsed);
         else drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed);
@@ -333,6 +343,39 @@ export function createRenderer(canvas) {
     if (isReady(professorArt) && professorFeet.y >= cameraY && professorFeet.y - professorHeight <= cameraY + ROOM_HEIGHT
         && professorFeet.x + 75 >= cameraX && professorFeet.x - 30 <= cameraX + ROOM_WIDTH) {
       actors.push({depth: professorFeet.y, draw: () => drawProfessor(ctx, professorArt, professorSipping, elapsed)});
+    }
+    const pillorySpeakers = {};
+    for (const {id, position, width, height, depth, art, fallback} of pilloryProps) {
+      const sprite = isReady(art) ? art : fallback;
+      if (!sprite || !isReady(sprite)) continue;
+      const {x, y} = position;
+      const front = y + depth;
+      const top = front - height;
+      if (x + width / 2 < cameraX || x - width / 2 > cameraX + ROOM_WIDTH
+          || front < cameraY || top > cameraY + ROOM_HEIGHT) continue;
+      if (id && sprite === art && x >= cameraX && x <= cameraX + ROOM_WIDTH) {
+        pillorySpeakers[id] = {x, head: top + (id === 'commissioner' ? 8 : 0), front};
+      }
+      actors.push({depth: front, draw: () => {
+        const breath = id === 'attendant' ? Math.sin(elapsed * 2.4) * 0.8 : 0;
+        const sway = id === 'attendant' ? Math.sin(elapsed * 1.6) * 0.4 : 0;
+        const left = x - width / 2;
+        ctx.drawImage(sprite, left + sway, top - breath, width, height + breath);
+        if (id === 'commissioner' && sprite === art && (elapsed + 1.3) % 5.7 < 0.13) {
+          // Blink over the eyes without moving the fixed wooden frame.
+          ctx.save();
+          ctx.strokeStyle = '#412925';
+          ctx.lineWidth = 1.35;
+          ctx.lineCap = 'round';
+          for (const eye of [0.452, 0.547]) {
+            ctx.beginPath();
+            ctx.moveTo(left + width * eye - 1.4, top + height * 0.317);
+            ctx.lineTo(left + width * eye + 1.4, top + height * 0.317);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+      }});
     }
     for (const guard of guards) {
       actors.push({depth: guard.y + 22, draw: () => {
@@ -413,6 +456,12 @@ export function createRenderer(canvas) {
           drawSpeech(ctx, index === 0 ? 'Bravo!' : 'Splendid!', 1, guest.x, guest.y - 75, guest.y, cameraX, cameraY);
         }
       });
+    }
+    if (milkBalloon) drawMilkBalloon(ctx, milkBalloon, player);
+    const stallRemark = pillorySpeech(elapsed, ropeScene || milkBalloon ? {} : pillorySpeakers);
+    if (stallRemark) {
+      const {x, head, front} = pillorySpeakers[stallRemark.id];
+      drawSpeech(ctx, stallRemark.text, stallRemark.opacity, x, head, front, cameraX, cameraY);
     }
     const professorRemark = professorSpeech(elapsed, professorVisible && !ropeScene);
     if (professorRemark) {

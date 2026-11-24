@@ -15,6 +15,14 @@ export const MILK_FOUNTAIN = {x: MILK_POOL.x, y: MILK_POOL.y + ROOM_HEIGHT * 2};
 const fountainBounds = {...MILK_FOUNTAIN, halfWidth: 140, halfHeight: 58};
 export const professorFeet = {x: MILK_FOUNTAIN.x - 158, y: MILK_FOUNTAIN.y + 59};
 const professorBounds = {x: professorFeet.x, y: professorFeet.y - 9, halfWidth: 24, halfHeight: 12};
+export const PILLORY = {x: WEST_EDGE + ROOM_WIDTH / 2, y: HALL_CENTER.y - ROOM_HEIGHT / 2 + 54};
+export const MILK_BAG_BASKET = {x: PILLORY.x, y: PILLORY.y + 81};
+export const PILLORY_ATTENDANT = {x: MILK_BAG_BASKET.x + 51, y: MILK_BAG_BASKET.y - 9};
+const pilloryFixtures = [
+  {...PILLORY, halfWidth: 53, halfHeight: 13},
+  {...MILK_BAG_BASKET, halfWidth: 21, halfHeight: 10},
+  {...PILLORY_ATTENDANT, halfWidth: 11, halfHeight: 10}
+];
 const columns = (EAST_EDGE - WEST_EDGE) / ROOM_WIDTH;
 const rows = MAP_HEIGHT / ROOM_HEIGHT;
 
@@ -120,6 +128,7 @@ export function isBlocked(x, y, radius, baron, from) {
   if (danceFixtures.some(fixture => overlaps(x, y, radius, fixture))
       || overlaps(x, y, radius, fountainBounds)
       || overlaps(x, y, radius, professorBounds)
+      || pilloryFixtures.some(fixture => overlaps(x, y, radius, fixture))
       || poolFixtures.some(fixture => overlaps(x, y, radius, fixture))
       || guestEnclosureBlocks(x, y, radius, from)) return true;
   const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};
@@ -163,8 +172,13 @@ export function crossesFountainArea(from, to) {
     && Math.min(from.y, to.y) < y + halfHeight + 40 && Math.max(from.y, to.y) > y - halfHeight - 40;
 }
 
+export function crossesPilloryArea(from, to) {
+  return Math.min(from.x, to.x) < PILLORY.x + 105 && Math.max(from.x, to.x) > PILLORY.x - 105
+    && Math.min(from.y, to.y) < MILK_BAG_BASKET.y + 55 && Math.max(from.y, to.y) > PILLORY.y - 55;
+}
+
 export function crossesScenery(from, to) {
-  return crossesPoolArea(from, to) || crossesFountainArea(from, to) || Math.max(from.y, to.y) >= DANCE_FLOOR.y - 340
+  return crossesPoolArea(from, to) || crossesFountainArea(from, to) || crossesPilloryArea(from, to) || Math.max(from.y, to.y) >= DANCE_FLOOR.y - 340
     && Math.min(from.x, to.x) < DANCE_FLOOR.x + 250
     && Math.max(from.x, to.x) > DANCE_FLOOR.x - 250;
 }
@@ -178,6 +192,7 @@ export function routeAroundBaron(member, target, baron) {
   const obstacles = [{x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35}];
   if (nearDanceFloor) obstacles.push(danceBounds, ...danceFixtures);
   if (crossesFountainArea(member, target)) obstacles.push(fountainBounds, professorBounds);
+  if (crossesPilloryArea(member, target)) obstacles.push(...pilloryFixtures);
   if (crossesPoolArea(member, target)) obstacles.push(...poolFixtures);
   if (guestEnclosure.active) obstacles.push(enclosureBounds);
   const corners = obstacles.flatMap(obstacleCorners)

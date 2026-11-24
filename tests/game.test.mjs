@@ -1089,3 +1089,64 @@ test('Pip can meet the professor once and revisit all four topics', () => {
   assert.deepEqual(endings, ['Guards!']);
   assert.equal(open(), menu);
 });
+
+test('the attendant introduces the stall once before offering the milk balloon game', async () => {
+  const {createAttendantConversation, attendantMoods} = await import('../src/attendant-dialogue.mjs');
+  const open = createAttendantConversation();
+  assert.match(open().text, /^Welcome, welcome/);
+  const menu = open();
+  assert.equal(open(), menu);
+  assert.equal(menu.replies.length, 4);
+  let node = menu.replies.find(reply => reply.label === 'Can I play?').next;
+  while (node.replies.length) {
+    assert.ok(attendantMoods.includes(node.mood));
+    node = node.replies[0].next;
+  }
+  assert.equal(node.action, 'startMilkBalloon');
+});
+
+test('Pip picks up a milk balloon, waits for the throw, then finishes the round', async () => {
+  const {createMilkBalloon, updateMilkBalloon, throwMilkBalloon, milkBalloonHand} = await import('../src/milk-balloon.mjs');
+  const {pilloryAttendant} = await import('../src/pillory.mjs');
+  const player = {...createPlayer(), x: pilloryAttendant.x + 36, y: pilloryAttendant.y};
+  const scene = createMilkBalloon(player, createBaron());
+  throwMilkBalloon(scene);
+  assert.equal(scene.phase, 'approach');
+  for (let i = 0; i < 240 && scene.phase !== 'ready'; i++) updateMilkBalloon(scene, player, 1 / 60);
+  assert.equal(scene.phase, 'ready');
+  assert.equal(updateMilkBalloon(scene, player, 5), false);
+  assert.ok(milkBalloonHand(scene, player));
+  throwMilkBalloon(scene);
+  assert.equal(scene.phase, 'throw');
+  assert.equal(updateMilkBalloon(scene, player, 1), false);
+  assert.equal(updateMilkBalloon(scene, player, 1), true);
+});
+
+test('the Commissioner is reachable, greets Pip once, and has three ways to end the game conversation', async () => {
+  const {createCommissionerConversation, commissionerMoods} = await import('../src/commissioner-dialogue.mjs');
+  const {pilloryAttendant, pilloryCommissioner} = await import('../src/pillory.mjs');
+  const baron = createBaron();
+  const player = {...createPlayer(), x: pilloryCommissioner.x, y: pilloryCommissioner.y + 33};
+  assert.equal(isBlocked(player.x, player.y, player.radius, baron), false);
+  assert.equal(nearestInteraction(player, baron, null, [], [pilloryAttendant, pilloryCommissioner]).id, pilloryCommissioner.id);
+  const open = createCommissionerConversation();
+  const first = open();
+  const menu = open();
+  assert.equal(first.text, 'Please... help me.');
+  assert.equal(open(), menu);
+  assert.equal(menu.replies.length, 3);
+  const branch = menu.replies[1].next;
+  assert.equal(branch.replies[0].next, null);
+  assert.ok(branch.replies.slice(1).every(reply => reply.next.replies.length === 0 && !reply.next.action));
+  const visited = new Set();
+  const moods = new Set();
+  function visit(node) {
+    if (!node || visited.has(node)) return;
+    visited.add(node);
+    moods.add(node.mood);
+    for (const reply of node.replies) visit(reply.next);
+  }
+  visit(first);
+  assert.ok(visited.has(menu));
+  assert.deepEqual([...moods].sort(), [...commissionerMoods].sort());
+});
