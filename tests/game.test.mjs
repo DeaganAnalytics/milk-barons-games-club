@@ -638,15 +638,15 @@ test('the Baron follows Pip to the dance stop and only dances after arrival', ()
   assert.equal(isBaronDancing(baron), false);
 });
 
-test('one randomly chosen dancer says one line every 20 seconds', () => {
-  const rolls = [0, 0.99, 0.26, 0, 0.51, 0.99, 0.99, 0.99];
+test('one randomly chosen dance-floor character says one line every 15 seconds', () => {
+  const rolls = [0, 0.99, 0.26, 0, 0.51, 0.99, 0.7, 0.99];
   const speechAt = createDancerSpeech(() => rolls.shift());
-  assert.equal(speechAt(19.9), null);
+  assert.equal(speechAt(14.9), null);
   for (const [time, id, line] of [
-    [20, 'mascot', 'Milk my cow! Milk her now!'],
-    [40, 'coral', 'I like to PARTAY!'],
-    [60, 'jade', 'That cow guard is kind of cute!!'],
-    [80, 'guard', 'God bless the Baron!']
+    [15, 'mascot', 'Milk my cow! Milk her now!'],
+    [30, 'coral', 'I like to PARTAY!'],
+    [45, 'jade', 'That cow guard is kind of cute!!'],
+    [60, 'guard', 'God bless the Baron!']
   ]) {
     const first = speechAt(time + 0.5);
     assert.equal(first.dancer.id, id);
@@ -668,9 +668,9 @@ test('the Baron pauses his milk countdown and joins the remarks while dancing', 
   assert.equal(baron.speech, null);
   const rolls = [0.99, 0.3];
   const speechAt = createDancerSpeech(() => rolls.shift());
-  assert.equal(speechAt(40.5, baron).text, 'Shake that belly, shake that belly');
+  assert.equal(speechAt(45.5, baron).text, 'Shake that belly, shake that belly');
   baron.x -= 1;
-  assert.equal(speechAt(41, baron), null);
+  assert.equal(speechAt(46, baron), null);
   updateMilkService(service, baron, [], [], camera, 42, 1, false);
   assert.equal(service.remaining, 44);
 });
@@ -728,4 +728,15 @@ test('the reporting guard runs to Milo, then Milo can flee from Pip after a conf
   fleeMilo(milo, {...pip, x: milo.x + 30, y: milo.y}, baron, [guard]);
   assert.equal(milo.fleeing, true);
   assert.ok(milo.route.length > 0);
+});
+
+test('the DJ can call out the Baron only when he is visible', () => {
+  const rolls = [0.99, 0.99, 0.99, 0.99];
+  const speechAt = createDancerSpeech(() => rolls.shift());
+  const baron = createBaron();
+  const withoutBaron = speechAt(15.5, baron, false);
+  assert.equal(withoutBaron.text, 'Get that guard a drink! Of Milkkkk!');
+  assert.equal(withoutBaron.x, DANCE_FLOOR.x);
+  assert.ok(withoutBaron.headY < DANCE_FLOOR.y);
+  assert.equal(speechAt(30.5, baron, true).text, 'Shake those milk makers ladies. And you too Baron!');
 });

@@ -108,10 +108,11 @@ const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-formal', '
   [name, new URL('../assets/dialogue/' + name + '.webp', import.meta.url)]));
 const portraitCache = new Map();
 
-function standalonePortraitUrl(id, withoutMilk = false) {
+function standalonePortraitUrl(id, withoutMilk = false, mood) {
   if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
   if (partyGuests.some(guest => guest.id === id)) {
-    return new URL('../assets/guests/' + id + '-portrait.webp', import.meta.url);
+    const suffix = mood === 'annoyed' ? '-annoyed-portrait.webp' : '-portrait.webp';
+    return new URL('../assets/guests/' + id + suffix, import.meta.url);
   }
   const filename = id + (withoutMilk ? '-empty-portrait.webp' : '-portrait.webp');
   return new URL('../assets/waiters/' + filename, import.meta.url);
@@ -124,7 +125,10 @@ function warmPortraits() {
     urls.push(standalonePortraitUrl(id));
     if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
-  urls.push(standalonePortraitUrl(bartender.id), ...partyGuests.map(guest => standalonePortraitUrl(guest.id)));
+  urls.push(standalonePortraitUrl(bartender.id));
+  for (const {id} of partyGuests) {
+    urls.push(standalonePortraitUrl(id), standalonePortraitUrl(id, false, 'annoyed'));
+  }
   // Keep the decoded images alive while the conversation panel is hidden.
   for (const url of urls) {
     const image = new Image();
@@ -161,7 +165,7 @@ export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} 
     element.dataset.portrait = character;
     if (reportPortrait || !portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.style.setProperty('--portrait-image', `url(${reportPortrait ?? standalonePortraitUrl(character, withoutMilk)})`);
+      element.style.setProperty('--portrait-image', `url(${reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood)})`);
       element.dataset.expression = mood;
       return;
     }

@@ -8,7 +8,7 @@ import {drawPip} from './pip-art.mjs';
 import {staffFrame, staffIds} from './staff.mjs';
 import {speechBubbleLayout} from './speech-layout.mjs';
 import {TURN} from './directions.mjs';
-import {isBaronDancing, speechOpacity} from './baron.mjs';
+import {isBaronDancing, isOnscreen, speechOpacity} from './baron.mjs';
 import {DANCE_FLOOR, NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
 import {composeHall, loadHallArt} from './hall-art.mjs';
 
@@ -311,7 +311,7 @@ export function createRenderer(canvas) {
       }
     }
     if (danceVisible) {
-      const speech = dancerSpeech(elapsed, baron);
+      const speech = dancerSpeech(elapsed, baron, isOnscreen(baron, cameraX, cameraY));
       if (speech && (!speech.dancer || isReady(dancerSprites[dancers.indexOf(speech.dancer)]))
           && speech.x >= cameraX && speech.x <= cameraX + ROOM_WIDTH
           && speech.feetY >= cameraY && speech.headY <= cameraY + ROOM_HEIGHT) {
