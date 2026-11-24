@@ -8,7 +8,7 @@ import {pilloryAttendant, pilloryCommissioner, pilloryInView} from './pillory.mj
 import {professor} from './professor.mjs';
 import {createMilkPool, lifeguard, poolClothing, takePoolClothing, updateMilkPool} from './milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} from './rope-warning.mjs';
-import {advanceGuestEscort, beginGuestEscort} from './guest-escort.mjs';
+import {advanceGuestEscort, beginGuestEscort, guestRopesInView} from './guest-escort.mjs';
 import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
 import {callOutMilo, createBaron, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
@@ -46,6 +46,7 @@ let poolClothesReport = null;
 let seenPillory = false;
 let reportedPillory = false;
 let guestEscort = null;
+let seenGuestRopes = false;
 let milkBalloon = null;
 let playedMilkBalloon = false;
 let completedGuestEscorts = 0;
@@ -110,7 +111,7 @@ function clubEvent(text, change) {
   const signed = value => value > 0 ? '+' : '−';
   const details = [
     coins && `Coins: ${signed(coins)}₥${Math.abs(coins)}.`,
-    karmaPoints && `Karma: ${signed(karmaPoints)}${Math.abs(karmaPoints)}.`
+    karmaPoints && (karmaPoints > 0 ? 'Karma gained.' : 'Karma lost.')
   ].filter(Boolean);
   info.textContent = [text, ...details].join(' ');
 }
@@ -387,7 +388,13 @@ function frame(timestamp) {
   const wasTraveling = baron.route.length > 0;
   const serviceWasActive = Boolean(milkService.scene);
   if (!serviceWasActive) updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY, guards);
-  updateMilkService(milkService, baron, staff, guards, {x: cameraX, y: cameraY}, elapsed, dt, wasTraveling);
+  const serviceEvent = updateMilkService(milkService, baron, staff, guards, {x: cameraX, y: cameraY}, elapsed, dt, wasTraveling);
+  if (serviceEvent === 'milk-served') clubEvent('The Baron’s glass is full. The club can breathe again.');
+  if (serviceEvent === 'glass-cleaned') clubEvent('Skim sweeps up the evidence. The Baron is already thirsty again.');
+  if (!seenGuestRopes && guestRopesInView(guestEnclosure, cameraX, cameraY)) {
+    seenGuestRopes = true;
+    clubEvent('Velvet ropes go up. The ladies’ milk is now a security matter.');
+  }
   const baronLocked = serviceWasActive || Boolean(milkService.scene);
   if (!baronLocked) updateBaronAttention(baron, player, elapsed, dt);
   if (updateMilo(milo, baron, elapsed, dt, guards) && !baronLocked) callOutMilo(baron, milo, elapsed);

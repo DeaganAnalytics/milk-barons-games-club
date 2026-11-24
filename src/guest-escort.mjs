@@ -1,6 +1,6 @@
 import {movePlayer} from './player.mjs';
 import {partyGuests} from './party-guests.mjs';
-import {ROOM_WIDTH, SOUTH_TRIM_Y, routeAroundBaron} from './room.mjs';
+import {ROOM_HEIGHT, ROOM_WIDTH, SOUTH_TRIM_Y, routeAroundBaron} from './room.mjs';
 
 const speed = 125;
 const escortX = Math.max(...partyGuests.map(guest => guest.x)) + ROOM_WIDTH / 2 + 34;
@@ -53,17 +53,28 @@ export function advanceGuestEscort(escort, player, baron, guards, elapsed, dt) {
   return true;
 }
 
-export function drawGuestRopes(ctx, enclosure, foreground) {
+function guestRopeSegments(enclosure, foreground) {
   const {west, east, north, south, gateY, gateHalf} = enclosure;
   const openingTop = gateY - gateHalf;
   const openingBottom = gateY + gateHalf;
-  const segments = foreground
+  return foreground
     ? [[west, south, east, south], [east, openingBottom, east, south]]
     : [[west, north, east, north], [west, north, west, south], [east, north, east, openingTop]];
+}
+
+export function guestRopesInView(enclosure, cameraX, cameraY) {
+  if (!enclosure.active) return false;
+  const segments = [...guestRopeSegments(enclosure, false), ...guestRopeSegments(enclosure, true)];
+  return segments.some(([x1, y1, x2, y2]) =>
+    Math.min(x1, x2) - 5 <= cameraX + ROOM_WIDTH && Math.max(x1, x2) + 5 >= cameraX
+    && Math.min(y1, y2) - 23 <= cameraY + ROOM_HEIGHT && Math.max(y1, y2) + 3 >= cameraY);
+}
+
+export function drawGuestRopes(ctx, enclosure, foreground) {
   const posts = new Map();
   ctx.save();
   ctx.lineCap = 'round';
-  for (const [x1, y1, x2, y2] of segments) {
+  for (const [x1, y1, x2, y2] of guestRopeSegments(enclosure, foreground)) {
     posts.set(x1 + ',' + y1, [x1, y1]);
     posts.set(x2 + ',' + y2, [x2, y2]);
     ctx.beginPath();

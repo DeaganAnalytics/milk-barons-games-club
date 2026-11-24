@@ -157,6 +157,7 @@ export function updateMilkService(service, baron, staff, guards, camera, elapsed
   if (scene.phase === 'handoff') {
     scene.server.serviceDuty = false;
     enter(scene, 'drink');
+    return 'milk-served';
   } else if (scene.phase === 'drink') {
     enter(scene, 'windup');
   } else if (scene.phase === 'windup') {
@@ -167,6 +168,7 @@ export function updateMilkService(service, baron, staff, guards, camera, elapsed
     scene.cleaner.serviceDuty = false;
     service.scene = null;
     service.remaining = interval;
+    return 'glass-cleaned';
   }
 }
 

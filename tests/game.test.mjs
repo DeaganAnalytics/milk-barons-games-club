@@ -2,7 +2,7 @@ import {createProfessorConversation, professorMoods} from '../src/professor-dial
 import {createProfessorSpeech, professor, professorPose} from '../src/professor.mjs';
 import {createMilkPool, lifeguard, milkPoolSpeech, poolClothing, remainingClothing, takePoolClothing, updateMilkPool} from '../src/milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
-import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
+import {advanceGuestEscort, beginGuestEscort, guestRopesInView} from '../src/guest-escort.mjs';
 import {partyGuests} from '../src/party-guests.mjs';
 import {availableReports, poolReports} from '../src/report-dialogue.mjs';
 import {createDancerSpeech} from '../src/dancers.mjs';
@@ -1490,4 +1490,14 @@ test('karma starts neutral and moves proportionally between its capped endpoints
   assert.equal(karma.change(-0.25), 7.75);
   assert.deepEqual(changes.at(-1), [7.75, 0.8875]);
   assert.throws(() => karma.change(0.1), TypeError);
+});
+
+test('guest ropes only enter sight while active and intersecting the camera', () => {
+  const cameraX = guestEnclosure.west;
+  const cameraY = guestEnclosure.north;
+  assert.equal(guestRopesInView({...guestEnclosure, active: false}, cameraX, cameraY), false);
+  const enclosure = {...guestEnclosure, active: true};
+  assert.equal(guestRopesInView(enclosure, cameraX, cameraY), true);
+  assert.equal(guestRopesInView(enclosure, enclosure.east + 20, cameraY), false);
+  assert.equal(guestRopesInView(enclosure, cameraX, enclosure.south + 20), false);
 });
