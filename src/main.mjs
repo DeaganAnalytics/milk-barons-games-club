@@ -100,7 +100,7 @@ const dialogue = createDialogue(baron, {
       }
     }
     if (action === 'escortGuest' && guestEscort) beginGuestEscort(guestEscort, player, baron, completedGuestEscorts > 0);
-    if (action === 'secureGuests' && !guestEnclosure.active) {
+    if ((action === 'secureGuests' || action === 'fineAndSecureGuests') && !guestEnclosure.active) {
       guestEnclosure.active = true;
       gateGuard = {
         x: guestEnclosure.east + 22, y: guestEnclosure.gateY - 48,
@@ -108,6 +108,7 @@ const dialogue = createDialogue(baron, {
       };
       guards.push(gateGuard);
     }
+    if (action === 'fineAndSecureGuests') coinBalance.change(-20);
     if (action === 'startMilkBalloon') {
       clearInput();
       milkBalloon = createMilkBalloon(player, baron);
@@ -199,7 +200,6 @@ function frame(timestamp) {
     const done = updateMilkBalloon(milkBalloon, player, dt);
     if (done) {
       const {attendant, guard} = milkBalloon;
-      playedMilkBalloon ||= !attendant && !guard;
       milkBalloon = null;
       clearInput();
       if (guard) {
@@ -208,7 +208,11 @@ function frame(timestamp) {
         requestAnimationFrame(frame);
         return;
       }
-      info.textContent = attendant ? 'Splat! The attendant hit the Commissioner.' : 'Splat! You hit the Commissioner.';
+      if (!attendant) {
+        playedMilkBalloon = true;
+        coinBalance.change(-1);
+      }
+      info.textContent = attendant ? 'Splat! The attendant hit the Commissioner.' : 'Splat! You hit the Commissioner. Milk fee: ₥1.';
     }
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
       staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, milkBalloon, attendantMilk.scene);

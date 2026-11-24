@@ -1107,6 +1107,12 @@ test('the attendant introduces the stall once before offering the milk balloon g
   assert.equal(replay.text, 'Please, yes, please do. All the more fun for me and you!');
   assert.equal(replay.action, 'startMilkBalloon');
   assert.equal(replay.replies.length, 0);
+  const complaint = 'Hey! You said not a penny, not a dime. Yet you took a coin. What gives?';
+  assert.equal(menu.replies.some(reply => reply.label === complaint), false);
+  const replayMenu = open(true);
+  const response = replayMenu.replies.find(reply => reply.label === complaint).next;
+  assert.equal(response.text, 'The game is free, just as I said! The fee is for the milk you shed!');
+  assert.equal(response.replies[0].next, replayMenu);
 });
 
 test('Pip picks up and automatically throws a milk balloon, then finishes the round', async () => {

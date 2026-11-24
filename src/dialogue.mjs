@@ -36,7 +36,7 @@ const postEscortWarning = {
     {label: 'Continue', playerMood: 'worried', next: {
       text: 'You have been warned. They are out of league.', mood: 'formal', replies: [
         {label: 'I just wanted to...', playerMood: 'sorry', next: {
-          text: "Don't!", mood: 'angry'
+          text: "Don't! Actually, open your wallet! Yes, I'll take that!", mood: 'angry', action: 'fineAndSecureGuests'
         }}
       ]
     }}
