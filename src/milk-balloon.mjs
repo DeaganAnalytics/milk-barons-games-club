@@ -73,7 +73,7 @@ export function updateMilkBalloon(scene, player, dt) {
       return true;
     }
     const facing = facingIndex(target.x - actor.x, target.y - actor.y);
-    actor.facing = scene.guard ? Math.round(facing / 2) % 4 : facing;
+    actor.facing = scene.guard ? 0 : facing;
     actor.danceIdle = 0;
     scene.phase = 'pickup';
   }
@@ -101,6 +101,27 @@ export function milkBalloonHand(scene, player) {
   return {x: -9 - follow * 10, y: -14 - follow * 23};
 }
 
+export function guardBalloonPose(scene) {
+  const guard = scene?.guard;
+  if (!guard || (scene.phase !== 'pickup' && (scene.phase !== 'throw' || scene.time >= release + 0.25))) return null;
+  const {phase, time} = scene;
+  const shoulder = {x: guard.x - 9, y: guard.y - 22};
+  const rest = {x: guard.x - 14, y: guard.y - 3};
+  const mix = (a, b, t) => ({x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t});
+  let hand;
+  if (phase === 'pickup') {
+    hand = mix(rest, basket, Math.sin(Math.PI * Math.min(1, time / 0.7)));
+  } else if (time >= release) {
+    hand = mix({x: guard.x - 26, y: guard.y - 30}, rest, Math.min(1, (time - release) / 0.25));
+  } else {
+    const t = time / release;
+    const windup = {x: guard.x - 19, y: guard.y - 42};
+    hand = t < 0.65 ? mix(rest, windup, t / 0.65)
+      : mix(windup, {x: guard.x - 26, y: guard.y - 30}, (t - 0.65) / 0.35);
+  }
+  return {shoulder, hand};
+}
+
 export function drawMilkBalloon(ctx, scene, player) {
   const {phase, time} = scene;
   const thrower = scene.guard ?? scene.attendant;
@@ -112,7 +133,9 @@ export function drawMilkBalloon(ctx, scene, player) {
     let x = player.x + hand.x;
     let y = player.y + hand.y;
     if (phase === 'pickup' && time < 0.35) ({x, y} = basket);
-    if (thrower && (phase === 'pickup' || time < release)) {
+    const guardPose = guardBalloonPose(scene);
+    if (guardPose && (phase !== 'pickup' || time >= 0.35)) ({x, y} = guardPose.hand);
+    if (thrower && !scene.guard && (phase === 'pickup' || time < release)) {
       ctx.strokeStyle = '#292226';
       ctx.lineWidth = 4;
       ctx.lineCap = 'round';
@@ -123,8 +146,10 @@ export function drawMilkBalloon(ctx, scene, player) {
     }
     if (phase === 'throw' && time >= release) {
       const t = (time - release) / (impact - release);
-      x = player.x - 9 + (target.x - player.x + 9) * t;
-      y = player.y - 37 + (target.y - player.y + 37) * t - Math.sin(t * Math.PI) * 28;
+      const fromX = scene.guard ? scene.guard.x - 26 : player.x - 9;
+      const fromY = scene.guard ? scene.guard.y - 30 : player.y - 37;
+      x = fromX + (target.x - fromX) * t;
+      y = fromY + (target.y - fromY) * t - Math.sin(t * Math.PI) * 28;
     }
     ctx.fillStyle = '#fff3d7';
     ctx.strokeStyle = '#6f5133';

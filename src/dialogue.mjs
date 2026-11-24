@@ -81,7 +81,7 @@ const guardReplies = [
   },
   {
     label: 'Yes I do.', playerMood: 'attentive',
-    next: {text: "Well? What's the problem?", mood: 'suspicious', replies: [
+    next: {text: "All right. What do you have to report?", mood: 'suspicious', replies: [
       {label: 'Actually, never mind.', playerMood: 'thinking', next: {text: 'Excellent. A problem that resolves itself. My favourite kind.', mood: 'deadpan'}}
     ]}
   }

@@ -176,7 +176,7 @@ export function drawEmptyServiceGlass(ctx, server) {
   drawMilkGlass(ctx, x, y, 0, 0, server.id === 'martini-waiter');
 }
 
-export function drawAttendantMilk(ctx, scene) {
+export function attendantGlassPose(scene) {
   if (!['handoff', 'drink', 'returnGlass'].includes(scene.phase)) return;
   const {server, phase} = scene;
   const {x, y} = PILLORY_ATTENDANT;
@@ -191,8 +191,8 @@ export function drawAttendantMilk(ctx, scene) {
   let milk = 1;
   if (phase === 'drink') {
     const lift = ease(Math.min(1, t * 4, (1 - t) * 4));
-    glassX = mix(restX, x + side * 4, lift);
-    glassY = mix(restY, y - 41, lift);
+    glassX = mix(restX, x + side * 3, lift);
+    glassY = mix(restY, y - 36, lift);
     angle = -side * lift;
     milk = 1 - Math.max(0, Math.min(1, (t - 0.25) * 2));
   } else {
@@ -200,10 +200,16 @@ export function drawAttendantMilk(ctx, scene) {
     glassX = mix(grip.x, restX, towardAttendant);
     glassY = mix(grip.y, restY, towardAttendant) - Math.sin(t * Math.PI) * 3;
     milk = Number(phase === 'handoff');
-    if (towardAttendant < 0.55) reach(ctx, grip.x, grip.y, glassX, glassY, '#f5e2c2', '#dfbd96');
   }
-  if (phase === 'drink' || Math.abs(glassX - x) < 29) {
-    reach(ctx, x + side * 7, y - 24, glassX, glassY - 1, '#31272c', '#f3d5b0');
-  }
-  drawMilkGlass(ctx, glassX, glassY, angle, milk, server.id === 'martini-waiter');
+  const arm = phase === 'drink' || Math.abs(glassX - x) < 29;
+  return {glassX, glassY, angle, milk, arm, side, grip};
+}
+
+export function drawAttendantMilk(ctx, scene, pose) {
+  if (!pose) return;
+  const {glassX, glassY, angle, milk, arm, side, grip} = pose;
+  const {x, y} = PILLORY_ATTENDANT;
+  if (!arm) reach(ctx, grip.x, grip.y, glassX, glassY, '#f5e2c2', '#dfbd96');
+  if (arm) reach(ctx, x + side * 7, y - 34, glassX, glassY - 1, '#31272c', '#f3d5b0');
+  drawMilkGlass(ctx, glassX, glassY, angle, milk, scene.server.id === 'martini-waiter');
 }
