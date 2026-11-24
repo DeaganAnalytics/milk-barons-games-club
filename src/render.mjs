@@ -9,7 +9,7 @@ import {drawGuestRopes} from './guest-escort.mjs';
 import {createDancerSpeech, dancers, drawDancer} from './dancers.mjs';
 import {danceLayers, danceLyric, drawBaronDance, drawDanceBooth, drawDanceFloor} from './dance-floor.mjs';
 import {bartender, creameryHatch} from './creamery.mjs';
-import {drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
+import {drawAttendantMilk, drawEmptyServiceGlass, drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
 import {partySpeech, refillProgress} from './party-chatter.mjs';
 import {drawGuestRefill, drawPartyGuest, partyGuests} from './party-guests.mjs';
 import {drawPip} from './pip-art.mjs';
@@ -296,7 +296,7 @@ export function createRenderer(canvas) {
 
   const professorSpeech = createProfessorSpeech();
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool, milkBalloon = null) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool, milkBalloon = null, attendantMilk = null) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -393,7 +393,10 @@ export function createRenderer(canvas) {
     for (const member of staff) {
       const usingBottle = pouring && member === refill.server;
       const sprite = member.withoutMilk || usingBottle ? emptySprites[member.id] : staffSprites[member.id];
-      actors.push({depth: member.y + 20, draw: () => drawStaff(ctx, sprite, member, elapsed, skimVertical)});
+      actors.push({depth: member.y + 20, draw: () => {
+        drawStaff(ctx, sprite, member, elapsed, skimVertical);
+        if (member.emptyServiceGlass) drawEmptyServiceGlass(ctx, member);
+      }});
     }
     partyGuests.forEach((guest, index) => {
       let milk = chatter?.milk[index];
@@ -420,6 +423,7 @@ export function createRenderer(canvas) {
     });
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
+    if (attendantMilk && !milkBalloon) drawAttendantMilk(ctx, attendantMilk);
     if (milkScene) drawMilkAction(ctx, milkScene, baron, animateBaronArm);
     if (pouring) drawGuestRefill(ctx, partyGuests[refill.guest], partySprites[refill.guest], refill.server, progress);
     if (danceVisible) {

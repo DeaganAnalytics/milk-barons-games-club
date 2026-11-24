@@ -1175,3 +1175,43 @@ test('the Commissioner is reachable, greets Pip once, and has three ways to end 
   assert.ok(visited.has(menu));
   assert.deepEqual([...moods].sort(), [...commissionerMoods].sort());
 });
+
+test('the attendant drinks once a minute from a free server who refills offscreen', async () => {
+  const {createAttendantMilk, updateAttendantMilk} = await import('../src/attendant-milk.mjs');
+  const {serviceStaffOnscreen} = await import('../src/milk-service.mjs');
+  const {pilloryAttendant} = await import('../src/pillory.mjs');
+  const baron = createBaron();
+  const camera = {x: cameraLeft(pilloryAttendant.x), y: cameraTop(pilloryAttendant.y)};
+  const makeServer = (offset, extra) => ({
+    x: pilloryAttendant.x + offset, y: pilloryAttendant.y + 10,
+    radius: 12, walkTime: 0, facing: 1, ...extra
+  });
+  const baronServer = makeServer(24, {serviceDuty: true});
+  const ladiesServer = makeServer(32, {serviceDuty: true});
+  const server = makeServer(80);
+  const farther = makeServer(200);
+  const staff = [baronServer, ladiesServer, server, farther];
+  const service = createAttendantMilk();
+  updateAttendantMilk(service, baron, staff, [], camera, 59.9);
+  assert.equal(service.scene, null);
+  updateAttendantMilk(service, baron, staff, [], camera, 0.1);
+  assert.equal(service.scene.server, server);
+  assert.ok(server.serviceDuty);
+
+  const phases = new Set();
+  for (let frame = 0; frame < 900 && service.scene; frame++) {
+    phases.add(service.scene.phase);
+    updateAttendantMilk(service, baron, staff, [], camera, 1 / 60);
+    if (service.scene?.phase === 'leave') {
+      assert.ok(server.emptyServiceGlass && server.withoutMilk && server.serviceDuty);
+    }
+  }
+  assert.deepEqual([...phases], ['delivery', 'handoff', 'drink', 'returnGlass', 'leave']);
+  assert.equal(service.scene, null);
+  assert.equal(serviceStaffOnscreen(server, camera), false);
+  assert.equal(server.withoutMilk, false);
+  assert.equal(server.emptyServiceGlass, false);
+  assert.equal(server.serviceDuty, false);
+  assert.equal(baronServer.serviceDuty, true);
+  assert.equal(ladiesServer.serviceDuty, true);
+});
