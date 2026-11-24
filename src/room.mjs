@@ -7,6 +7,8 @@ export const SOUTH_TRIM_Y = SOUTH_EDGE - 52;
 export const WEST_EDGE = -ROOM_WIDTH;
 export const EAST_EDGE = ROOM_WIDTH * 2;
 export const HALL_CENTER = {x: ROOM_WIDTH / 2, y: (NORTH_EDGE + SOUTH_EDGE) / 2};
+export const DANCE_FLOOR = {x: HALL_CENTER.x, y: SOUTH_EDGE - ROOM_HEIGHT / 2 + 25};
+export const BARON_DANCE_STOP = {x: DANCE_FLOOR.x - 270, y: DANCE_FLOOR.y - 227};
 const columns = (EAST_EDGE - WEST_EDGE) / ROOM_WIDTH;
 const rows = MAP_HEIGHT / ROOM_HEIGHT;
 
@@ -18,7 +20,7 @@ export const RUGS = Array.from({length: columns * rows}, (_, index) => {
     y: NORTH_EDGE + (row + 0.5) * ROOM_HEIGHT,
     horizontal: (row === 0 || row === rows - 1) && (column === 0 || column === columns - 1)
   };
-});
+}).filter(rug => rug.x !== DANCE_FLOOR.x || rug.y !== DANCE_FLOOR.y - 25);
 
 const middleRowStart = Math.floor(rows / 2) * columns;
 export const SIDE_RUGS = [RUGS[middleRowStart], RUGS[middleRowStart + columns - 1]];
@@ -41,6 +43,13 @@ export function cameraTop(playerY) {
   return Math.max(NORTH_EDGE, Math.min(SOUTH_EDGE - ROOM_HEIGHT, playerY - ROOM_HEIGHT / 2));
 }
 
+const danceFixtures = [
+  {x: DANCE_FLOOR.x, y: DANCE_FLOOR.y - 246, halfWidth: 127, halfHeight: 57},
+  ...[-1, 1].map(side => ({
+    x: DANCE_FLOOR.x + side * 191, y: DANCE_FLOOR.y - 227, halfWidth: 32, halfHeight: 23
+  }))
+];
+
 function overlaps(x, y, radius, obstacle) {
   return Math.abs(x - obstacle.x) < obstacle.halfWidth + radius
     && Math.abs(y - obstacle.y) < obstacle.halfHeight + radius;
@@ -50,6 +59,7 @@ export function isBlocked(x, y, radius, baron, from) {
   if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < NORTH_EDGE + 160 || y > SOUTH_TRIM_Y - 16) return true;
   // The closed center door stands proud of the back wall.
   if (y < NORTH_EDGE + 190 && Math.abs(x - HALL_CENTER.x) < 75 + radius) return true;
+  if (danceFixtures.some(fixture => overlaps(x, y, radius, fixture))) return true;
   const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};
   if (!overlaps(x, y, radius, baronObstacle)) return false;
   // The Baron can walk up to an occupied rug. Let a player he overlaps step away.
