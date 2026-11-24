@@ -1,4 +1,4 @@
-import {drawMilkBalloon, milkBalloonHand} from './milk-balloon.mjs';
+import {drawMilkBalloon, guardBalloonPose, milkBalloonHand} from './milk-balloon.mjs';
 import {createPillorySpeech} from './pillory.mjs';
 import {createProfessorSpeech, drawProfessor, professorHeight} from './professor.mjs';
 import {drawMilkFountain, fountainHeight, fountainWidth} from './milk-fountain.mjs';
@@ -9,7 +9,7 @@ import {drawGuestRopes} from './guest-escort.mjs';
 import {createDancerSpeech, dancers, drawDancer} from './dancers.mjs';
 import {danceLayers, danceLyric, drawBaronDance, drawDanceBooth, drawDanceFloor} from './dance-floor.mjs';
 import {bartender, creameryHatch} from './creamery.mjs';
-import {drawAttendantMilk, drawEmptyServiceGlass, drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
+import {attendantGlassPose, drawAttendantMilk, drawEmptyServiceGlass, drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
 import {partySpeech, refillProgress} from './party-chatter.mjs';
 import {drawGuestRefill, drawPartyGuest, partyGuests} from './party-guests.mjs';
 import {drawPip} from './pip-art.mjs';
@@ -138,6 +138,16 @@ function drawMilo(ctx, sprite, milo, elapsed) {
   ctx.scale(milo.facingLeft ? -1 : 1, 1);
   ctx.rotate(motion * 0.035);
   ctx.drawImage(sprite, 375, 431, 275, 669, -14, -66, 28, 66);
+  ctx.restore();
+}
+
+function withoutRestingArm(ctx, left, top, width, height, draw) {
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(left - 100, top - 100, 200 + width, 200 + height);
+  ctx.rect(left, top, width, height);
+  ctx.clip('evenodd');
+  draw();
   ctx.restore();
 }
 
@@ -344,6 +354,8 @@ export function createRenderer(canvas) {
         && professorFeet.x + 75 >= cameraX && professorFeet.x - 30 <= cameraX + ROOM_WIDTH) {
       actors.push({depth: professorFeet.y, draw: () => drawProfessor(ctx, professorArt, professorSipping, elapsed)});
     }
+    const guardThrowPose = guardBalloonPose(milkBalloon);
+    const milkPoseAttendant = attendantMilk && !milkBalloon ? attendantGlassPose(attendantMilk) : null;
     const pillorySpeakers = {};
     for (const {id, position, width, height, depth, art, fallback} of pilloryProps) {
       const sprite = isReady(art) ? art : fallback;
@@ -363,7 +375,10 @@ export function createRenderer(canvas) {
         const sway = movingAttendant?.walking ? Math.sin(movingAttendant.stride) * 1.1
           : id === 'attendant' ? Math.sin(elapsed * 1.6) * 0.4 : 0;
         const left = x - width / 2;
-        ctx.drawImage(sprite, left + sway, top - breath, width, height + breath);
+        const draw = () => ctx.drawImage(sprite, left + sway, top - breath, width, height + breath);
+        if (id === 'attendant' && milkPoseAttendant?.arm) {
+          withoutRestingArm(ctx, x + (milkPoseAttendant.side < 0 ? -16 : 8), y - 32, 8, 24, draw);
+        } else draw();
         if (id === 'commissioner' && sprite === art && (elapsed + 1.3) % 5.7 < 0.13) {
           // Blink over the eyes without moving the fixed wooden frame.
           ctx.save();
@@ -384,6 +399,24 @@ export function createRenderer(canvas) {
       actors.push({depth: guard.y + 22, draw: () => {
         if (guard === ropeScene?.guard && ropeScene.phase !== 'approach' && isReady(guardSprite)) {
           drawRopeAim(ctx, guardSprite, ropeScene, player);
+        } else if (guardThrowPose && guard === milkBalloon.guard) {
+          withoutRestingArm(ctx, guard.x - 19, guard.y - 21, 8, 27,
+            () => drawGuard(ctx, guardSprite, guard, elapsed));
+          const {shoulder, hand} = guardThrowPose;
+          ctx.save();
+          ctx.strokeStyle = '#242023';
+          ctx.lineWidth = 5;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(shoulder.x, shoulder.y);
+          ctx.lineTo((shoulder.x + hand.x) / 2 - 2, (shoulder.y + hand.y) / 2 + 3);
+          ctx.lineTo(hand.x, hand.y);
+          ctx.stroke();
+          ctx.fillStyle = '#a66c48';
+          ctx.beginPath();
+          ctx.arc(hand.x, hand.y, 2.6, 0, TURN);
+          ctx.fill();
+          ctx.restore();
         } else drawGuard(ctx, guard.posted ? armedGuard : guardSprite, guard, elapsed);
       }});
     }
@@ -423,7 +456,7 @@ export function createRenderer(canvas) {
     });
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
-    if (attendantMilk && !milkBalloon) drawAttendantMilk(ctx, attendantMilk);
+    if (milkPoseAttendant) drawAttendantMilk(ctx, attendantMilk, milkPoseAttendant);
     if (milkScene) drawMilkAction(ctx, milkScene, baron, animateBaronArm);
     if (pouring) drawGuestRefill(ctx, partyGuests[refill.guest], partySprites[refill.guest], refill.server, progress);
     if (danceVisible) {
