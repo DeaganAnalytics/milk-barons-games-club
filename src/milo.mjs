@@ -1,4 +1,4 @@
-import {HALL_CENTER, EAST_EDGE, NORTH_EDGE, isBlocked, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {crossesDanceArea, HALL_CENTER, onDanceFloor, routeAroundBaron, EAST_EDGE, NORTH_EDGE, isNpcBlocked, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 import {guardBlocks} from './guards.mjs';
 import {TURN} from './directions.mjs';
 
@@ -29,6 +29,11 @@ function distanceToSegment(point, start, end) {
   return Math.hypot(point.x - start.x - projection * dx, point.y - start.y - projection * dy);
 }
 
+function routeToCorner(milo, corner, baron) {
+  return crossesDanceArea(milo, corner)
+    ? routeAroundBaron({...milo, radius: 12}, corner, baron) : [corner];
+}
+
 function selectRoute(milo, baron, distance) {
   for (let offset = 1; offset < CORNERS.length; offset++) {
     const index = (milo.corner + offset) % CORNERS.length;
@@ -36,7 +41,7 @@ function selectRoute(milo, baron, distance) {
     if (Math.hypot(corner.x - baron.x, corner.y - baron.y) < THREAT_DISTANCE) continue;
     if (distanceToSegment(baron, milo, corner) >= Math.min(125, distance) - 0.01) {
       milo.corner = index;
-      return [corner];
+      return routeToCorner(milo, corner, baron);
     }
   }
   return [];
@@ -54,7 +59,7 @@ function startEscape(milo, baron, guards, elapsed) {
   const alternate = preferred ^ 1;
   const preferredOccupied = [baron, ...guards].some(actor => !actor.posted && sameSquare(actor, CORNERS[preferred]));
   milo.corner = preferredOccupied ? alternate : preferred;
-  milo.route = [CORNERS[milo.corner]];
+  milo.route = routeToCorner(milo, CORNERS[milo.corner], baron);
   milo.fleeing = true;
   return spottedByBaron;
 }
@@ -79,12 +84,12 @@ export function updateMilo(milo, baron, elapsed, dt, guards = []) {
   let x = remaining ? milo.x + dx * step / remaining : milo.x;
   let y = remaining ? milo.y + dy * step / remaining : milo.y;
   let arrived = step === remaining;
-  if (guardBlocks(x, y, milo, guards, 12)) {
+  if (onDanceFloor(x, y, 12) || guardBlocks(x, y, milo, guards, 12)) {
     const heading = Math.atan2(dy, dx);
     const turn = AVOIDANCE_TURNS.find(offset => {
       const nextX = milo.x + Math.cos(heading + offset) * step;
       const nextY = milo.y + Math.sin(heading + offset) * step;
-      return !isBlocked(nextX, nextY, 12, baron, milo) && !guardBlocks(nextX, nextY, milo, guards, 12);
+      return !isNpcBlocked(nextX, nextY, 12, baron, milo) && !guardBlocks(nextX, nextY, milo, guards, 12);
     });
     if (turn === undefined) {
       milo.stride = 0;

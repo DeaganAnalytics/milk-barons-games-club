@@ -12,7 +12,7 @@ import {test} from 'node:test';
 import {callOutMilo, createBaron, isBaronDancing, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, HALL_CENTER, isBlocked, nearestInteraction, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
+import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, HALL_CENTER, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -654,4 +654,52 @@ test('one randomly chosen dancer says one line every 20 seconds', () => {
     assert.equal(speechAt(time + 5), null);
   }
   assert.equal(rolls.length, 0);
+});
+
+test('the Baron pauses his milk countdown and joins the remarks while dancing', () => {
+  const baron = {...createBaron(), ...BARON_DANCE_STOP};
+  const service = createMilkService();
+  const camera = {x: cameraLeft(baron.x), y: cameraTop(baron.y)};
+  updateMilkService(service, baron, [], [], camera, 25, 25, false);
+  assert.equal(service.remaining, 45);
+  updateBaronIdleSpeech(baron, camera.x, camera.y, 40);
+  callOutMilo(baron, createMilo(), 40);
+  assert.equal(baron.speech, null);
+  const rolls = [0.99, 0.3];
+  const speechAt = createDancerSpeech(() => rolls.shift());
+  assert.equal(speechAt(40.5, baron).text, 'Shake that belly, shake that belly');
+  baron.x -= 1;
+  assert.equal(speechAt(41, baron), null);
+  updateMilkService(service, baron, [], [], camera, 42, 1, false);
+  assert.equal(service.remaining, 44);
+});
+
+test('Pip can enter the dance floor and only dances after three seconds without movement', () => {
+  const pip = {...createPlayer(), ...DANCE_FLOOR};
+  const baron = createBaron();
+  for (let i = 0; i < 60; i++) updatePlayer(pip, baron, {dx: 0, dy: 0}, 0.05);
+  assert.ok(pip.danceIdle <= 3);
+  updatePlayer(pip, baron, {dx: 0, dy: 0}, 0.05);
+  assert.ok(pip.danceIdle > 3);
+  movePlayer(pip, baron, 3, 0);
+  assert.equal(pip.danceIdle, 0);
+  pip.x += 200;
+  updatePlayer(pip, baron, {dx: 0, dy: 0}, 0.05);
+  assert.equal(pip.danceIdle, 0);
+});
+
+test('NPC routes skirt the dance floor with room for the walker', () => {
+  const start = {x: DANCE_FLOOR.x - 260, y: DANCE_FLOOR.y, radius: 14};
+  const end = {x: DANCE_FLOOR.x + 260, y: DANCE_FLOOR.y};
+  const route = routeAroundBaron(start, end, createBaron());
+  assert.ok(route.length > 1);
+  assert.equal(route.at(-1), end);
+  let previous = start;
+  for (const waypoint of route) {
+    for (let i = 0; i <= 100; i++) {
+      assert.equal(onDanceFloor(previous.x + (waypoint.x - previous.x) * i / 100,
+        previous.y + (waypoint.y - previous.y) * i / 100, start.radius), false);
+    }
+    previous = waypoint;
+  }
 });

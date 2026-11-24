@@ -1,5 +1,5 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {EAST_EDGE, isBlocked, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {crossesDanceArea, EAST_EDGE, onDanceFloor, isNpcBlocked, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const RADIUS = 14;
 const SPEED = 71;
@@ -11,7 +11,7 @@ export function createGuards(player, baron, milo, random = Math.random) {
   const guards = [];
   for (const side of [1, -1]) {
     const occupied = [player, baron, milo, ...guards];
-    const isClear = ({x, y}) => !isBlocked(x, y, RADIUS, baron)
+    const isClear = ({x, y}) => !isNpcBlocked(x, y, RADIUS, baron)
       && occupied.every(actor => Math.hypot(x - actor.x, y - actor.y) >= 80);
     let spawn;
     for (let attempt = 0; attempt < 12; attempt++) {
@@ -76,6 +76,7 @@ export function updateGuards(guards, player, baron, milo, elapsed, dt) {
       arrivedGuard = guard;
       continue;
     }
+    if (pursuit && onDanceFloor(player.x, player.y, RADIUS)) continue;
     if (pursuit && (!pursuit.destination || Math.hypot(
       player.x - pursuit.destination.x, player.y - pursuit.destination.y
     ) >= 24)) {
@@ -86,9 +87,16 @@ export function updateGuards(guards, player, baron, milo, elapsed, dt) {
     const nearPlayer = Math.hypot(guard.x - player.x, guard.y - player.y) <= APPROACH_DISTANCE;
     const needsToYield = [baron, milo].some(actor => Math.hypot(guard.x - actor.x, guard.y - actor.y) < 60);
     if (dt <= 0 || (!pursuit && (elapsed < guard.pauseUntil || (nearPlayer && !needsToYield)))) continue;
-    guard.target ??= patrolTarget();
+    if (!pursuit && !guard.target) {
+      guard.target = patrolTarget();
+      if (isNpcBlocked(guard.target.x, guard.target.y, RADIUS, baron)) {
+        guard.target = null;
+        continue;
+      }
+      guard.route = crossesDanceArea(guard, guard.target) ? routeAroundBaron(guard, guard.target, baron) : [];
+    }
 
-    const target = pursuit ? (pursuit.route[0] ?? player) : guard.target;
+    const target = pursuit ? (pursuit.route[0] ?? player) : (guard.route?.[0] ?? guard.target);
     const dx = target.x - guard.x;
     const dy = target.y - guard.y;
     const distance = Math.hypot(dx, dy);
@@ -97,6 +105,8 @@ export function updateGuards(guards, player, baron, milo, elapsed, dt) {
         pursuit.route.shift();
         continue;
       }
+      guard.route?.shift();
+      if (guard.route?.length) continue;
       guard.target = null;
       guard.pauseUntil = elapsed + 0.5 + Math.random() * 1.5;
       continue;
@@ -110,7 +120,7 @@ export function updateGuards(guards, player, baron, milo, elapsed, dt) {
       const vy = Math.sin(angle) * step;
       const x = guard.x + vx;
       const y = guard.y + vy;
-      if (isBlocked(x, y, RADIUS, baron, guard) || guardBlocks(x, y, guard, guards)
+      if (isNpcBlocked(x, y, RADIUS, baron, guard) || guardBlocks(x, y, guard, guards)
           || approaches(x, y, guard, player, player.radius + RADIUS)
           || approaches(x, y, guard, milo, RADIUS + 12)) continue;
       guard.x = x;

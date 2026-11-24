@@ -8,6 +8,7 @@ export const WEST_EDGE = -ROOM_WIDTH;
 export const EAST_EDGE = ROOM_WIDTH * 2;
 export const HALL_CENTER = {x: ROOM_WIDTH / 2, y: (NORTH_EDGE + SOUTH_EDGE) / 2};
 export const DANCE_FLOOR = {x: HALL_CENTER.x, y: SOUTH_EDGE - ROOM_HEIGHT / 2 + 25};
+const danceBounds = {...DANCE_FLOOR, halfWidth: 177, halfHeight: 175};
 export const BARON_DANCE_STOP = {x: DANCE_FLOOR.x - 270, y: DANCE_FLOOR.y - 227};
 const columns = (EAST_EDGE - WEST_EDGE) / ROOM_WIDTH;
 const rows = MAP_HEIGHT / ROOM_HEIGHT;
@@ -55,6 +56,14 @@ function overlaps(x, y, radius, obstacle) {
     && Math.abs(y - obstacle.y) < obstacle.halfHeight + radius;
 }
 
+export function onDanceFloor(x, y, radius = 0) {
+  return overlaps(x, y, radius, danceBounds);
+}
+
+export function isNpcBlocked(x, y, radius, baron, from) {
+  return onDanceFloor(x, y, radius) || isBlocked(x, y, radius, baron, from);
+}
+
 export function isBlocked(x, y, radius, baron, from) {
   if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < NORTH_EDGE + 160 || y > SOUTH_TRIM_Y - 16) return true;
   // The closed center door stands proud of the back wall.
@@ -72,7 +81,9 @@ export function nearestInteraction(player, baron, milo, guards = [], guests = []
   const baronTarget = {
     id: 'baron', x: baron.x, y: baron.y, radius: 39, title: 'The Milk Baron'
   };
-  const targets = [...guests, baronTarget, ...guards.map(guard => ({
+  const baronTargets = baron.x === BARON_DANCE_STOP.x && baron.y === BARON_DANCE_STOP.y && !baron.route?.length
+    ? [] : [baronTarget];
+  const targets = [...guests, ...baronTargets, ...guards.map(guard => ({
     id: 'guard', x: guard.x, y: guard.y, radius: guard.radius, title: 'Bull Guard', posted: guard.posted
   }))];
   if (milo) {
@@ -87,13 +98,22 @@ export function nearestInteraction(player, baron, milo, guards = [], guests = []
     .sort((a, b) => a.distance - b.distance)[0];
 }
 
+export function crossesDanceArea(from, to) {
+  return Math.max(from.y, to.y) >= DANCE_FLOOR.y - 340
+    && Math.min(from.x, to.x) < DANCE_FLOOR.x + 250
+    && Math.max(from.x, to.x) > DANCE_FLOOR.x - 250;
+}
+
 export function routeAroundBaron(member, target, baron) {
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
-  const width = 29 + member.radius + 10;
-  const height = 35 + member.radius + 10;
-  const corners = [-1, 1].flatMap(dx => [-1, 1].map(dy => ({
-    x: baron.x + dx * width, y: baron.y + 6 + dy * height
-  }))).filter(point => !isBlocked(point.x, point.y, member.radius, baron));
+  const obstacleCorners = ({x, y, halfWidth, halfHeight}) => [-1, 1].flatMap(dx => [-1, 1].map(dy => ({
+    x: x + dx * (halfWidth + member.radius + 10), y: y + dy * (halfHeight + member.radius + 10)
+  })));
+  const nearDanceFloor = Math.max(member.y, target.y) >= danceBounds.y - 340;
+  const obstacles = [{x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35}];
+  if (nearDanceFloor) obstacles.push(danceBounds, ...danceFixtures);
+  const corners = obstacles.flatMap(obstacleCorners)
+    .filter(point => !isNpcBlocked(point.x, point.y, member.radius, baron));
   const nodes = [member, target, ...corners];
   const costs = nodes.map((_, index) => index === 0 ? 0 : Infinity);
   const parents = [];
@@ -103,11 +123,12 @@ export function routeAroundBaron(member, target, baron) {
     for (let step = 1; step <= samples; step++) {
       const x = start.x + (end.x - start.x) * step / samples;
       const y = start.y + (end.y - start.y) * step / samples;
-      if (isBlocked(x, y, member.radius, baron, start)) return false;
+      if (isNpcBlocked(x, y, member.radius, baron, start)) return false;
     }
     return true;
   };
-  // Only the Baron's four collision corners can obstruct the direct delivery.
+  if (clear(member, target, distance(member, target))) return [target];
+  // Route around the corners of obstacles when the direct path is blocked.
   while (!visited.has(1)) {
     let next = -1;
     for (let index = 0; index < nodes.length; index++) {

@@ -1,18 +1,22 @@
 import {guardBlocks} from './guards.mjs';
 import {facingIndex, TURN} from './directions.mjs';
-import {HALL_CENTER, isBlocked} from './room.mjs';
+import {HALL_CENTER, isBlocked, onDanceFloor} from './room.mjs';
 
 export function createPlayer() {
-  return {x: HALL_CENTER.x + 5, y: HALL_CENTER.y + 228, speed: 124, radius: 13, facing: 0, stride: 0, walking: false};
+  return {x: HALL_CENTER.x + 5, y: HALL_CENTER.y + 228, speed: 124, radius: 13, facing: 0, stride: 0, walking: false, danceIdle: 0};
 }
 
 export function updatePlayer(player, baron, {dx, dy}, dt, guards = []) {
   const step = player.speed * dt * (dx && dy ? Math.SQRT1_2 : 1);
   movePlayer(player, baron, dx * step, dy * step, guards);
+  player.danceIdle = dx || dy || !onDanceFloor(player.x, player.y) ? 0 : player.danceIdle + dt;
 }
 
 export function movePlayer(player, baron, dx, dy, guards = []) {
-  if (dx || dy) player.facing = facingIndex(dx, dy);
+  if (dx || dy) {
+    player.facing = facingIndex(dx, dy);
+    player.danceIdle = 0;
+  }
   const startX = player.x;
   const startY = player.y;
   if (!isBlocked(player.x + dx, player.y, player.radius, baron, player)
