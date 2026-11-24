@@ -1,3 +1,4 @@
+import {drawProfessor} from './professor.mjs';
 import {drawMilkFountain, fountainHeight, fountainWidth} from './milk-fountain.mjs';
 import {createMilkPool, drawMilkPool, milkPoolSpeech} from './milk-pool.mjs';
 import {ropeWarningSpeech} from './rope-warning.mjs';
@@ -14,7 +15,7 @@ import {staffFrame, staffIds} from './staff.mjs';
 import {speechBubbleLayout} from './speech-layout.mjs';
 import {TURN} from './directions.mjs';
 import {isBaronDancing, isOnscreen, speechOpacity} from './baron.mjs';
-import {DANCE_FLOOR, guestEnclosure, MILK_FOUNTAIN, MILK_POOL, NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
+import {DANCE_FLOOR, guestEnclosure, MILK_FOUNTAIN, MILK_POOL, NORTH_EDGE, professorFeet, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
 import {composeHall, loadHallArt} from './hall-art.mjs';
 
 function loadSprite(name, extension = "png") {
@@ -253,6 +254,8 @@ export function createRenderer(canvas) {
   ctx.setTransform(canvas.width / ROOM_WIDTH, 0, 0, canvas.height / ROOM_HEIGHT, 0, 0);
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
+  const professorArt = loadSprite('hall/professor', 'webp');
+  const professorSipping = loadSprite('hall/professor-sipping', 'webp');
   const fountainArt = loadSprite('hall/milk-fountain', 'webp');
   const poolArt = loadSprite('pool/milk-pool', 'webp');
   const lifeguardArt = loadSprite('pool/lifeguard', 'webp');
@@ -286,7 +289,7 @@ export function createRenderer(canvas) {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
-      ctx.drawImage(world, cameraX - WEST_EDGE, cameraY - NORTH_EDGE, ROOM_WIDTH, ROOM_HEIGHT,
+      ctx.drawImage(world, cameraX - WEST_EDGE, cameraY - NORTH_EDGE, professorFeet, ROOM_WIDTH, ROOM_HEIGHT,
         0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     } else {
       ctx.fillStyle = '#ae744c';
@@ -322,6 +325,10 @@ export function createRenderer(canvas) {
     if (isReady(fountainArt) && fountainFront >= cameraY && fountainFront - fountainHeight <= cameraY + ROOM_HEIGHT
         && MILK_FOUNTAIN.x + fountainWidth / 2 >= cameraX && MILK_FOUNTAIN.x - fountainWidth / 2 <= cameraX + ROOM_WIDTH) {
       actors.push({depth: fountainFront, draw: () => drawMilkFountain(ctx, fountainArt, elapsed, fountainFront)});
+    }
+    if (isReady(professorArt) && professorFeet.y >= cameraY && professorFeet.y - 92 <= cameraY + ROOM_HEIGHT
+        && professorFeet.x + 75 >= cameraX && professorFeet.x - 30 <= cameraX + ROOM_WIDTH) {
+      actors.push({depth: professorFeet.y, draw: () => drawProfessor(ctx, professorArt, professorSipping, elapsed)});
     }
     for (const guard of guards) {
       actors.push({depth: guard.y + 22, draw: () => {

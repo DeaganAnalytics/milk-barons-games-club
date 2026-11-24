@@ -1,3 +1,4 @@
+import {professorPose} from '../src/professor.mjs';
 import {createMilkPool, lifeguard, milkPoolSpeech, updateMilkPool} from '../src/milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
@@ -17,7 +18,7 @@ import {test} from 'node:test';
 import {callOutMilo, createBaron, isBaronDancing, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, guestGateOutside, insideGuestEnclosure, HALL_CENTER, MILK_FOUNTAIN, MILK_POOL, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
+import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, guestGateOutside, insideGuestEnclosure, HALL_CENTER, MILK_FOUNTAIN, MILK_POOL, professorFeet, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -1032,4 +1033,16 @@ test('the fountain occupies the former pool site and NPCs can route around it', 
     }
     from = to;
   }
+});
+
+test('the professor rocks while he raises, holds, and lowers the straw', () => {
+  assert.equal(professorPose(0).lift, 0);
+  assert.ok(professorPose(1.5).lift > 0 && professorPose(1.5).lift < 1);
+  assert.equal(professorPose(2).lift, 1);
+  assert.equal(professorPose(5).lift, 1);
+  assert.ok(professorPose(5.5).lift > 0 && professorPose(5.5).lift < 1);
+  assert.equal(professorPose(6.1).lift, 0);
+  assert.equal(professorPose(8.32).lift, 0);
+  assert.notEqual(professorPose(2).rock, professorPose(3).rock);
+  assert.equal(isBlocked(professorFeet.x, professorFeet.y, 13, createBaron()), true);
 });
