@@ -149,9 +149,9 @@ export function eliasTaxConversation({earnings, due}) {
   };
 }
 
-export function routeEliasToPip(actor, player, baron) {
+export function routeEliasToPip(actor, player, baron, spacing = 38) {
   const radius = 11;
-  const spots = [[-38, 0], [38, 0], [0, -38], [0, 38]]
+  const spots = [[-spacing, 0], [spacing, 0], [0, -spacing], [0, spacing]]
     .map(([dx, dy]) => ({x: player.x + dx, y: player.y + dy}))
     .filter(({x, y}) => !isNpcBlocked(x, y, radius, baron))
     .sort((a, b) => Math.hypot(a.x - actor.x, a.y - actor.y) - Math.hypot(b.x - actor.x, b.y - actor.y));

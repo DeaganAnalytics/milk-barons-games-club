@@ -143,9 +143,7 @@ export function nearestInteraction(player, baron, milo, guards = [], guests = []
   const baronTarget = {
     id: 'baron', x: baron.x, y: baron.y, radius: 39, title: 'The Milk Baron'
   };
-  const baronTargets = baron.x === BARON_DANCE_STOP.x && baron.y === BARON_DANCE_STOP.y && !baron.route?.length
-    ? [] : [baronTarget];
-  const targets = [...guests, ...baronTargets, ...guards.map(guard => ({
+  const targets = [...guests, baronTarget, ...guards.map(guard => ({
     id: 'guard', x: guard.x, y: guard.y, radius: guard.radius, title: 'Bull Guard', posted: guard.posted, guestGate: guard.guestGate, guard
   }))];
   if (milo) {

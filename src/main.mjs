@@ -1,3 +1,5 @@
+import {clubSightLines} from './club-sight-lines.mjs';
+import {facingIndex} from './directions.mjs';
 import {advanceEliasRun, elias, routeEliasToPip, updateEliasFollow} from './elias.mjs';
 import {createCoinBalance, STARTING_COINS} from './coins.mjs';
 import {createHealth, MAX_HEARTS} from './health.mjs';
@@ -11,7 +13,7 @@ import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} 
 import {advanceGuestEscort, beginGuestEscort, guestRopesInView} from './guest-escort.mjs';
 import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
-import {callOutMilo, createBaron, isBaronDancing, isOnscreen, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
+import {advanceBaronApproach, callOutMilo, createBaron, isBaronDancing, isOnscreen, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
 import {createGuards, dispatchGuardToMilo, dispatchRovingGuardsToPool, summonGuard, updateGuards} from './guards.mjs';
 import {createMilo, fleeMilo, updateMilo} from './milo.mjs';
@@ -20,7 +22,7 @@ import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {createPlayer, movePlayer, takeDanceExit, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
-import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, MILK_POOL, nearGuestGate, nearestInteraction, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, MILK_POOL, nearGuestGate, nearestInteraction, onDanceFloor, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 import {createStaff, updateStaff} from './staff.mjs';
 
 const player = createPlayer();
@@ -87,11 +89,18 @@ export const health = createHealth((hearts, deathMessage) => {
 });
 
 const clothingTheftKarma = {all: -2, man: -0.5, women: -1.5};
+const pendingBaronKarma = [];
+const triggeredBaronKarma = new Set();
 const karmaMeter = document.getElementById('karma-meter');
 export const karma = createKarma((score, position) => {
   karmaMeter.style.setProperty('--karma-position', `${position * 100}%`);
   karmaMeter.setAttribute('aria-valuenow', score);
   karmaMeter.setAttribute('aria-valuetext', score === 0 ? 'Neutral' : String(score));
+  const event = score <= -0.5 ? 'reward' : score >= 5 ? 'fine' : null;
+  if (event && !triggeredBaronKarma.has(event)) {
+    triggeredBaronKarma.add(event);
+    pendingBaronKarma.push(event);
+  }
 });
 
 export const coinBalance = createCoinBalance((count, outcome) => {
@@ -102,14 +111,7 @@ export const coinBalance = createCoinBalance((count, outcome) => {
   if (outcome === 'win') endGame('You Win!', 'You reached 200 coins.');
 });
 
-const firstSightLines = new Map([
-  ['baronDance', 'Is the Baron... dancing? Good heavens. So much jiggling.'],
-  ['milo', "A man dressed in rags scurries along the wall. Doesn't he look familiar?"],
-  ['ladies', "Two exceptionally wealthy, beautiful and sophisticated ladies gossip in the corner. They're well out of your league. Perhaps you should introduce yourself?"],
-  ['pool', "An entire swimming pool filled with pure milk. Such extravagance! Wait... where are those young ladies' clothes?!"],
-  ['pillory', 'A plainly dressed woman is trapped in a pillory, and a ridiculous-looking man in a top hat is enthusiastically waving at you. Perhaps you should investigate?'],
-  ['danceFloor', 'Two young women, a drunken guard and a man dressed as a giant milk bottle are dancing away. Perhaps you should join in?']
-]);
+const firstSightLines = new Map(clubSightLines);
 const sightNotices = [];
 let nextSightNoticeAt = 0;
 
@@ -153,6 +155,7 @@ const clothingEvents = {
 };
 
 const dialogue = createDialogue(baron, {
+  baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
   hasPlayedMilkBalloon: () => playedMilkBalloon,
   canReportPillory: guard => seenPillory && !reportedPillory && guard && !guard.pursuit
     && !guard.poolWatch && !pilloryInView(cameraLeft(player.x), cameraTop(player.y)),
@@ -183,6 +186,9 @@ const dialogue = createDialogue(baron, {
       if (action === 'rewardMissingDresses') clubEvent('The lifeguard pays you for the good news.', () => coinBalance.change(15));
       if (action === 'fineMissingSuit') clubEvent('The lifeguard takes a dim view of the missing suit.', () => coinBalance.change(-10));
     }
+    if (action === 'baronSlap') health.change(-0.5);
+    if (action === 'baronKarmaReward') clubEvent('The Baron awards a performance incentive.', () => coinBalance.change(15));
+    if (action === 'baronKarmaFine') clubEvent('The Baron charges a behavioural compliance levy.', () => coinBalance.change(-15));
     if (action === 'collectTax') clubEvent('Elias takes the Baron’s cut.', () => coinBalance.collectTax());
     if (action === 'finishEliasWelcome') {
       document.getElementById('coin-counter').hidden = false;
@@ -308,17 +314,35 @@ function frame(timestamp) {
     requestAnimationFrame(frame);
     return;
   }
-  if (!eliasScene && coinBalance.pendingTax && !guestEscort && !ropeWarning.scene && !milkBalloon) {
-    startEliasScene({tax: coinBalance.pendingTax});
+  if (!eliasScene && !guestEscort && !ropeWarning.scene && !milkBalloon) {
+    if (pendingBaronKarma.length && !milkService.scene && !onDanceFloor(player.x, player.y)) {
+      clearInput();
+      player.walking = false;
+      baron.walking = false;
+      baron.route = [];
+      baron.speech = null;
+      const route = routeEliasToPip({...baron, radius: 24}, player, {x: Infinity, y: Infinity}, 70);
+      eliasScene = {route: null, baronRoute: route, conversation: {baronKarma: pendingBaronKarma.shift()}};
+    } else if (coinBalance.pendingTax) startEliasScene({tax: coinBalance.pendingTax});
   }
   if (eliasScene) {
-    const {route, conversation} = eliasScene;
-    if (route.length && advanceEliasRun(elias, route[0], dt, 0)) route.shift();
+    const {route, baronRoute, conversation} = eliasScene;
+    if (baronRoute?.length) {
+      if (advanceBaronApproach(baron, baronRoute[0], dt)) baronRoute.shift();
+      if (!baronRoute.length) {
+        baron.walking = false;
+        baron.facing = facingIndex(player.x - baron.x, player.y - baron.y);
+        eliasScene.route = routeEliasToPip(elias, player, baron);
+      }
+    } else if (route?.length && advanceEliasRun(elias, route[0], dt, 0, conversation.baronKarma ? 165 : 230)) {
+      route.shift();
+    }
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
       staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
-    if (!route.length) {
+    if (route?.length === 0) {
       eliasScene = null;
-      dialogue.open({...elias, ...conversation});
+      const speaker = conversation.baronKarma ? {id: 'baron', title: 'The Milk Baron'} : elias;
+      dialogue.open({...speaker, ...conversation});
     }
     requestAnimationFrame(frame);
     return;

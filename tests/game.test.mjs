@@ -1501,3 +1501,33 @@ test('guest ropes only enter sight while active and intersecting the camera', ()
   assert.equal(guestRopesInView(enclosure, enclosure.east + 20, cameraY), false);
   assert.equal(guestRopesInView(enclosure, cameraX, enclosure.south + 20), false);
 });
+
+test('Baron greetings keep the six defaults and add only eligible groups', async () => {
+  const {baronGreetings} = await import('../src/baron-dialogue.mjs');
+  const defaults = baronGreetings(0, 100);
+  assert.equal(defaults.length, 6);
+  assert.equal(baronGreetings(-5, 100).length, 6);
+  assert.equal(baronGreetings(5, 100).length, 6);
+  assert.deepEqual(baronGreetings(-6, 150).slice(0, 6), defaults);
+  assert.equal(baronGreetings(-6, 150).length, 15);
+  assert.equal(baronGreetings(-6, 151).length, 18);
+  assert.equal(baronGreetings(6, 100).length, 11);
+});
+
+test('the dancing Baron offers one DJ request and the karma encounters switch to Elias', async () => {
+  const {baronDanceDialogue, baronKarmaDialogue} = await import('../src/baron-dialogue.mjs');
+  const baron = {...createBaron(), ...BARON_DANCE_STOP};
+  assert.equal(nearestInteraction({x: baron.x + 42, y: baron.y}, baron, null).id, 'baron');
+  assert.equal(baronDanceDialogue(true).replies.length, 0);
+  const fan = baronDanceDialogue(false).replies[0].next;
+  assert.equal(fan.replies[0].next, null);
+  const slap = fan.replies[1].next;
+  assert.equal(slap.enterAction, 'baronSlap');
+  assert.equal(slap.playerMood, 'alarmed');
+  assert.equal(slap.replies[0].next.direction, 'Heavy breathing');
+  for (const [event, action] of [['reward', 'baronKarmaReward'], ['fine', 'baronKarmaFine']]) {
+    const eliasReply = baronKarmaDialogue[event].replies[0].next.replies[0].next;
+    assert.equal(eliasReply.character, 'elias');
+    assert.equal(eliasReply.replies[0].next.action, action);
+  }
+});
