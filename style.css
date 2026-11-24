@@ -251,6 +251,12 @@ canvas {
 
 .viewport:has(#game-over) {
   position: relative;
+  aspect-ratio: auto;
+}
+
+/* The HUD sits above the canvas so the camera's top edge stays visible. */
+#game {
+  height: auto;
 }
 
 .game-over:not([hidden]) {
@@ -274,13 +280,11 @@ canvas {
 }
 
 .game-hud {
-  position: absolute;
-  inset: 0 0 auto;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   align-items: center;
   gap: clamp(4px, 1.4vw, 10px);
-  padding: clamp(4px, 1vw, 8px) 2%;
+  padding: clamp(3px, 0.7vw, 5px) 2%;
   background: linear-gradient(#2a3e30, #17251d);
   border-bottom: 2px solid #a17d42;
   box-shadow: 0 2px 6px #15100c80;
@@ -289,7 +293,7 @@ canvas {
 
 .health-meter {
   grid-column: 1;
-  width: min(100%, 210px);
+  width: min(72%, 148px);
 }
 
 .health-meter img,
@@ -303,7 +307,7 @@ canvas {
   position: relative;
   grid-column: 2;
   justify-self: center;
-  width: min(100%, 224px);
+  width: min(92%, 200px);
 }
 
 .karma-marker {
@@ -323,13 +327,13 @@ canvas {
   position: relative;
   grid-column: 3;
   justify-self: end;
-  width: min(100%, 174px);
+  width: min(92%, 164px);
   aspect-ratio: 3.02;
   background: url('./assets/hall/coin-counter.webp') center / 100% 100% no-repeat;
   color: #352117;
   display: grid;
   align-items: center;
-  font: bold clamp(12px, 3.5vw, 24px)/1 Georgia, serif;
+  font: bold clamp(11px, 3.2vw, 22px)/1 Georgia, serif;
   font-variant-numeric: tabular-nums;
 }
 

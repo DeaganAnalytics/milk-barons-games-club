@@ -243,16 +243,21 @@ try {
   await frames(100);
   await key('keyUp', 'ArrowUp');
   const mapSize = await evaluate(`(() => {
-    const map = document.getElementById('game').parentElement.getBoundingClientRect();
-    return [map.width, map.height];
+    const canvas = document.getElementById('game');
+    const hud = canvas.previousElementSibling.getBoundingClientRect();
+    const map = canvas.parentElement.getBoundingClientRect();
+    return {width: map.width, playHeight: map.height - hud.height, canvasTop: canvas.getBoundingClientRect().top, hudBottom: hud.bottom};
   })()`);
+  assert.ok(Math.abs(mapSize.canvasTop - mapSize.hudBottom) < 1);
   const drawnFrames = await evaluate('window.mapFrames');
   await activate('The Milk Baron');
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Welcome, welcome to my establishment!');
-  assert.deepEqual(await evaluate(`(() => {
+  const portraitSize = await evaluate(`(() => {
     const portraits = document.querySelector('.conversation-portraits').getBoundingClientRect();
-    return [portraits.width, portraits.height];
-  })()`), mapSize);
+    return {width: portraits.width, height: portraits.height};
+  })()`);
+  assert.equal(portraitSize.width, mapSize.width);
+  assert.ok(Math.abs(portraitSize.height - mapSize.playHeight) < 1);
   assert.equal(await evaluate(`(() => {
     const reply = document.activeElement;
     const event = new KeyboardEvent('keydown', {code: 'ArrowDown', bubbles: true, cancelable: true});
@@ -282,6 +287,8 @@ try {
   await frames(180);
   assert.equal(await evaluate('window.spokenLines.some(line => line.opacity > 0 && line.opacity < 1)'), true);
   await load(390, 844, true, 'mobile');
+  assert.ok(await evaluate(`Math.abs(document.querySelector('.game-hud').getBoundingClientRect().bottom
+    - document.getElementById('game').getBoundingClientRect().top) < 1`));
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth && document.querySelector(".controls").getBoundingClientRect().bottom <= innerHeight'), true);
   const point = await evaluate(`(() => {
     const rect = document.querySelector('[data-dir=up]').getBoundingClientRect();
