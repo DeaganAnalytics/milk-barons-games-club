@@ -55,11 +55,13 @@ function approaches(x, y, guard, actor, distance) {
 }
 
 export function summonGuard(guards, player) {
-  if (guards.some(guard => guard.pursuit && !guard.pursuit.milo)) return;
+  const alreadyComing = guards.find(guard => guard.pursuit && !guard.pursuit.milo);
+  if (alreadyComing) return alreadyComing;
   const guard = guards.filter(guard => !guard.posted && !guard.pursuit).reduce((closest, candidate) =>
     !closest || Math.hypot(candidate.x - player.x, candidate.y - player.y)
       < Math.hypot(closest.x - player.x, closest.y - player.y) ? candidate : closest, null);
   if (guard) guard.pursuit = {destination: null, route: []};
+  return guard;
 }
 
 export function dispatchGuardToMilo(guard) {
@@ -69,7 +71,7 @@ export function dispatchGuardToMilo(guard) {
 export function updateGuards(guards, player, baron, milo, elapsed, dt) {
   let arrivedGuard = null;
   for (const guard of guards) {
-    if (guard.posted) continue;
+    if (guard.posted || guard.escorting) continue;
     guard.walking = false;
     const pursuit = guard.pursuit;
     const pursued = pursuit?.milo ? milo : player;

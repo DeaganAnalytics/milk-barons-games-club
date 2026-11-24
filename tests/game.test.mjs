@@ -1,3 +1,5 @@
+import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
+import {partyGuests} from '../src/party-guests.mjs';
 import {availableReports} from '../src/report-dialogue.mjs';
 import {createDancerSpeech} from '../src/dancers.mjs';
 import {danceLyric} from '../src/dance-floor.mjs';
@@ -13,7 +15,7 @@ import {test} from 'node:test';
 import {callOutMilo, createBaron, isBaronDancing, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, HALL_CENTER, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
+import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, guestGateOutside, insideGuestEnclosure, HALL_CENTER, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -739,4 +741,55 @@ test('the DJ can call out the Baron only when he is visible', () => {
   assert.equal(withoutBaron.x, DANCE_FLOOR.x);
   assert.ok(withoutBaron.headY < DANCE_FLOOR.y);
   assert.equal(speechAt(30.5, baron, true).text, 'Shake those milk makers ladies. And you too Baron!');
+});
+
+test('the corner guest escort walks Pip beyond both guests before releasing him', () => {
+  const baron = createBaron();
+  const [guest, otherGuest] = partyGuests;
+  const pip = {...createPlayer(), x: guest.x + 6, y: guest.y - 19};
+  const guard = {x: pip.x - 20, y: pip.y - 30, facing: 0, radius: 14, stride: 0};
+  const escort = {guest, guard, phase: 'warning'};
+  beginGuestEscort(escort, pip, baron);
+  assert.equal(guard.escorting, true);
+  let ended = false;
+  for (let time = 0; time < 8 && !ended; time += 0.05) {
+    ended = advanceGuestEscort(escort, pip, baron, [guard], time, 0.05);
+  }
+  assert.equal(ended, true);
+  assert.ok(cameraLeft(pip.x) > otherGuest.x + 25);
+  assert.ok(Math.hypot(guard.x - pip.x, guard.y - pip.y) < 38);
+  assert.equal(guard.escorting, false);
+});
+
+test('the enclosure blocks Pip and milk staff enter and exit through the east gate', () => {
+  const baron = createBaron();
+  const pip = {...createPlayer(), ...guestGateOutside};
+  const camera = {x: WEST_EDGE, y: SOUTH_EDGE - ROOM_HEIGHT};
+  const server = {x: guestGateOutside.x + 60, y: guestGateOutside.y + 25, radius: 14, walkTime: 0};
+  const guard = {x: guestEnclosure.east + 22, y: guestEnclosure.gateY - 34, radius: 14};
+  const chatter = createPartyChatter();
+  chatter.completed = 4;
+  guestEnclosure.active = true;
+  try {
+    for (let i = 0; i < 20; i++) movePlayer(pip, baron, -5, 0, [guard]);
+    assert.ok(pip.x >= guestEnclosure.east + pip.radius);
+    let cameInside = false;
+    let movedOut = false;
+    for (let i = 0; i < 460 && chatter.completed; i++) {
+      const wasInside = insideGuestEnclosure(server);
+      updatePartyChatter(chatter, camera, [server], baron, [guard], i * 0.05, 0.05);
+      const inside = insideGuestEnclosure(server);
+      if (wasInside !== inside) {
+        assert.ok(Math.abs(server.x - guestEnclosure.east) < 12);
+        assert.ok(Math.abs(server.y - guestEnclosure.gateY) < 12);
+        cameInside ||= inside;
+        movedOut ||= !inside;
+      }
+    }
+    assert.ok(cameInside && movedOut);
+    assert.equal(server.guestAccess, false);
+    assert.equal(chatter.completed, 0);
+  } finally {
+    guestEnclosure.active = false;
+  }
 });

@@ -1,6 +1,6 @@
 import {runServiceStaff} from './milk-service.mjs';
 import {partyGuests} from './party-guests.mjs';
-import {ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
+import {guestEnclosure, guestGateOutside, insideGuestEnclosure, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
 
 const exchanges = [
   [[0, 'Oh, I just ADORE milk!'], [1, "Darling, it's simply divine!"]],
@@ -59,6 +59,18 @@ function nextExchange(chatter, random) {
   chatter.line = 0;
 }
 
+function routeToGuests(server, baron) {
+  if (!guestEnclosure.active) return routeAroundBaron(server, serviceSpot, baron);
+  server.guestAccess = true;
+  if (insideGuestEnclosure(server)) return [serviceSpot];
+  const {east, gateY} = guestEnclosure;
+  return [...routeAroundBaron(server, guestGateOutside, baron), {x: east - 24, y: gateY}, serviceSpot];
+}
+
+function routeOutOfGuests() {
+  return [{x: guestEnclosure.east - 24, y: guestEnclosure.gateY}, guestGateOutside];
+}
+
 function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
   if (!chatter.refill) {
     const distance = member => Math.hypot(member.x - serviceSpot.x, member.y - serviceSpot.y);
@@ -67,10 +79,16 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
     if (!server) return;
     server.serviceDuty = true;
     server.target = null;
-    chatter.refill = {server, route: routeAroundBaron(server, serviceSpot, baron), blocked: 0, pour: 0, guest: 0};
+    chatter.refill = {server, route: routeToGuests(server, baron), enclosed: guestEnclosure.active, blocked: 0, pour: 0, guest: 0};
   }
   const refill = chatter.refill;
-  const {server, route} = refill;
+  const {server} = refill;
+  if (guestEnclosure.active && !refill.enclosed) {
+    refill.enclosed = true;
+    server.guestAccess = true;
+    if (refill.route.length) refill.route = routeToGuests(server, baron);
+  }
+  const {route} = refill;
   if (route.length) {
     const waypoint = route[0];
     const before = Math.hypot(server.x - waypoint.x, server.y - waypoint.y);
@@ -81,11 +99,18 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
       if (!route.length) {
         server.walking = false;
         server.facing = -1;
+        if (refill.exiting) {
+          server.guestAccess = false;
+          server.serviceDuty = false;
+          server.pauseUntil = elapsed + 0.5;
+          chatter.refill = null;
+          chatter.completed = 0;
+        }
       }
     } else if (before - Math.hypot(server.x - waypoint.x, server.y - waypoint.y) < dt * 30) {
       refill.blocked += dt;
       if (refill.blocked > 2) {
-        refill.route = routeAroundBaron(server, serviceSpot, baron);
+        refill.route = refill.exiting ? routeOutOfGuests() : routeToGuests(server, baron);
         refill.blocked = 0;
       }
     }
@@ -99,6 +124,9 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
     refill.guest = 1;
     refill.pour = 0;
     server.facing = 1;
+  } else if (guestEnclosure.active) {
+    refill.exiting = true;
+    refill.route = routeOutOfGuests();
   } else {
     server.serviceDuty = false;
     server.pauseUntil = elapsed + 0.5;

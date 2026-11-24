@@ -4,11 +4,29 @@ import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
 import {drawPipPortrait} from './pip-art.mjs';
 
+const partyGuestCallsGuard = {
+  text: 'Then get away from me! Guards!', mood: 'annoyed', action: 'callGuard'
+};
+
 const partyGuestOpening = {
   text: "Where's your milk waiter?", mood: 'attentive', replies: [
-    {label: "I'm not a waiter.", playerMood: 'thinking', next: {
-      text: 'Then get away from me! Guards!', mood: 'annoyed', action: 'callGuard'
+    {label: "I'm not a waiter.", playerMood: 'thinking', next: partyGuestCallsGuard},
+    {label: "I'll go get it.", playerMood: 'attentive', next: {
+      text: "And hurry up with it. And where's your suit?", mood: 'annoyed', replies: [
+        {label: "I'm sorry.", playerMood: 'sorry', next: {
+          text: 'Unacceptable. I must raise a complaint with the Baron!', mood: 'annoyed'
+        }},
+        {label: "Actually I'm not a waiter.", playerMood: 'worried', next: partyGuestCallsGuard}
+      ]
     }}
+  ]
+};
+
+const guestGateWarning = {
+  text: "Sir, stop bothering the ladies. Please leave or I'll have to shoot you.", mood: 'formal', replies: [
+    {label: "You'll shoot me?", playerMood: 'alarmed', next: {text: "Yes. Baron's orders.", mood: 'deadpan'}},
+    {label: "You can't shoot me, that's illegal!", playerMood: 'worried',
+      next: {text: 'The Baron owns the courts. Try me.', mood: 'suspicious'}}
   ]
 };
 
@@ -228,7 +246,11 @@ export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} 
     activeTarget = target;
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
-      : target.summoned ? {text: 'Sir I have to ask you to leave.', mood: 'speaking'}
+      : target.guestGate ? guestGateWarning
+      : target.summoned ? {
+          text: target.repeat ? 'Sir, please stop bothering the ladies.' : 'Sir I have to ask you to leave.',
+          mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
+        }
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
       : target.id === 'guard' ? {
           text: target.posted ? postedGuardOpening : guardOpening,
@@ -243,7 +265,7 @@ export function createDialogue(baron, {onAction, canReportMilo, takeMiloInjury} 
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;
-    show(opening, target.id, injured || target.summoned ? 'worried' : 'attentive', target.withoutMilk);
+    show(opening, target.id, injured || target.summoned || target.guestGate ? 'worried' : 'attentive', target.withoutMilk);
   }
 
   return {open, isOpen: () => !panel.hidden};
