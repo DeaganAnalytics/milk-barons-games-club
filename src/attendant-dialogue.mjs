@@ -56,8 +56,11 @@ menu.replies.push(
 
 export function createAttendantConversation() {
   let met = false;
-  return () => {
-    const node = met ? menu : opening;
+  const replayMenu = {...menu, replies: [...menu.replies.slice(0, -1),
+    exchange([['Can I play?', 'Please, yes, please do. All the more fun for me and you!', exuberant]], [], 'startMilkBalloon')
+  ]};
+  return (played = false) => {
+    const node = met ? (played ? replayMenu : menu) : opening;
     met = true;
     return node;
   };

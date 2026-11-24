@@ -1,5 +1,16 @@
 export const commissionerMoods = ['sad', 'despondent', 'frowning', 'stressed', 'deadpan'];
 const [sad, despondent, frowning, stressed, deadpan] = commissionerMoods;
+const guardWarning = {
+  text: "No, no, no! What a ridiculous claim! Spreading such rumours is a dangerous game!",
+  character: 'pillory-attendant',
+  mood: 'self-assured',
+  replies: [{
+    label: 'But she just said—', playerMood: 'alarmed', next: {
+      text: "I... um... I'd rather not talk about it. I don't want to attract any more attention.",
+      mood: stressed, replies: [], action: 'attendantMilkBalloon'
+    }
+  }]
+};
 const menu = {text: '', mood: sad, replies: []};
 const back = [{label: 'Continue', playerMood: 'attentive', next: menu}];
 
@@ -31,9 +42,8 @@ menu.replies.push(
   ]),
   exchange([
     ['Am I crazy, or are the guards cows?', "You're... not... crazy.", deadpan, 'worried'],
-    ['So they are cows?', 'Yes.', deadpan],
-    ['Why?', "I... um... I'd rather not talk about it. I don't want to attract any more attention.", stressed]
-  ])
+    ['So they are cows?', 'Yes.', deadpan]
+  ], [{label: 'Continue', playerMood: 'attentive', next: guardWarning}])
 );
 
 export function createCommissionerConversation() {
