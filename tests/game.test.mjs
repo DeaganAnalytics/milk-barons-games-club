@@ -2,7 +2,7 @@ import {createMilkPool, lifeguard, milkPoolSpeech, updateMilkPool} from '../src/
 import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
 import {partyGuests} from '../src/party-guests.mjs';
-import {availableReports} from '../src/report-dialogue.mjs';
+import {availableReports, poolReports} from '../src/report-dialogue.mjs';
 import {createDancerSpeech} from '../src/dancers.mjs';
 import {danceLyric} from '../src/dance-floor.mjs';
 import {createPartyChatter, partySpeech, updatePartyChatter} from '../src/party-chatter.mjs';
@@ -10,7 +10,7 @@ import {bartender, createCreameryGuard} from '../src/creamery.mjs';
 import {createMilkService, milkCalls, updateMilkService} from '../src/milk-service.mjs';
 import {createStaff, faceStaffMovement, updateStaff, staffFrame} from '../src/staff.mjs';
 import {speechBubbleLayout} from '../src/speech-layout.mjs';
-import {createGuards, dispatchGuardToMilo, summonGuard, updateGuards} from '../src/guards.mjs';
+import {createGuards, dispatchGuardToMilo, dispatchGuardToPool, summonGuard, updateGuards} from '../src/guards.mjs';
 import {createMilo, fleeMilo, updateMilo} from '../src/milo.mjs';
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
@@ -930,8 +930,6 @@ test('the snorkel touches alternate swimmers and reaches an edge between touches
   const edges = [];
   const heard = new Set();
   const guardRemarks = new Set();
-  let previousLine;
-  let awaitingPolo = false;
   let firstHit;
   for (let frame = 1; frame <= 12000; frame++) {
     const previous = pool.snorkel.returning;
@@ -943,10 +941,7 @@ test('the snorkel touches alternate swimmers and reaches an edge between touches
     if (previous && !pool.snorkel.returning) edges.push(Math.round(pool.snorkel.x));
     const speech = milkPoolSpeech(pool, frame * 0.05);
     assert.ok(!pool.reaction || !pool.lines.length, 'touch reactions must wait for ambient lines');
-    if (!speech || speech.text === previousLine) continue;
-    if (awaitingPolo) assert.equal(speech.text, 'Polo!');
-    awaitingPolo = speech.text === 'Milko';
-    previousLine = speech.text;
+    if (!speech) continue;
     heard.add(speech.text);
     if (speech.x === lifeguard.x && speech.y === lifeguard.y) guardRemarks.add(speech.text);
   }
@@ -956,7 +951,64 @@ test('the snorkel touches alternate swimmers and reaches an edge between touches
   assert.equal([...guardRemarks].at(-1), 'What happens in the milk pool stays in the milk pool.');
   assert.deepEqual(hits.slice(0, 4), [0, 1, 0, 1]);
   assert.deepEqual(edges.slice(0, 4), [-204, 204, -204, 204]);
-  for (const text of ['He he he, caught me again.', 'This milk is sooo good for my skin!',
-    "I'm glad we don't share milk with peasants!", 'Milko', 'Polo!']) assert.ok(heard.has(text));
-  assert.ok([...heard].indexOf('Milko') < [...heard].indexOf('Polo!'));
+  assert.ok(heard.has("You're certainly an enthusiastic swimmer!"));
+  assert.ok(heard.has('Imagine bathing in something that comes out of a tap!'));
+});
+
+test('a random swimmer exchange plays both lines in order before a pending reaction', () => {
+  const pool = createMilkPool();
+  pool.guardNext = false;
+  pool.remaining = 0;
+  updateMilkPool(pool, 0.05, 0.05, () => 8 / 14);
+  assert.equal(milkPoolSpeech(pool, 0.05).text, 'Milko!');
+
+  pool.pendingReaction = {speaker: 0, text: 'Hey! That tickles!'};
+  updateMilkPool(pool, 1.55, 1.5);
+  assert.equal(milkPoolSpeech(pool, 1.55), null);
+  updateMilkPool(pool, 1.8, 0.25);
+  assert.equal(milkPoolSpeech(pool, 1.8), null);
+  updateMilkPool(pool, 2.05, 0.25);
+  assert.equal(milkPoolSpeech(pool, 2.05).text, 'Polo!');
+  updateMilkPool(pool, 3.55, 1.5);
+  updateMilkPool(pool, 3.6, 0.05);
+  assert.equal(milkPoolSpeech(pool, 3.6).text, 'Hey! That tickles!');
+});
+
+test('only the two pool investigations dispatch a guard', () => {
+  const [manInPool, clothing] = poolReports;
+  const findings = [];
+  function visit(node) {
+    if (node.action) findings.push([node.text, node.action]);
+    for (const response of node.replies ?? []) visit(response.next);
+  }
+  for (const report of poolReports) visit(report.next);
+  assert.deepEqual(findings, [
+    ["No, no. I wouldn't want to burden him with additional responsibilities. I'll handle this personally.", 'inspectPool'],
+    ["Hopefully he's submerged.", 'inspectPool']
+  ]);
+  assert.equal(manInPool.next.replies[1].next.replies[0].next.mood, 'radio');
+  assert.equal(clothing.next.replies.length, 2);
+});
+
+test('a guard routes around the pool, watches for 15 seconds, then resumes patrolling', () => {
+  const baron = createBaron();
+  const player = createPlayer();
+  const milo = createMilo();
+  const guard = {...createGuards(player, baron, milo)[0], x: MILK_POOL.x, y: MILK_POOL.y + 110};
+  dispatchGuardToPool(guard);
+  for (let frame = 1; frame <= 500 && !guard.poolWatch; frame++) {
+    assert.equal(updateGuards([guard], player, baron, milo, frame * 0.05, 0.05), null);
+    assert.equal(isBlocked(guard.x, guard.y, guard.radius, baron), false);
+  }
+  assert.ok(guard.poolWatch);
+  const {start, until} = guard.poolWatch;
+  assert.equal(until, start + 15);
+  assert.equal(guard.facing, 0);
+  assert.ok(guard.y < MILK_POOL.y);
+  const {x, y} = guard;
+  updateGuards([guard], player, baron, milo, until - 0.05, 0.05);
+  assert.deepEqual({x: guard.x, y: guard.y}, {x, y});
+  updateGuards([guard], player, baron, milo, until, 0.05);
+  assert.equal(guard.poolWatch, null);
+  assert.equal(guard.pursuit, null);
 });

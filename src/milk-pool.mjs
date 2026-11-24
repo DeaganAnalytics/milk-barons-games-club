@@ -11,12 +11,39 @@ const swimmers = [
 ];
 
 const touchLines = [
-  'Hey! That tickles!', 'He he he, caught me again.', 'Ouch, that was a pinch!', 'Ooh la la.'
+  'Hey! That tickles!',
+  'Hehehe, caught me again!',
+  'Ouch! That was a pinch!',
+  'Ooh la la!',
+  "You're certainly an enthusiastic swimmer!",
+  'Good heavens! You startled me!',
+  'Oh! There you are!',
+  "My goodness, you're persistent!",
+  'Hehehe! Not again!',
+  "You're making quite a splash!",
+  'Careful, darling!',
+  'Oh, you cheeky thing!',
+  "Someone's enjoying himself!",
+  'Good heavens! What are you doing down there?',
+  'Oh! I nearly swallowed a mouthful of milk!',
+  "You're certainly getting your money's worth!"
 ];
+
 const exchanges = [
   [[0, 'This milk is sooo good for my skin!']],
-  [[1, "I'm glad we don't share milk with peasants!"]],
-  [[0, 'Milko'], [1, 'Polo!']]
+  [[1, "I'm so glad we don't have to share our milk with peasants!"]],
+  [[0, "I simply couldn't go back to swimming in water."]],
+  [[1, 'Imagine bathing in something that comes out of a tap!']],
+  [[0, 'My dermatologist recommended a milk bath. I doubt she meant this!']],
+  [[1, 'Being wealthy is simply exhausting. I needed this.']],
+  [[0, 'I do hope nobody finds my clothes.']],
+  [[1, 'The Baron really has outdone himself this evening.']],
+  [[0, 'Milko!'], [1, 'Polo!']],
+  [[0, 'The lifeguard is rather handsome...'], [1, "Yes, but this one's rich!"]],
+  [[0, 'How much milk do you suppose is in here?'], [1, "Oh, darling, it's vulgar to discuss expenditure."]],
+  [[1, "Apparently some peasants can't even afford milk."], [0, 'Good heavens! What do they swim in?']],
+  [[0, "Does your husband know you're here?"], [1, 'Heavens, no! Does yours?']],
+  [[1, 'Is that lifeguard still watching us?'], [0, "Well, at least somebody's earning their salary."]]
 ];
 
 const lifeguardLines = [
@@ -45,7 +72,7 @@ function swimmerPosition(swimmer, elapsed) {
 export function createMilkPool() {
   return {
     snorkel: {x: 0, y: 35, direction: -1, swimmer: 0, returning: false},
-    reaction: null, pendingReaction: null, exchange: 0, lifeguardLine: 0, guardNext: true, lines: [], remaining: 11
+    reaction: null, pendingReaction: null, lifeguardLine: 0, guardNext: true, lines: [], replyDelay: false, remaining: 11
   };
 }
 
@@ -86,14 +113,21 @@ export function updateMilkPool(pool, elapsed, dt, random = Math.random) {
   }
   pool.remaining -= dt;
   if (pool.remaining > 0) return;
-  if (pool.lines.length) pool.lines.shift();
-  else {
+  if (pool.replyDelay) {
+    pool.replyDelay = false;
+  } else if (pool.lines.length) {
+    pool.lines.shift();
+    if (pool.lines.length) {
+      pool.replyDelay = true;
+      pool.remaining = 0.5;
+      return;
+    }
+  } else {
     if (pool.guardNext) {
       pool.lines = [['lifeguard', lifeguardLines[pool.lifeguardLine]]];
       pool.lifeguardLine = (pool.lifeguardLine + 1) % lifeguardLines.length;
     } else {
-      pool.lines = [...exchanges[pool.exchange]];
-      pool.exchange = (pool.exchange + 1) % exchanges.length;
+      pool.lines = [...exchanges[Math.floor(random() * exchanges.length)]];
     }
     pool.guardNext = !pool.guardNext;
   }
@@ -101,7 +135,7 @@ export function updateMilkPool(pool, elapsed, dt, random = Math.random) {
 }
 
 export function milkPoolSpeech(pool, elapsed) {
-  const entry = pool.reaction ? [pool.reaction.speaker, pool.reaction.text] : pool.lines[0];
+  const entry = pool.reaction ? [pool.reaction.speaker, pool.reaction.text] : !pool.replyDelay && pool.lines[0];
   if (!entry) return null;
   const [speaker, text] = entry;
   if (speaker === 'lifeguard') {
