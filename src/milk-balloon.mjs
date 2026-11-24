@@ -12,28 +12,33 @@ export function createMilkBalloon(player, baron) {
 }
 
 export function createAttendantThrow() {
-  return {phase: 'throw', time: 0, attendant: true};
+  return {
+    phase: 'approach', time: 0, route: [pickup],
+    attendant: {...PILLORY_ATTENDANT, facing: 0, stride: 0, walking: false}
+  };
 }
 
 export function updateMilkBalloon(scene, player, dt) {
-  if (scene.phase === 'approach') {
+  const actor = scene.attendant ?? player;
+  if (scene.phase === 'approach' || scene.phase === 'return') {
     const next = scene.route[0];
-    const dx = next.x - player.x;
-    const dy = next.y - player.y;
+    const dx = next.x - actor.x;
+    const dy = next.y - actor.y;
     const distance = Math.hypot(dx, dy);
     const step = Math.min(distance, 115 * dt);
     if (step > 0) {
-      player.x += dx / distance * step;
-      player.y += dy / distance * step;
-      player.facing = facingIndex(dx, dy);
-      player.stride = (player.stride + step * TURN / 25) % TURN;
-      player.walking = true;
+      actor.x += dx / distance * step;
+      actor.y += dy / distance * step;
+      actor.facing = facingIndex(dx, dy);
+      actor.stride = (actor.stride + step * TURN / 25) % TURN;
+      actor.walking = true;
     }
     if (step === distance) scene.route.shift();
     if (scene.route.length) return false;
-    player.walking = false;
-    player.facing = facingIndex(target.x - player.x, target.y - player.y);
-    player.danceIdle = 0;
+    actor.walking = false;
+    actor.facing = facingIndex(target.x - actor.x, target.y - actor.y);
+    if (scene.phase === 'return') return true;
+    actor.danceIdle = 0;
     scene.phase = 'pickup';
   }
   scene.time += dt;
@@ -41,7 +46,11 @@ export function updateMilkBalloon(scene, player, dt) {
     scene.phase = 'throw';
     scene.time = 0;
   }
-  return scene.phase === 'throw' && scene.time >= 1.8;
+  if (scene.phase !== 'throw' || scene.time < 1.8) return false;
+  if (!scene.attendant) return true;
+  scene.phase = 'return';
+  scene.route = [PILLORY_ATTENDANT];
+  return false;
 }
 
 export function milkBalloonHand(scene, player) {
@@ -58,8 +67,8 @@ export function milkBalloonHand(scene, player) {
 
 export function drawMilkBalloon(ctx, scene, player) {
   const {phase, time} = scene;
-  if (scene.attendant) player = {x: PILLORY_ATTENDANT.x, y: PILLORY_ATTENDANT.y - 12};
-  if (phase === 'approach') return;
+  if (scene.attendant) player = {x: scene.attendant.x, y: scene.attendant.y - 12};
+  if (phase === 'approach' || phase === 'return') return;
   ctx.save();
   if (phase !== 'throw' || time < impact) {
     const hand = milkBalloonHand(scene, player);

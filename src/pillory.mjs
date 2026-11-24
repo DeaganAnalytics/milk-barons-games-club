@@ -9,19 +9,19 @@ export const pilloryCommissioner = {
 };
 
 const attendantLines = [
-  'Come one, come all! Throw a balloon of milk at this miserable bore!',
-  "Mad at the bureaucracy? It's your lucky day!",
-  'Hey there, young man! Come and play a game!',
-  "Don't just cry over spilt milk! Make someone else cry!",
+  'Come one, come all! Have a ball! Make the Commissioner bawl!',
+  'Mad at the bureaucracy? Filled with dismay? Throw a milk balloon and brighten your day!',
+  'Hey there, young man! Come and try your aim! Humiliating officials is a wonderful game!',
+  "Don't cry over spilt milk, my dear! Make the Commissioner shed a tear!",
   'Feeling oppressed? Feeling distressed? Throw a balloon and get it off your chest!',
-  'All the satisfaction of civil disobedience, without the paperwork!',
-  'A splash of milk keeps the revolutionary tendencies away!',
-  'Why petition the government when you can pelt a peasant?',
-  'Come and exercise your right to throw milk at the Rights Commissioner!',
-  'Stickman rights? What about your right to a good time?',
-  'She fought for equality! Now everyone gets an equal opportunity to pelt her!',
-  'Give the Commissioner some feedback! Balloons available right here!',
-  'A champion of the oppressed, now available for your amusement!'
+  'Civil disobedience without the crime! Come and have a splendid time!',
+  'Revolutionary thoughts getting in the way? A splash of milk keeps rebellion at bay!',
+  'Why petition the state when you can participate? Grab a milk balloon and vent your hate!',
+  'Exercise your rights and take delight! Give the Commissioner a milky fright!',
+  'Stickman rights? What a dreadful bore! Throw a balloon and ask for more!',
+  "She fought for equality, she fought for the poor! Now she's our entertainment, forevermore!",
+  'Give the Commissioner feedback today! Grab a milk balloon and let it spray!',
+  'A champion of the oppressed, now our honoured guest! Grab a balloon and put your aim to the test!'
 ];
 
 const commissionerLines = [

@@ -348,7 +348,8 @@ export function createRenderer(canvas) {
     for (const {id, position, width, height, depth, art, fallback} of pilloryProps) {
       const sprite = isReady(art) ? art : fallback;
       if (!sprite || !isReady(sprite)) continue;
-      const {x, y} = position;
+      const movingAttendant = id === 'attendant' ? milkBalloon?.attendant : null;
+      const {x, y} = movingAttendant ?? position;
       const front = y + depth;
       const top = front - height;
       if (x + width / 2 < cameraX || x - width / 2 > cameraX + ROOM_WIDTH
@@ -357,8 +358,10 @@ export function createRenderer(canvas) {
         pillorySpeakers[id] = {x, head: top + (id === 'commissioner' ? 8 : 0), front};
       }
       actors.push({depth: front, draw: () => {
-        const breath = id === 'attendant' ? Math.sin(elapsed * 2.4) * 0.8 : 0;
-        const sway = id === 'attendant' ? Math.sin(elapsed * 1.6) * 0.4 : 0;
+        const breath = movingAttendant?.walking ? Math.abs(Math.sin(movingAttendant.stride)) * 2.4
+          : id === 'attendant' ? Math.sin(elapsed * 2.4) * 0.8 : 0;
+        const sway = movingAttendant?.walking ? Math.sin(movingAttendant.stride) * 1.1
+          : id === 'attendant' ? Math.sin(elapsed * 1.6) * 0.4 : 0;
         const left = x - width / 2;
         ctx.drawImage(sprite, left + sway, top - breath, width, height + breath);
         if (id === 'commissioner' && sprite === art && (elapsed + 1.3) % 5.7 < 0.13) {

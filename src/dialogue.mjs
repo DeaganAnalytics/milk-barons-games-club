@@ -289,7 +289,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     activeTarget = target;
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
-      : target.id === pilloryCommissioner.id ? commissionerOpening()
+      : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
       : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue

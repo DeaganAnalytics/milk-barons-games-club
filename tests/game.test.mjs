@@ -1123,8 +1123,17 @@ test('Pip picks up and automatically throws a milk balloon, then finishes the ro
 
   const position = {x: player.x, y: player.y};
   const attendant = createAttendantThrow();
-  assert.ok(attendant.attendant);
-  assert.equal(updateMilkBalloon(attendant, player, 2), true);
+  const phases = new Set();
+  let finished = false;
+  for (let frame = 0; frame < 300 && !finished; frame++) {
+    phases.add(attendant.phase);
+    finished = updateMilkBalloon(attendant, player, 1 / 60);
+    if (attendant.phase === 'pickup') assert.notEqual(attendant.attendant.x, pilloryAttendant.x);
+  }
+  assert.equal(finished, true);
+  assert.deepEqual([...phases], ['approach', 'pickup', 'throw', 'return']);
+  assert.equal(attendant.attendant.x, pilloryAttendant.x);
+  assert.equal(attendant.attendant.y, pilloryAttendant.y);
   assert.deepEqual({x: player.x, y: player.y}, position);
 });
 
@@ -1139,6 +1148,11 @@ test('the Commissioner is reachable, greets Pip once, and has three ways to end 
   const first = open();
   const menu = open();
   assert.equal(first.text, 'Please... help me.');
+  const openingAfterThrow = "Oh... it's you. You're just like all the rest.";
+  assert.equal(open(true).text, openingAfterThrow);
+  const firstAfterThrow = createCommissionerConversation();
+  assert.equal(firstAfterThrow(true).text, first.text);
+  assert.equal(firstAfterThrow(true).text, openingAfterThrow);
   assert.equal(open(), menu);
   assert.equal(menu.replies.length, 3);
   const branch = menu.replies[1].next;
