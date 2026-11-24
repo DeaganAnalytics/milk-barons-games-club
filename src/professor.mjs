@@ -2,6 +2,10 @@ import {MILK_FOUNTAIN, professorFeet} from './room.mjs';
 
 export const professorHeight = 92;
 const width = 55;
+export const professor = {
+  id: 'professor', title: 'Professor Butterworth-Smythe',
+  x: professorFeet.x, y: professorFeet.y - 14, radius: 24
+};
 
 const ambientLines = [
   'The milk must flow.',

@@ -1,4 +1,5 @@
-import {createProfessorSpeech, professorPose} from '../src/professor.mjs';
+import {createProfessorConversation, professorMoods} from '../src/professor-dialogue.mjs';
+import {createProfessorSpeech, professor, professorPose} from '../src/professor.mjs';
 import {createMilkPool, lifeguard, milkPoolSpeech, updateMilkPool} from '../src/milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
@@ -1055,4 +1056,36 @@ test('the professor gives a random remark every 20 seconds without repeats', () 
   assert.equal(speech(24, true), null);
   assert.equal(speech(40.9, true), null);
   assert.equal(speech(41, true).text, 'One man, one vote. Such a barbaric concept.');
+});
+
+test('Pip can meet the professor once and revisit all four topics', () => {
+  const baron = createBaron();
+  const player = {x: professor.x - 44, y: professor.y, radius: 13};
+  assert.equal(isBlocked(player.x, player.y, player.radius, baron), false);
+  assert.equal(nearestInteraction(player, baron, null, [], [professor]).id, professor.id);
+
+  const open = createProfessorConversation();
+  const first = open();
+  const menu = open();
+  assert.match(first.text, /what is your name/);
+  assert.deepEqual(menu.replies.map(reply => reply.label), [
+    'What are you doing here?', 'What do you think of the Baron?',
+    'What do you think about democracy?', 'You seem like a smart man. Why are the guards cows?'
+  ]);
+
+  const seen = new Set();
+  const moods = new Set();
+  const endings = [];
+  function visit(node) {
+    if (seen.has(node)) return;
+    seen.add(node);
+    moods.add(node.mood);
+    if (!node.replies.length) endings.push(node.text);
+    for (const reply of node.replies) visit(reply.next);
+  }
+  visit(first);
+  assert.ok(seen.has(menu), 'the introduction should lead to the topic menu');
+  assert.deepEqual([...moods].sort(), [...professorMoods].sort());
+  assert.deepEqual(endings, ['Guards!']);
+  assert.equal(open(), menu);
 });
