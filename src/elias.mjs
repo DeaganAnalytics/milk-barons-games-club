@@ -98,6 +98,7 @@ export function advanceEliasRun(actor, destination, dt, stop, speed = 230) {
     actor.x += dx / distance * step;
     actor.y += dy / distance * step;
     actor.stride = (actor.stride ?? 0) + step * 0.35;
+    if (Math.abs(dx / distance) > 0.05) actor.facing = Math.sign(dx);
   }
   actor.running = distance - step > stop + 0.001;
   return !actor.running;
@@ -157,8 +158,13 @@ export function drawElias(ctx, sprite, actor) {
   const height = 70;
   const width = height * sprite.naturalWidth / sprite.naturalHeight;
   const feet = actor.y + 18;
+  ctx.save();
+  ctx.translate(actor.x, 0);
+  // The source sprite faces left.
+  if (actor.facing === 1) ctx.scale(-1, 1);
   if (!actor.running) {
-    ctx.drawImage(sprite, actor.x - width / 2, feet - height, width, height);
+    ctx.drawImage(sprite, -width / 2, feet - height, width, height);
+    ctx.restore();
     return;
   }
   const step = Math.sin(actor.stride);
@@ -166,7 +172,7 @@ export function drawElias(ctx, sprite, actor) {
   const lower = Math.round(sprite.naturalHeight * 0.74);
   const half = Math.floor(sprite.naturalWidth / 2);
   const split = lower * height / sprite.naturalHeight;
-  const left = actor.x - width / 2;
+  const left = -width / 2;
   const top = feet - height - bob;
   for (const side of [-1, 1]) {
     const offset = side === -1 ? 0 : half;
@@ -177,4 +183,5 @@ export function drawElias(ctx, sprite, actor) {
       sourceWidth * width / sprite.naturalWidth, height - split - lift);
   }
   ctx.drawImage(sprite, 0, 0, sprite.naturalWidth, lower, left, top, width, split);
+  ctx.restore();
 }

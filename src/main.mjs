@@ -85,6 +85,7 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    if (action === 'awardPilloryTip') coinBalance.change(5);
     if (action === 'finishEliasWelcome') {
       document.getElementById('coin-counter').hidden = false;
       elias.findingEdge = true;

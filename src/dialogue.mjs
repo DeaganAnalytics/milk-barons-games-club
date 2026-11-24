@@ -304,7 +304,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
       : target.id === elias.id ? (target.welcome ? eliasWelcome : eliasConversation)
       : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue
-      : target.pilloryThanks ? {text: 'Thanks, I needed a laugh today.', mood: 'deadpan'}
+      : target.pilloryThanks ? {text: 'Thanks, I needed a laugh today. Have ₥5 as a tip.', mood: 'deadpan', action: 'awardPilloryTip'}
       : target.postEscort ? postEscortWarning
       : target.guestGate ? guestGateWarning
       : target.summoned ? {
