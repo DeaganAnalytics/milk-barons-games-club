@@ -552,7 +552,7 @@ try {
     createDialogue().open(target);
   })()`, true);
   assert.equal(await evaluate('document.getElementById("conversation-title").textContent'), 'Bull Lifeguard');
-  assert.equal(await evaluate('document.querySelectorAll("#conversation-replies button").length'), 7);
+  assert.equal(await evaluate('document.querySelectorAll("#conversation-replies button").length'), 8);
   await reply('Can I go in?', 'Are you a beautiful woman or a wealthy man?');
   await expressions('thinking', 'thinking');
   await reply('Well... no.', "Well, there's your answer.");

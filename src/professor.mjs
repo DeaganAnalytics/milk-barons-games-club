@@ -3,7 +3,7 @@ import {MILK_FOUNTAIN, professorFeet} from './room.mjs';
 export const professorHeight = 92;
 const width = 55;
 export const professor = {
-  id: 'professor', title: 'Professor Butterworth-Smythe',
+  id: 'professor', title: 'Professor',
   x: professorFeet.x, y: professorFeet.y - 14, radius: 24
 };
 

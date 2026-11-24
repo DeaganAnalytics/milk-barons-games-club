@@ -4,7 +4,7 @@ import {createAttendantMilk, updateAttendantMilk} from './attendant-milk.mjs';
 import {createAttendantThrow, createMilkBalloon, createPilloryReportScene, updateMilkBalloon} from './milk-balloon.mjs';
 import {pilloryAttendant, pilloryCommissioner, pilloryInView} from './pillory.mjs';
 import {professor} from './professor.mjs';
-import {createMilkPool, lifeguard, updateMilkPool} from './milk-pool.mjs';
+import {createMilkPool, lifeguard, poolClothing, takePoolClothing, updateMilkPool} from './milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} from './rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from './guest-escort.mjs';
 import {bartender, createCreameryGuard} from './creamery.mjs';
@@ -36,8 +36,9 @@ const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
 const render = createRenderer(document.getElementById('game'));
 let eliasApproaching = true;
-let eliasDanceRoute = null;
+let eliasScene = null;
 let seenMilo = false;
+let reportedMilo = false;
 let seenPoolAndClothes = false;
 let poolClothesReport = null;
 let seenPillory = false;
@@ -81,7 +82,7 @@ const dialogue = createDialogue(baron, {
     && !guard.poolWatch && !pilloryInView(cameraLeft(player.x), cameraTop(player.y)),
   canReportPool: () => seenPoolAndClothes,
   canReportPoolClothes: () => poolClothesReport === null,
-  canReportMilo: () => ({seen: seenMilo, pending: milo.injuryPending || guards.some(guard => guard.pursuit?.milo)}),
+  canReportMilo: () => ({seen: seenMilo, unavailable: reportedMilo || milo.injuryPending || guards.some(guard => guard.pursuit?.milo)}),
   takeMiloInjury: () => {
     const injured = milo.injuryPending;
     milo.injuryPending = false;
@@ -90,7 +91,21 @@ const dialogue = createDialogue(baron, {
   onAction: (action, target) => {
     if (action === 'awardPilloryTip' || action === 'baronMoneyGift' || action === 'awardPoolClothesTip') coinBalance.change(5);
     if (action === 'baronMoneyPenalty') coinBalance.change(-25);
+    if (action === 'finePoolLie') coinBalance.change(-10);
+    if (action === 'chargeProfessorFee' || action === 'lifeguardMoneyPenalty') coinBalance.change(-5);
+    if (action === 'lifeguardMoneyGift') coinBalance.change(3);
+    if (action === 'stealPoolClothing' && takePoolClothing(milkPool, target.selection) && target.selection === 'man') {
+      info.textContent = 'Pip finds ₥10 in the suit pocket.';
+      coinBalance.change(10);
+    }
+    if (!milkPool.clothingReported && ['rewardMissingDresses', 'fineMissingSuit', 'dismissMissingSuit'].includes(action)) {
+      milkPool.clothingReported = true;
+      target.missingClothing = null;
+      if (action === 'rewardMissingDresses') coinBalance.change(15);
+      if (action === 'fineMissingSuit') coinBalance.change(-10);
+    }
     if (action === 'chargeDanceFee') coinBalance.change(-3);
+    if (action === 'collectTax') coinBalance.collectTax();
     if (action === 'finishEliasWelcome') {
       document.getElementById('coin-counter').hidden = false;
       elias.findingEdge = true;
@@ -133,7 +148,11 @@ const dialogue = createDialogue(baron, {
     if (action === 'inspectPool' && !poolClothesReport) {
       poolClothesReport = {guards: dispatchRovingGuardsToPool(guards), thanked: false};
     }
-    if (action === 'reportMilo') dispatchGuardToMilo(target.guard);
+    if (action === 'reportMilo' && !reportedMilo) {
+      reportedMilo = true;
+      dispatchGuardToMilo(target.guard);
+      coinBalance.change(10);
+    }
     if (action === 'fleeMilo') fleeMilo(milo, player, baron, guards);
   }
 });
@@ -150,20 +169,22 @@ function warnAtGuestGate() {
 }
 
 const {readMovement, clearInput} = bindControls({
-  isPaused: () => eliasApproaching || Boolean(eliasDanceRoute) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
+  isPaused: () => eliasApproaching || Boolean(eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
   nudge: (dx, dy) => {
-    if (eliasApproaching || eliasDanceRoute || !gameOver.hidden || milkBalloon) return;
+    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else movePlayer(player, baron, dx, dy, guards);
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
-    if (eliasApproaching || eliasDanceRoute || !gameOver.hidden || milkBalloon) return;
+    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon) return;
     const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
       && !(guestEnclosure.active && insideGuestEnclosure(guest)));
+    if (!milkPool.stolenClothing) nearbyGuests.push(poolClothing);
     const target = nearestInteraction(player, baron, milo, guards, nearbyGuests);
     if (target) {
       if (target.id === 'milo') seenMilo = true;
+      if (target.id === lifeguard.id && !milkPool.clothingReported) target.missingClothing = milkPool.stolenClothing;
       if (target.guestGate) ropeWarning.talks++;
       if (target.guard && poolClothesReport?.guards.includes(target.guard) && !poolClothesReport.thanked
           && poolClothesReport.guards.every(guard => !guard.poolReportPending)) {
@@ -175,6 +196,12 @@ const {readMovement, clearInput} = bindControls({
     } else info.textContent = 'Nobody is close enough to talk to.';
   }
 });
+
+function startEliasScene(conversation) {
+  clearInput();
+  player.walking = false;
+  eliasScene = {route: routeEliasToPip(elias, player, baron), conversation};
+}
 
 function frame(timestamp) {
   const dt = Math.min((timestamp - lastFrame) / 1000 || 0, 0.05);
@@ -195,13 +222,17 @@ function frame(timestamp) {
     requestAnimationFrame(frame);
     return;
   }
-  if (eliasDanceRoute) {
-    if (advanceEliasRun(elias, eliasDanceRoute[0], dt, 0)) eliasDanceRoute.shift();
+  if (!eliasScene && coinBalance.pendingTax && !guestEscort && !ropeWarning.scene && !milkBalloon) {
+    startEliasScene({tax: coinBalance.pendingTax});
+  }
+  if (eliasScene) {
+    const {route, conversation} = eliasScene;
+    if (route.length && advanceEliasRun(elias, route[0], dt, 0)) route.shift();
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
       staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
-    if (!eliasDanceRoute.length) {
-      eliasDanceRoute = null;
-      dialogue.open({...elias, danceFee: true});
+    if (!route.length) {
+      eliasScene = null;
+      dialogue.open({...elias, ...conversation});
     }
     requestAnimationFrame(frame);
     return;
@@ -265,9 +296,7 @@ function frame(timestamp) {
     updatePlayer(player, baron, movement, dt, guards);
   }
   if (!guestEscort && takeDanceExit(player)) {
-    clearInput();
-    player.walking = false;
-    eliasDanceRoute = routeEliasToPip(elias, player, baron);
+    startEliasScene({danceFee: true});
     requestAnimationFrame(frame);
     return;
   }
@@ -283,7 +312,7 @@ function frame(timestamp) {
   seenPillory ||= pilloryInView(cameraX, cameraY);
   seenPoolAndClothes ||= [
     MILK_POOL,
-    {x: MILK_POOL.x + 58, y: MILK_POOL.y - 109}
+    poolClothing
   ].every(({x, y}) => x >= cameraX && x <= cameraX + ROOM_WIDTH
     && y >= cameraY && y <= cameraY + ROOM_HEIGHT);
   const wasTraveling = baron.route.length > 0;

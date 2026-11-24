@@ -3,7 +3,7 @@ const baronReport = {
   next: {text: "No he doesn't.", mood: 'deadpan', replies: [
     {label: 'Look! He is approaching us now.', playerMood: 'alarmed',
       next: {text: "Sir you've had too much to drink. Or too little.", mood: 'suspicious', replies: [
-        {label: 'But the Baron...', playerMood: 'worried', next: {text: 'MOOOOVE IT!', mood: 'angry'}}
+        {label: 'But the Baron...', playerMood: 'worried', next: {text: 'MOOOOVE IT!', mood: 'angry', action: 'reportBaronFollowing'}}
       ]}}
   ]}
 };
@@ -13,14 +13,14 @@ const miloReport = {
   next: {text: 'We have a code 9, I repeat a code 9. Possible Milo sighting.', mood: 'radio',
     direction: 'Grabs radio', replies: [
       {label: "What's gonna happen to him?", playerMood: 'worried',
-        next: {text: 'Sir you have done your nation and the Baron a great duty today.', mood: 'formal', action: 'reportMilo'}}
+        next: {text: 'Sir you have done your nation and the Baron a great duty today. Here\'s a performance bonus.', mood: 'formal', action: 'reportMilo'}}
     ]}
 };
 
-export function availableReports(completedTrips, seenMilo, reportPending) {
+export function availableReports(completedTrips, seenMilo, miloUnavailable, baronReported = false) {
   const replies = [];
-  if (completedTrips >= 2) replies.push(baronReport);
-  if (seenMilo && !reportPending) replies.push(miloReport);
+  if (completedTrips >= 2 && !baronReported) replies.push(baronReport);
+  if (seenMilo && !miloUnavailable) replies.push(miloReport);
   return replies;
 }
 
@@ -57,8 +57,8 @@ const manInPool = {
       ['Continue', 'And is he poor?', 'radio', 'worried', '...'],
       ['Continue', 'How wealthy?', 'radio', 'worried', '...'],
       ['Continue', 'Ah. Understood. Give him my regards.', 'radio', 'worried', '...'],
-      ['Continue', 'Get out of here, you liar! Wasting valuable security resources!', 'angry', 'alarmed']
-    ])
+      ['Continue', 'Get out of here, you liar! Wasting valuable security resources! ₥10 fine. Pay up!', 'angry', 'alarmed']
+    ], {action: 'finePoolLie'})
   ]}
 };
 
@@ -91,15 +91,17 @@ export const unattendedClothes = {
   ]}
 };
 
+export const lifeguardQualificationReport = exchange([
+  ["I don't think the lifeguard is qualified.", 'What makes you say that?', 'suspicious'],
+  ["He told me he can't swim.", 'Well, can he see?', 'deadpan'],
+  ['Yes.', "Then he's perfectly capable of watching the pool.", 'formal', 'attentive'],
+  ['What if someone drowns?', "That's a matter for the lifeguard.", 'deadpan', 'worried']
+]);
+
 export const poolReports = [
   manInPool,
   unattendedClothes,
-  exchange([
-    ["I don't think the lifeguard is qualified.", 'What makes you say that?', 'suspicious'],
-    ["He told me he can't swim.", 'Well, can he see?', 'deadpan'],
-    ['Yes.', "Then he's perfectly capable of watching the pool.", 'formal', 'attentive'],
-    ['What if someone drowns?', "That's a matter for the lifeguard.", 'deadpan', 'worried']
-  ]),
+  lifeguardQualificationReport,
   exchange([
     ['I think something inappropriate is happening in the pool.', 'Inappropriate by whose standards?', 'suspicious', 'worried'],
     ['Well, generally accepted standards of public decency.', 'Ah. Peasant standards.', 'deadpan'],

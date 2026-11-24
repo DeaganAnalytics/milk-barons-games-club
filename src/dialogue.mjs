@@ -1,12 +1,12 @@
-import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasWelcome} from './elias.mjs';
+import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasTaxConversation, eliasWelcome} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
 import {createProfessorConversation, professorMoods} from './professor-dialogue.mjs';
 import {professor} from './professor.mjs';
-import {lifeguardDialogue, lifeguardMoods} from './lifeguard-dialogue.mjs';
-import {lifeguard} from './milk-pool.mjs';
-import {availableReports, injuredMiloReply, poolReports, unattendedClothes} from './report-dialogue.mjs';
+import {clothingReports, lifeguardDialogue, lifeguardMoods, poolClothingDialogue} from './lifeguard-dialogue.mjs';
+import {lifeguard, poolClothing} from './milk-pool.mjs';
+import {availableReports, injuredMiloReply, lifeguardQualificationReport, poolReports, unattendedClothes} from './report-dialogue.mjs';
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
@@ -152,6 +152,7 @@ function standalonePortraitUrl(id, withoutMilk = false, mood) {
   if (id === pilloryAttendant.id) return new URL('../assets/dialogue/attendant/' + mood + '.webp', import.meta.url);
   if (id === elias.id) return new URL('../assets/dialogue/elias/' + mood + '.webp', import.meta.url);
   if (id === professor.id) return new URL('../assets/dialogue/professor/' + mood + '.webp', import.meta.url);
+  if (id === poolClothing.id) return new URL('../assets/pool/clothes.webp', import.meta.url);
   if (id === lifeguard.id) return new URL('../assets/dialogue/lifeguard-' + mood + '.webp', import.meta.url);
   if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
   if (partyGuests.some(guest => guest.id === id)) {
@@ -169,7 +170,7 @@ function warmPortraits() {
     urls.push(standalonePortraitUrl(id));
     if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
-  urls.push(standalonePortraitUrl(bartender.id));
+  urls.push(standalonePortraitUrl(bartender.id), standalonePortraitUrl(poolClothing.id));
   for (const mood of commissionerMoods) urls.push(standalonePortraitUrl(pilloryCommissioner.id, false, mood));
   for (const mood of attendantMoods) urls.push(standalonePortraitUrl(pilloryAttendant.id, false, mood));
   for (const mood of eliasPortraits) urls.push(standalonePortraitUrl(elias.id, false, mood));
@@ -204,6 +205,9 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
   let askedBaronForMoney = false;
+  const usedReplies = new Set();
+  let reportedBaronFollowing = false;
+  let heardLifeguardCannotSwim = false;
   const closeButton = document.getElementById('conversation-close');
   let action = null;
   let activeTarget;
@@ -229,6 +233,18 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     element.dataset.expression = mood;
   }
 
+  function finishAction(finishedAction, target) {
+    if (finishedAction === 'reportBaronFollowing') {
+      reportedBaronFollowing = true;
+      return;
+    }
+    if (finishedAction === 'chargeProfessorFee') {
+      if (usedReplies.has(finishedAction)) return;
+      usedReplies.add(finishedAction);
+    }
+    onAction?.(finishedAction, target);
+  }
+
   function close(runAction = true) {
     panel.hidden = true;
     map.hidden = info.hidden = controls.hidden = false;
@@ -237,12 +253,13 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const finishedTarget = activeTarget;
     activeTarget = null;
     action = null;
-    if (runAction && finishedAction) onAction?.(finishedAction, finishedTarget);
+    if (runAction && finishedAction) finishAction(finishedAction, finishedTarget);
   }
 
   function show(node, character, playerMood, withoutMilk) {
     action = node.action ?? null;
-    closeButton.hidden = Boolean((activeTarget.welcome || activeTarget.danceFee) && !action);
+    if (node.revealsLifeguardCannotSwim) heardLifeguardCannotSwim = true;
+    closeButton.hidden = Boolean((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax) && !action);
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
@@ -261,18 +278,33 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const currentSpeaker = node.character ?? character;
     speaker.textContent = currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title;
     setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk);
-    replyList.replaceChildren(...(node.replies ?? []).map(reply => {
+    const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
+    const replies = report ? [report, ...node.replies] : node.replies ?? [];
+    replyList.replaceChildren(...replies.filter(reply => !usedReplies.has(reply.once)).map(reply => {
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = reply.label;
       button.addEventListener('click', () => {
+        if (reply.once === 'lifeguardMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;
-        if (next === null) close();
-        else show(next, character, reply.playerMood, withoutMilk);
+        if (next?.action === 'stealPoolClothing') {
+          activeTarget.selection = next.selection;
+          action = next.action;
+          close();
+        } else if (next === null) close();
+        else {
+          if (node.action === 'chargeProfessorFee') {
+            action = null;
+            finishAction(node.action, activeTarget);
+            if (!activeTarget) return; // The fee may end the game.
+          }
+          show(next, character, reply.playerMood, withoutMilk);
+        }
       });
       return button;
     }));
     (replyList.firstElementChild ?? closeButton).focus();
+    if (node.enterAction) finishAction(node.enterAction, activeTarget);
   }
 
   closeButton.addEventListener('click', close);
@@ -305,8 +337,10 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
   function reportingReplies(target) {
     const report = guardReplies[2];
     const status = canReportMilo?.() ?? {};
-    const reports = [...availableReports(baron.completedRugTrips, status.seen, status.pending),
-      ...(canReportPool?.() ? poolReports.filter(report => report !== unattendedClothes || canReportPoolClothes?.() !== false) : [])];
+    const reports = [...availableReports(baron.completedRugTrips, status.seen, status.unavailable, reportedBaronFollowing)];
+    if (canReportPool?.()) reports.push(...poolReports.filter(report =>
+      (report !== unattendedClothes || canReportPoolClothes?.() !== false)
+      && (report !== lifeguardQualificationReport || heardLifeguardCannotSwim)));
     if (canReportPillory?.(target.guard)) reports.push({
       label: 'Someone has the Stickman Rights Commissioner in a pillory!',
       playerMood: 'alarmed',
@@ -323,9 +357,11 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
+      : target.id === elias.id && target.tax ? eliasTaxConversation(target.tax)
       : target.id === elias.id && target.danceFee ? eliasDanceConversation
       : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)
       : target.id === professor.id ? professorOpening()
+      : target.id === poolClothing.id ? poolClothingDialogue
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.poolClothesThanks ? {
           text: "Thanks for the tip about the women skimmy-dipping in the milk pool. Best bloody shift I've had in months. Here, take a few coins for your troubles.",

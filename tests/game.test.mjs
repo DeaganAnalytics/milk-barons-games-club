@@ -1,6 +1,6 @@
 import {createProfessorConversation, professorMoods} from '../src/professor-dialogue.mjs';
 import {createProfessorSpeech, professor, professorPose} from '../src/professor.mjs';
-import {createMilkPool, lifeguard, milkPoolSpeech, updateMilkPool} from '../src/milk-pool.mjs';
+import {createMilkPool, lifeguard, milkPoolSpeech, poolClothing, remainingClothing, takePoolClothing, updateMilkPool} from '../src/milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
 import {partyGuests} from '../src/party-guests.mjs';
@@ -717,6 +717,11 @@ test('reports unlock after two Baron trips or seeing Milo, and a Milo report can
   assert.equal(availableReports(0, true, false)[0].label, "There's a man in rags wandering around the walls.");
   assert.equal(availableReports(2, true, false).length, 2);
   assert.equal(availableReports(2, true, true).length, 1);
+  assert.equal(availableReports(10, true, true, true).length, 0);
+  const [following, milo] = availableReports(2, true, false);
+  assert.equal(following.next.replies[0].next.replies[0].next.action, 'reportBaronFollowing');
+  assert.match(milo.next.replies[0].next.text, /Here's a performance bonus/);
+  assert.equal(milo.next.replies[0].next.action, 'reportMilo');
 });
 
 test('the reporting guard runs to Milo, then Milo can flee from Pip after a confession', () => {
@@ -978,6 +983,28 @@ test('a random swimmer exchange plays both lines in order before a pending react
   assert.equal(milkPoolSpeech(pool, 3.6).text, 'Hey! That tickles!');
 });
 
+test('pool clothing is reachable, and each theft changes the pile and starts the corresponding chatter', async () => {
+  const {clothingReports, poolClothingDialogue} = await import('../src/lifeguard-dialogue.mjs');
+  const player = {x: poolClothing.x + 30, y: poolClothing.y};
+  assert.equal(nearestInteraction(player, createBaron(), null, [], [lifeguard, poolClothing]).id, poolClothing.id);
+  assert.deepEqual(poolClothingDialogue.replies.map(choice => choice.next?.selection ?? null), ['women', 'man', 'all', null]);
+  for (const [selection, left, line] of [
+    ['women', 'man', 'Good heavens! Where are my clothes?!'],
+    ['man', 'women', "Sir, I'm going to need you to remain in the pool."],
+    ['all', null, 'Good heavens! Where are my clothes?!']
+  ]) {
+    const pool = createMilkPool();
+    assert.equal(takePoolClothing(pool, selection), true);
+    assert.equal(takePoolClothing(pool, 'all'), false);
+    assert.equal(remainingClothing[pool.stolenClothing], left);
+    updateMilkPool(pool, 2, 2, () => 0);
+    assert.equal(milkPoolSpeech(pool, 2).text, line);
+  }
+  assert.equal(clothingReports.all, clothingReports.women);
+  assert.equal(clothingReports.women.next.replies[0].next.enterAction, 'rewardMissingDresses');
+  assert.deepEqual(clothingReports.man.next.replies.map(choice => choice.next.action), ['fineMissingSuit', 'dismissMissingSuit']);
+});
+
 test('only the two pool investigations dispatch a guard', () => {
   const [manInPool, clothing] = poolReports;
   const findings = [];
@@ -987,6 +1014,7 @@ test('only the two pool investigations dispatch a guard', () => {
   }
   for (const report of poolReports) visit(report.next);
   assert.deepEqual(findings, [
+    ['Get out of here, you liar! Wasting valuable security resources! ₥10 fine. Pay up!', 'finePoolLie'],
     ["No, no. I wouldn't want to burden him with additional responsibilities. I'll handle this personally.", 'inspectPool'],
     ["Hopefully he's submerged.", 'inspectPool']
   ]);
@@ -1070,7 +1098,8 @@ test('Pip can meet the professor once and revisit all four topics', () => {
   assert.match(first.text, /what is your name/);
   assert.deepEqual(menu.replies.map(reply => reply.label), [
     'What are you doing here?', 'What do you think of the Baron?',
-    'What do you think about democracy?', 'You seem like a smart man. Why are the guards cows?'
+    'What do you think about democracy?', 'You seem like a smart man. Why are the guards cows?',
+    'Can I have some money?'
   ]);
 
   const seen = new Set();
@@ -1088,6 +1117,37 @@ test('Pip can meet the professor once and revisit all four topics', () => {
   assert.deepEqual([...moods].sort(), [...professorMoods].sort());
   assert.deepEqual(endings, ['Guards!']);
   assert.equal(open(), menu);
+});
+
+test('the Professor’s money lecture charges at the end and returns to the topic menu', () => {
+  const open = createProfessorConversation();
+  open();
+  const menu = open();
+  const request = menu.replies.find(reply => reply.label === 'Can I have some money?');
+  assert.equal(request.once, 'chargeProfessorFee');
+  let node = request.next;
+  for (const label of ['Continue', 'Continue', 'Continue', 'I suppose that makes sense.', 'Well, yes.', 'I guess so.', 'Wait, what?!']) {
+    assert.equal(node.action, undefined);
+    assert.equal(node.replies[0].label, label);
+    node = node.replies[0].next;
+  }
+  assert.equal(node.action, request.once);
+  assert.match(node.text, /investment in human capital/);
+  assert.equal(node.replies[0].next, menu);
+});
+
+test('the one-time lifeguard request splits at 50% and 75% with the correct coin actions', async () => {
+  const {lifeguardDialogue} = await import('../src/lifeguard-dialogue.mjs');
+  const request = lifeguardDialogue.replies.find(reply => reply.label === 'Can I have some money?');
+  assert.equal(request.once, 'lifeguardMoneyRequest');
+  assert.equal(request.next.text, 'What? Why?');
+  const chooseOutcome = request.next.replies[0].next;
+  assert.equal(chooseOutcome(0).action, 'lifeguardMoneyGift');
+  assert.equal(chooseOutcome(0.499).action, 'lifeguardMoneyGift');
+  assert.equal(chooseOutcome(0.5).action, undefined);
+  assert.match(chooseOutcome(0.749).text, /charity/);
+  assert.equal(chooseOutcome(0.75).replies[0].next.action, 'lifeguardMoneyPenalty');
+  assert.equal(chooseOutcome(0.999).replies[0].next.text, 'Pay up, scrawny.');
 });
 
 test('the attendant introduces the stall once before offering the milk balloon game', async () => {
@@ -1259,6 +1319,27 @@ test('coin balance starts at 100 and locks on reaching either game outcome', asy
   assert.equal(otherRun.change(-100), 0);
   assert.equal(otherRun.outcome, 'loss');
   assert.equal(otherRun.change(200), 0);
+});
+
+test('tax counts five positive transactions, rounds up, and starts a fresh streak after collection', async () => {
+  const {createCoinBalance} = await import('../src/coins.mjs');
+  const {eliasTaxConversation} = await import('../src/elias.mjs');
+  const coins = createCoinBalance();
+  for (const delta of [3, 3, 3, 3, -1, 1, 2, 0, 3, 4]) coins.change(delta);
+  assert.equal(coins.pendingTax, null);
+  coins.change(5);
+  assert.deepEqual(coins.pendingTax, {earnings: 15, due: 5});
+
+  const opening = eliasTaxConversation(coins.pendingTax);
+  assert.match(opening.text, /earned you ₥15/);
+  const demand = opening.replies[0].next.replies[0].next.replies[0].next;
+  assert.match(demand.text, /hand over ₥5/);
+  assert.equal(demand.action, 'collectTax');
+  assert.equal(coins.collectTax(), 121);
+  assert.equal(coins.pendingTax, null);
+  assert.equal(coins.collectTax(), 121);
+  for (let i = 0; i < 5; i++) coins.change(2);
+  assert.deepEqual(coins.pendingTax, {earnings: 10, due: 3});
 });
 
 test('Elias’s regular dialogue pairs the cow and garlic reactions with the intended portraits', async () => {

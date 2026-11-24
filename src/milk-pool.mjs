@@ -5,6 +5,12 @@ export const lifeguard = {
   id: 'lifeguard', title: 'Bull Lifeguard', x: MILK_POOL.x - 36, y: MILK_POOL.y - 119, radius: 24
 };
 
+export const poolClothing = {
+  id: 'pool-clothing', title: 'Swimmers’ Clothing', x: MILK_POOL.x + 58, y: MILK_POOL.y - 109, radius: 24
+};
+
+export const remainingClothing = {women: 'man', man: 'women', all: null};
+
 const swimmers = [
   {offset: -99, phase: 0.65, speed: 0.72},
   {offset: 102, phase: 2.9, speed: -0.64}
@@ -59,6 +65,58 @@ const lifeguardLines = [
   'What happens in the milk pool stays in the milk pool.'
 ];
 
+const missingDressesExchanges = [
+  'Good heavens! Where are my clothes?!',
+  'That dress cost more than a peasant earns in a year!',
+  "Guard! Guard! We've been robbed!",
+  'I cannot possibly attend dinner in this state!',
+  'This is an outrage against the Milk Aristocracy!',
+  'Stop staring at us, you revolting creature!',
+  'I refuse to leave this pool until my clothes are returned!',
+  'Someone fetch the Baron immediately!',
+  'My husband will have someone imprisoned for this!',
+  'This sort of thing never happened before they started letting peasants in!'
+].map((line, index) => [[index % 2, line]]);
+
+const missingDressesGuardLines = [
+  'Oh boy, oh boy, oh boy!',
+  'Best day of my bloody career!',
+  "Ladies, I assure you, I'm monitoring the situation very closely.",
+  'No need to panic, ladies. Take your time getting out.',
+  'Hehehehe... MOOOO!',
+  'And to think I nearly called in sick today!',
+  "Unfortunately, ladies, we don't have any spare towels.",
+  "I'm afraid you'll have to exit the pool eventually. Health and safety regulations.",
+  'Nothing gets past these eyes. Nothing.',
+  'I love my job. I bloody love my job!'
+];
+
+const missingSuitGuardLines = [
+  "Sir, I'm going to need you to remain in the pool.",
+  'Nobody wants to see that, mate. Stay submerged.',
+  'Of all the bloody clothes to steal!',
+  'Someone get this bloke a towel. Immediately!',
+  'This is NOT what I signed up for!',
+  'Sir, if you attempt to exit that pool, I will have you arrested.',
+  'My day is ruined. Absolutely bloody ruined.',
+  'Ladies, your clothing is still there. Unfortunately.',
+  "I should've called in sick today.",
+  'Keep everything below the milk, mate!',
+  "Whoever did this is getting a bloody fine!"
+];
+
+export function takePoolClothing(pool, selection) {
+  if (pool.stolenClothing || !Object.hasOwn(remainingClothing, selection)) return false;
+  pool.stolenClothing = selection;
+  pool.reaction = pool.pendingReaction = null;
+  pool.lines = [];
+  pool.replyDelay = false;
+  pool.remaining = 2;
+  pool.guardNext = selection === 'man';
+  pool.lifeguardLine = 0;
+  return true;
+}
+
 function swimmerPosition(swimmer, elapsed) {
   const phase = elapsed * swimmer.speed + swimmer.phase;
   return {
@@ -71,6 +129,7 @@ function swimmerPosition(swimmer, elapsed) {
 
 export function createMilkPool() {
   return {
+    stolenClothing: null, clothingReported: false,
     snorkel: {x: 0, y: 35, direction: -1, swimmer: 0, returning: false},
     reaction: null, pendingReaction: null, lifeguardLine: 0, guardNext: true, lines: [], replyDelay: false, remaining: 11
   };
@@ -79,6 +138,7 @@ export function createMilkPool() {
 export function updateMilkPool(pool, elapsed, dt, random = Math.random) {
   if (dt <= 0) return;
   if (pool.reaction && elapsed >= pool.reaction.until) pool.reaction = null;
+  const dressesMissing = pool.stolenClothing === 'women' || pool.stolenClothing === 'all';
   const snorkel = pool.snorkel;
   const target = snorkel.returning
     ? {x: snorkel.swimmer === 0 ? -204 : 204, y: 35}
@@ -99,7 +159,7 @@ export function updateMilkPool(pool, elapsed, dt, random = Math.random) {
       snorkel.swimmer = 1 - snorkel.swimmer;
       snorkel.returning = false;
     } else {
-      pool.pendingReaction = {speaker: snorkel.swimmer, text: touchLines[Math.floor(random() * touchLines.length)]};
+      if (!dressesMissing) pool.pendingReaction = {speaker: snorkel.swimmer, text: touchLines[Math.floor(random() * touchLines.length)]};
       snorkel.returning = true;
     }
   }
@@ -124,10 +184,13 @@ export function updateMilkPool(pool, elapsed, dt, random = Math.random) {
     }
   } else {
     if (pool.guardNext) {
-      pool.lines = [['lifeguard', lifeguardLines[pool.lifeguardLine]]];
-      pool.lifeguardLine = (pool.lifeguardLine + 1) % lifeguardLines.length;
+      const remarks = dressesMissing ? missingDressesGuardLines
+        : pool.stolenClothing === 'man' ? missingSuitGuardLines : lifeguardLines;
+      pool.lines = [['lifeguard', remarks[pool.lifeguardLine]]];
+      pool.lifeguardLine = (pool.lifeguardLine + 1) % remarks.length;
     } else {
-      pool.lines = [...exchanges[Math.floor(random() * exchanges.length)]];
+      const chatter = dressesMissing ? missingDressesExchanges : exchanges;
+      pool.lines = [...chatter[Math.floor(random() * chatter.length)]];
     }
     pool.guardNext = !pool.guardNext;
   }
@@ -226,7 +289,7 @@ export function drawMilkPool(ctx, art, elapsed, pool, heads, clothes, lifeguardA
   // The source is trimmed around the furniture, so only the art overlays the hall parquet.
   ctx.drawImage(art, -296.4, -202, 534.4, 266);
   drawLifeguard(ctx, lifeguardArt, elapsed);
-  if (clothes.naturalWidth) {
+  if (clothes?.naturalWidth) {
     const width = 96;
     const height = width * clothes.naturalHeight / clothes.naturalWidth;
     ctx.drawImage(clothes, 10, -90 - height, width, height);
