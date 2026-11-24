@@ -1,3 +1,4 @@
+import {createCoinBalance, STARTING_COINS} from './coins.mjs';
 import {createAttendantMilk, updateAttendantMilk} from './attendant-milk.mjs';
 import {createAttendantThrow, createMilkBalloon, createPilloryReportScene, updateMilkBalloon} from './milk-balloon.mjs';
 import {pilloryAttendant, pilloryCommissioner, pilloryInView} from './pillory.mjs';
@@ -47,6 +48,29 @@ const ropeWarning = createRopeWarning();
 const gameOver = document.getElementById('game-over');
 const restart = document.getElementById('restart-game');
 restart.addEventListener('click', () => location.reload());
+const coinCount = document.getElementById('coin-count');
+const coinAnnouncement = document.getElementById('coin-announcement');
+coinCount.textContent = STARTING_COINS;
+coinAnnouncement.textContent = `${STARTING_COINS} coins`;
+
+function endGame(title, message) {
+  if (!gameOver.hidden) return;
+  if (dialogue.isOpen()) dialogue.dismiss();
+  clearInput();
+  document.getElementById('end-title').textContent = title;
+  document.getElementById('end-message').textContent = message;
+  gameOver.hidden = false;
+  restart.focus();
+}
+
+export const coinBalance = createCoinBalance((count, outcome) => {
+  if (!gameOver.hidden) return;
+  coinCount.textContent = count;
+  coinAnnouncement.textContent = `${count} coins`;
+  if (outcome === 'loss') endGame('Game Over', 'You ran out of coins.');
+  if (outcome === 'win') endGame('You Win!', 'You reached 200 coins.');
+});
+
 const dialogue = createDialogue(baron, {
   hasPlayedMilkBalloon: () => playedMilkBalloon,
   canReportPillory: guard => seenPillory && !reportedPillory && guard && !guard.pursuit
@@ -111,15 +135,15 @@ function warnAtGuestGate() {
 }
 
 const {readMovement, clearInput} = bindControls({
-  isPaused: () => dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
+  isPaused: () => !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
   nudge: (dx, dy) => {
-    if (milkBalloon) return;
+    if (!gameOver.hidden || milkBalloon) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else movePlayer(player, baron, dx, dy, guards);
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
-    if (milkBalloon) return;
+    if (!gameOver.hidden || milkBalloon) return;
     const target = nearestInteraction(player, baron, milo, guards, guestEnclosure.active ? guests.filter(guest => !insideGuestEnclosure(guest)) : guests);
     if (target) {
       if (target.id === 'milo') seenMilo = true;
@@ -133,6 +157,7 @@ const {readMovement, clearInput} = bindControls({
 function frame(timestamp) {
   const dt = Math.min((timestamp - lastFrame) / 1000 || 0, 0.05);
   lastFrame = timestamp;
+  if (!gameOver.hidden) return;
   if (dialogue.isOpen()) {
     requestAnimationFrame(frame);
     return;
@@ -144,8 +169,7 @@ function frame(timestamp) {
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
       staff, null, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
     if (ended) {
-      gameOver.hidden = false;
-      restart.focus();
+      endGame('Game Over', 'You have displeased the Baron!');
     } else requestAnimationFrame(frame);
     return;
   }

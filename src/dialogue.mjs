@@ -225,7 +225,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     element.dataset.expression = mood;
   }
 
-  function close() {
+  function close(runAction = true) {
     panel.hidden = true;
     map.hidden = info.hidden = controls.hidden = false;
     interact.focus({preventScroll: true});
@@ -233,7 +233,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const finishedTarget = activeTarget;
     activeTarget = null;
     action = null;
-    if (finishedAction) onAction?.(finishedAction, finishedTarget);
+    if (runAction && finishedAction) onAction?.(finishedAction, finishedTarget);
   }
 
   function show(node, character, playerMood, withoutMilk) {
@@ -322,5 +322,5 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     show(opening, target.id, injured || target.summoned || target.guestGate || target.postEscort ? 'worried' : 'attentive', target.withoutMilk);
   }
 
-  return {open, isOpen: () => !panel.hidden};
+  return {open, dismiss: () => close(false), isOpen: () => !panel.hidden};
 }

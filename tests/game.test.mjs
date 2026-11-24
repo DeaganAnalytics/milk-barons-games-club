@@ -1238,3 +1238,19 @@ test('Pip leads a roving guard to the pillory and the guard returns after throwi
   assert.ok(Math.hypot(guard.x - player.x, guard.y - player.y) < 35);
   assert.equal(guard.walking, false);
 });
+
+test('coin balance starts at 100 and locks on reaching either game outcome', async () => {
+  const {createCoinBalance} = await import('../src/coins.mjs');
+  const changes = [];
+  const coins = createCoinBalance((count, outcome) => changes.push({count, outcome}));
+  assert.equal(coins.count, 100);
+  assert.equal(coins.change(20), 120);
+  assert.equal(coins.change(85), 200);
+  assert.equal(coins.change(-1), 200);
+  assert.deepEqual(changes, [{count: 120, outcome: null}, {count: 200, outcome: 'win'}]);
+  const otherRun = createCoinBalance();
+  assert.throws(() => otherRun.change(0.5), TypeError);
+  assert.equal(otherRun.change(-100), 0);
+  assert.equal(otherRun.outcome, 'loss');
+  assert.equal(otherRun.change(200), 0);
+});
