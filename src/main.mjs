@@ -29,7 +29,8 @@ const player = createPlayer();
 const baron = createBaron();
 const milo = createMilo();
 const guards = createGuards(player, baron, milo);
-guards.push(createCreameryGuard());
+const creameryGuard = createCreameryGuard();
+guards.push(creameryGuard);
 const staff = createStaff(player, baron, milo, guards);
 const guests = [...staff, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
@@ -38,7 +39,8 @@ const milkService = createMilkService();
 const attendantMilk = createAttendantMilk();
 const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
-const render = createRenderer(document.getElementById('game'));
+let seenCowGuard = false;
+const render = createRenderer(document.getElementById('game'), () => { seenCowGuard = true; });
 let eliasApproaching = true;
 let eliasScene = null;
 let seenMilo = false;
@@ -148,6 +150,12 @@ const coinEvents = {
   chargeDanceFee: ['It turns out dancing was on the bill.', -3]
 };
 
+const bartenderOrders = {
+  whole: ['A glass of whole milk.', -3, 0.5],
+  cocktail: ['The Piña Cow-lada lives up to the warning.', -5, -0.5],
+  ocean: ['That ocean milk goes down like low tide.', -1, -1]
+};
+
 const clothingEvents = {
   all: 'The whole pile is gone. Everyone is still in the pool.',
   man: 'Pip finds ₥10 in the suit pocket.',
@@ -155,6 +163,7 @@ const clothingEvents = {
 };
 
 const dialogue = createDialogue(baron, {
+  hasSeenCowGuard: () => seenCowGuard,
   baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
   hasPlayedMilkBalloon: () => playedMilkBalloon,
   canReportPillory: guard => seenPillory && !reportedPillory && guard && !guard.pursuit
@@ -172,6 +181,20 @@ const dialogue = createDialogue(baron, {
     if (coinEvent) {
       const [text, amount] = coinEvent;
       clubEvent(text, () => coinBalance.change(amount));
+    }
+    if (action === 'bartenderDrink') {
+      const [text, cost, hearts] = bartenderOrders[target.order];
+      clubEvent(text, () => {
+        coinBalance.change(cost);
+        health.change(hearts, 'The Backroom Creamery has served you your last drink.');
+      });
+    }
+    if (action === 'bartenderTip') clubEvent('The bartender collects his tip.', () => coinBalance.change(-2));
+    if (action === 'bartenderDoubleTip') clubEvent('The bartender and the guard collect their tips.', () => coinBalance.change(-5));
+    if (action === 'bartenderRefusal') {
+      clearInput();
+      beginRopeScene(ropeWarning, creameryGuard, player, baron);
+      ropeWarning.scene.deathMessage = 'You refused to pay the bartender.';
     }
     if (action === 'stealPoolClothing' && takePoolClothing(milkPool, target.selection, elapsed)) {
       clubEvent(clothingEvents[target.selection], () => {
@@ -354,7 +377,7 @@ function frame(timestamp) {
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
       staff, null, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
     if (ended) {
-      health.change(-MAX_HEARTS, 'You have displeased the Baron!');
+      health.change(-MAX_HEARTS, ropeWarning.scene.deathMessage ?? 'You have displeased the Baron!');
     } else requestAnimationFrame(frame);
     return;
   }

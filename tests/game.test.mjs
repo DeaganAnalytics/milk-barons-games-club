@@ -1531,3 +1531,19 @@ test('the dancing Baron offers one DJ request and the karma encounters switch to
     assert.equal(eliasReply.replies[0].next.action, action);
   }
 });
+
+test('bartender cycles ten greetings and offers drinks, tips, and the refusal scene', async () => {
+  const {bartenderExit, bartenderMoods, bartenderOpening} = await import('../src/bartender-dialogue.mjs');
+  const greetings = Array.from({length: 10}, (_, i) => bartenderOpening(i));
+  assert.equal(new Set(greetings.map(greeting => greeting.text)).size, 10);
+  assert.equal(bartenderOpening(10).text, greetings[0].text);
+  assert.ok(greetings.every(greeting => bartenderMoods.includes(greeting.mood)));
+  const order = greetings[0].replies.find(reply => reply.label === "I'll have a milk, please.").next;
+  assert.deepEqual(order.replies.slice(0, 2).map(reply => reply.next.order), ['whole', 'cocktail']);
+  assert.equal(order.replies[2].next.replies[0].next.replies[0].next.order, 'ocean');
+  const tipOptions = bartenderExit.replies[0].next.replies[0].next.replies[0].next.replies;
+  assert.equal(tipOptions[0].next.action, 'bartenderTip');
+  assert.equal(tipOptions[1].next.replies[0].next, order);
+  assert.equal(tipOptions[2].next.replies[0].next.exitAction, 'bartenderRefusal');
+  assert.equal(tipOptions[2].next.replies[1].next.replies[0].next.action, 'bartenderDoubleTip');
+});

@@ -3,7 +3,6 @@ import {NORTH_EDGE, WEST_EDGE} from './room.mjs';
 export const bartender = {
   id: 'creamery-bartender',
   title: 'The Bartender',
-  message: "Sorry, we're not serving customers right now",
   x: WEST_EDGE + 187,
   y: NORTH_EDGE + 161,
   radius: 35

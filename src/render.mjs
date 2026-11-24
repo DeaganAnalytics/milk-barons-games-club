@@ -3,7 +3,7 @@ import {drawMilkBalloon, guardBalloonPose, milkBalloonHand} from './milk-balloon
 import {createPillorySpeech} from './pillory.mjs';
 import {createProfessorSpeech, drawProfessor, professorHeight} from './professor.mjs';
 import {drawMilkFountain, fountainHeight, fountainWidth} from './milk-fountain.mjs';
-import {createMilkPool, drawMilkPool, milkPoolSpeech, remainingClothing} from './milk-pool.mjs';
+import {createMilkPool, drawMilkPool, lifeguard, milkPoolSpeech, remainingClothing} from './milk-pool.mjs';
 import {ropeWarningSpeech} from './rope-warning.mjs';
 import {drawPipFall, drawRopeAim} from './rope-scene-art.mjs';
 import {drawGuestRopes} from './guest-escort.mjs';
@@ -260,7 +260,9 @@ function drawBartender(ctx, sprite, elapsed) {
   ctx.drawImage(sprite, x, sill - bustHeight, width * 82 / 384, bustHeight);
 }
 
-export function createRenderer(canvas) {
+export function createRenderer(canvas, onCowGuardSeen) {
+  let seenCowGuard = false;
+  const danceGuardIndex = dancers.findIndex(dancer => dancer.id === 'guard');
   const ctx = canvas.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
@@ -330,6 +332,19 @@ export function createRenderer(canvas) {
       && DANCE_FLOOR.x + 235 > cameraX && DANCE_FLOOR.x - 235 < cameraX + ROOM_WIDTH;
     const poolVisible = isReady(poolArt) && MILK_POOL.x + 239 > cameraX && MILK_POOL.x - 297 < cameraX + ROOM_WIDTH
       && MILK_POOL.y + 64 > cameraY && MILK_POOL.y - 202 < cameraY + ROOM_HEIGHT;
+    if (onCowGuardSeen && !seenCowGuard) {
+      const inView = (x, top, bottom, halfWidth) =>
+        x + halfWidth > cameraX && x - halfWidth < cameraX + ROOM_WIDTH
+        && bottom > cameraY && top < cameraY + ROOM_HEIGHT;
+      const danceGuard = dancers[danceGuardIndex];
+      seenCowGuard = guards.some(guard => isReady(guard.posted ? armedGuard : guardSprite)
+        && inView(guard.x, guard.y - 63, guard.y + 24, 21))
+        || (poolVisible && isReady(lifeguardArt)
+          && inView(lifeguard.x, lifeguard.y - 58, lifeguard.y, 56 * lifeguardArt.naturalWidth / lifeguardArt.naturalHeight / 2))
+        || (danceVisible && isReady(dancerSprites[danceGuardIndex])
+          && inView(danceGuard.x, danceGuard.y - danceGuard.height, danceGuard.y, 24));
+      if (seenCowGuard) onCowGuardSeen();
+    }
     if (poolVisible) {
       const clothes = milkPool.stolenClothing ? poolClothes[remainingClothing[milkPool.stolenClothing]] : poolClothes.intact;
       drawMilkPool(ctx, poolArt, elapsed, milkPool, poolHeads, clothes, lifeguardArt);

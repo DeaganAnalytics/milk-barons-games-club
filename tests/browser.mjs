@@ -389,15 +389,24 @@ try {
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-creamery.png`, Buffer.from(shot.data, 'base64'));
   }
   await activate('The Bartender');
-  assert.equal(await evaluate("document.querySelectorAll('#conversation-replies button').length"), 0);
-  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'),
-    "Sorry, we're not serving customers right now");
+  assert.equal(await evaluate("document.querySelectorAll('#conversation-replies button').length"), 7);
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), "What'll it be? Milk?");
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'),'::before')
-    .backgroundImage.includes('/dialogue/creamery-bartender.webp')`));
+    .backgroundImage.includes('/dialogue/bartender/polite.webp')`));
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-bartender.png`, Buffer.from(shot.data, 'base64'));
   }
+  await evaluate('document.getElementById("conversation-close").click()');
+  await reply('What?', 'AHEM!');
+  await reply('Continue', 'He vants a tip.');
+  await expressions('attentive', 'insulted');
+  await reply("A tip? He didn't do anything!", "He spoke to a peasant, didn't he? Pay up or I'll shoot.");
+  await reply('Can I buy a drink instead?', 'Of course, sir.');
+  await reply('Continue', 'Certainly, sir. What will it be?');
+  const beforeDrink = Number(await evaluate('document.getElementById("coin-count").textContent'));
+  await reply('A glass of whole milk, please.', '(Pip drinks the milk.) An excellent choice, sir. A timeless classic.');
+  assert.equal(Number(await evaluate('document.getElementById("coin-count").textContent')), beforeDrink - 3);
   await closeConversation();
   await hold('ArrowRight', 36);
   await hold('ArrowDown', 14);
@@ -459,6 +468,40 @@ try {
   await expressions('thinking', 'sad');
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
   await closeConversation();
+
+  await load(390, 844, true, 'cow-guard-dialogue-unlock');
+  const cowGuardOptions = await evaluate(`(async () => {
+    const [{createDialogue}, {createBaron}] = await Promise.all(
+      ['./src/dialogue.mjs', './src/baron.mjs'].map(path => import(path)));
+    let seen = false;
+    const dialogue = createDialogue(createBaron(), {hasSeenCowGuard: () => seen});
+    const results = [];
+    for (const [id, posted, question] of [
+      ['baron', false, 'Why do you have cows for guards?'],
+      ['elias', false, 'Why are the guards cows?'],
+      ['professor', false, 'You seem like a smart man. Why are the guards cows?'],
+      ['pillory-attendant', false, 'Why are the guards cows?'],
+      ['pillory-commissioner', false, 'Am I crazy, or are the guards cows?'],
+      ['guard', false, 'Are you a cow?'],
+      ['guard', true, 'Are you a cow?']
+    ]) {
+      const target = {id, title: id, posted};
+      dialogue.open(target);
+      dialogue.dismiss(); // Skip any first-meeting introduction.
+      for (const visible of [false, true]) {
+        seen = visible;
+        dialogue.open(target);
+        const offered = Array.from(document.querySelectorAll('#conversation-replies button'))
+          .some(button => button.textContent === question);
+        results.push({id, posted, visible, offered});
+        dialogue.dismiss();
+      }
+    }
+    return results;
+  })()`, true);
+  for (const {id, posted, visible, offered} of cowGuardOptions) {
+    assert.equal(offered, visible, `Cow guard question for ${id} (posted: ${posted})`);
+  }
 
   await load(390, 844, true, 'conditional-baron-dialogue');
   const choices = () => evaluate('Array.from(document.querySelectorAll("#conversation-replies button"), button => button.textContent)');
