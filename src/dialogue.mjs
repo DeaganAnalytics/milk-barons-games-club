@@ -1,4 +1,4 @@
-import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasWelcome} from './elias.mjs';
+import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasTaxConversation, eliasWelcome} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
@@ -6,7 +6,7 @@ import {createProfessorConversation, professorMoods} from './professor-dialogue.
 import {professor} from './professor.mjs';
 import {lifeguardDialogue, lifeguardMoods} from './lifeguard-dialogue.mjs';
 import {lifeguard} from './milk-pool.mjs';
-import {availableReports, injuredMiloReply, poolReports, unattendedClothes} from './report-dialogue.mjs';
+import {availableReports, injuredMiloReply, lifeguardQualificationReport, poolReports, unattendedClothes} from './report-dialogue.mjs';
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
@@ -204,6 +204,8 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
   let askedBaronForMoney = false;
+  let reportedBaronFollowing = false;
+  let heardLifeguardCannotSwim = false;
   const closeButton = document.getElementById('conversation-close');
   let action = null;
   let activeTarget;
@@ -237,12 +239,14 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const finishedTarget = activeTarget;
     activeTarget = null;
     action = null;
-    if (runAction && finishedAction) onAction?.(finishedAction, finishedTarget);
+    if (runAction && finishedAction === 'reportBaronFollowing') reportedBaronFollowing = true;
+    else if (runAction && finishedAction) onAction?.(finishedAction, finishedTarget);
   }
 
   function show(node, character, playerMood, withoutMilk) {
     action = node.action ?? null;
-    closeButton.hidden = Boolean((activeTarget.welcome || activeTarget.danceFee) && !action);
+    if (node.revealsLifeguardCannotSwim) heardLifeguardCannotSwim = true;
+    closeButton.hidden = Boolean((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax) && !action);
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
@@ -305,8 +309,10 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
   function reportingReplies(target) {
     const report = guardReplies[2];
     const status = canReportMilo?.() ?? {};
-    const reports = [...availableReports(baron.completedRugTrips, status.seen, status.pending),
-      ...(canReportPool?.() ? poolReports.filter(report => report !== unattendedClothes || canReportPoolClothes?.() !== false) : [])];
+    const reports = [...availableReports(baron.completedRugTrips, status.seen, status.unavailable, reportedBaronFollowing)];
+    if (canReportPool?.()) reports.push(...poolReports.filter(report =>
+      (report !== unattendedClothes || canReportPoolClothes?.() !== false)
+      && (report !== lifeguardQualificationReport || heardLifeguardCannotSwim)));
     if (canReportPillory?.(target.guard)) reports.push({
       label: 'Someone has the Stickman Rights Commissioner in a pillory!',
       playerMood: 'alarmed',
@@ -323,6 +329,7 @@ export function createDialogue(baron, {onAction, hasPlayedMilkBalloon, canReport
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
+      : target.id === elias.id && target.tax ? eliasTaxConversation(target.tax)
       : target.id === elias.id && target.danceFee ? eliasDanceConversation
       : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)
       : target.id === professor.id ? professorOpening()

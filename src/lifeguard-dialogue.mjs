@@ -43,9 +43,12 @@ lifeguardDialogue.replies.push(
     reply('[Lie] Yes.', 'attentive', say("And I'm a qualified lifeguard. Get out of here!", frown)),
     reply('Well... no.', 'sorry', say("Well, there's your answer.", deadpan, back))
   ])),
-  reply('Can you swim?', 'thinking', say('Nope.', deadpan, [
-    reply('Then what are you doing up there?', 'thinking', say('Enjoying the view!', grin, back))
-  ])),
+  reply('Can you swim?', 'thinking', {
+    ...say('Nope.', deadpan, [
+      reply('Then what are you doing up there?', 'thinking', say('Enjoying the view!', grin, back))
+    ]),
+    revealsLifeguardCannotSwim: true
+  }),
   reply('I see piles of clothes everywhere.', 'attentive', say('And?', deadpan, [
     reply('Are they skinny dipping?', 'thinking', say("No, they're skimmy dipping. It's skim milk, you see!", grin, [
       reply('Oh... okay.', 'attentive', lifeguardDialogue),

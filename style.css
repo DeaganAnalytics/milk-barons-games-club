@@ -192,6 +192,12 @@ canvas {
   width: 79%;
 }
 
+.conversation-portrait.standalone-portrait[data-portrait="professor"]::before {
+  width: 95%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
 .conversation-portraits figcaption {
   padding: 8px;
   background: #24392c;

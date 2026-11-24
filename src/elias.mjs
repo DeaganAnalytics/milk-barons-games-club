@@ -126,6 +126,29 @@ export const eliasDanceConversation = {
   ]
 };
 
+export function eliasTaxConversation({earnings, due}) {
+  const demand = {
+    text: `Thirty per cent, Master Pip. Kindly hand over ₥${due}.`,
+    mood: 'self-assured-smirk',
+    action: 'collectTax'
+  };
+  return {
+    text: `Master Pip! A most profitable series of ventures. Your recent undertakings have earned you ₥${earnings}.`,
+    mood: 'current-smile',
+    replies: [{
+      label: "Thanks! I think I'm getting the hang of it.", playerMood: 'attentive',
+      next: {
+        text: 'Indeed, indeed. Zere is just ze small matter of taxation.',
+        mood: 'devious',
+        replies: [{
+          label: "Taxation?! I thought the Milk Aristocracy didn't pay tax!", playerMood: 'alarmed',
+          next: {text: 'Correct. Zey do not. You do.', mood: 'self-assured-smirk', replies: [continueTo(demand)]}
+        }]
+      }
+    }]
+  };
+}
+
 export function routeEliasToPip(actor, player, baron) {
   const radius = 11;
   const spots = [[-38, 0], [38, 0], [0, -38], [0, 38]]

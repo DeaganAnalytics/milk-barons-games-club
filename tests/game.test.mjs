@@ -717,6 +717,11 @@ test('reports unlock after two Baron trips or seeing Milo, and a Milo report can
   assert.equal(availableReports(0, true, false)[0].label, "There's a man in rags wandering around the walls.");
   assert.equal(availableReports(2, true, false).length, 2);
   assert.equal(availableReports(2, true, true).length, 1);
+  assert.equal(availableReports(10, true, true, true).length, 0);
+  const [following, milo] = availableReports(2, true, false);
+  assert.equal(following.next.replies[0].next.replies[0].next.action, 'reportBaronFollowing');
+  assert.match(milo.next.replies[0].next.text, /Here's a performance bonus/);
+  assert.equal(milo.next.replies[0].next.action, 'reportMilo');
 });
 
 test('the reporting guard runs to Milo, then Milo can flee from Pip after a confession', () => {
@@ -987,6 +992,7 @@ test('only the two pool investigations dispatch a guard', () => {
   }
   for (const report of poolReports) visit(report.next);
   assert.deepEqual(findings, [
+    ['Get out of here, you liar! Wasting valuable security resources! ₥10 fine. Pay up!', 'finePoolLie'],
     ["No, no. I wouldn't want to burden him with additional responsibilities. I'll handle this personally.", 'inspectPool'],
     ["Hopefully he's submerged.", 'inspectPool']
   ]);
@@ -1259,6 +1265,27 @@ test('coin balance starts at 100 and locks on reaching either game outcome', asy
   assert.equal(otherRun.change(-100), 0);
   assert.equal(otherRun.outcome, 'loss');
   assert.equal(otherRun.change(200), 0);
+});
+
+test('tax counts five positive transactions, rounds up, and starts a fresh streak after collection', async () => {
+  const {createCoinBalance} = await import('../src/coins.mjs');
+  const {eliasTaxConversation} = await import('../src/elias.mjs');
+  const coins = createCoinBalance();
+  for (const delta of [3, 3, 3, 3, -1, 1, 2, 0, 3, 4]) coins.change(delta);
+  assert.equal(coins.pendingTax, null);
+  coins.change(5);
+  assert.deepEqual(coins.pendingTax, {earnings: 15, due: 5});
+
+  const opening = eliasTaxConversation(coins.pendingTax);
+  assert.match(opening.text, /earned you ₥15/);
+  const demand = opening.replies[0].next.replies[0].next.replies[0].next;
+  assert.match(demand.text, /hand over ₥5/);
+  assert.equal(demand.action, 'collectTax');
+  assert.equal(coins.collectTax(), 121);
+  assert.equal(coins.pendingTax, null);
+  assert.equal(coins.collectTax(), 121);
+  for (let i = 0; i < 5; i++) coins.change(2);
+  assert.deepEqual(coins.pendingTax, {earnings: 10, due: 3});
 });
 
 test('Elias’s regular dialogue pairs the cow and garlic reactions with the intended portraits', async () => {
