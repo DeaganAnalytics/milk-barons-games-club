@@ -1,3 +1,4 @@
+import {createDancerSpeech} from '../src/dancers.mjs';
 import {danceLyric} from '../src/dance-floor.mjs';
 import {createPartyChatter, partySpeech, updatePartyChatter} from '../src/party-chatter.mjs';
 import {bartender, createCreameryGuard} from '../src/creamery.mjs';
@@ -634,4 +635,23 @@ test('the Baron follows Pip to the dance stop and only dances after arrival', ()
   updateBaronWalk(baron, HALL_CENTER, cameraX, time + 6, 0.05, nextY);
   assert.equal(baron.route.at(-1), closestRug(HALL_CENTER));
   assert.equal(isBaronDancing(baron), false);
+});
+
+test('one randomly chosen dancer says one line every 20 seconds', () => {
+  const rolls = [0, 0.99, 0.26, 0, 0.51, 0.99, 0.99, 0.99];
+  const speechAt = createDancerSpeech(() => rolls.shift());
+  assert.equal(speechAt(19.9), null);
+  for (const [time, id, line] of [
+    [20, 'mascot', 'Milk my cow! Milk her now!'],
+    [40, 'coral', 'I like to PARTAY!'],
+    [60, 'jade', 'That cow guard is kind of cute!!'],
+    [80, 'guard', 'God bless the Baron!']
+  ]) {
+    const first = speechAt(time + 0.5);
+    assert.equal(first.dancer.id, id);
+    assert.equal(first.text, line);
+    assert.equal(speechAt(time + 4).text, line);
+    assert.equal(speechAt(time + 5), null);
+  }
+  assert.equal(rolls.length, 0);
 });

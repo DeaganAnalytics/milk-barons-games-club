@@ -1,3 +1,4 @@
+import {createDancerSpeech, dancers, drawDancer} from './dancers.mjs';
 import {danceLayers, danceLyric, drawBaronDance, drawDanceBooth, drawDanceFloor} from './dance-floor.mjs';
 import {bartender, creameryHatch} from './creamery.mjs';
 import {drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
@@ -221,6 +222,8 @@ export function createRenderer(canvas) {
   const hallImages = Object.values(hallArt);
   const danceArt = Object.fromEntries(danceLayers.map(name => [name, loadSprite('dance/' + name, 'webp')]));
   const danceImages = Object.values(danceArt);
+  const dancerSpeech = createDancerSpeech();
+  const dancerSprites = dancers.map(({id}) => loadSprite('dance/dancers/' + id, 'webp'));
   const baronDancePose = loadSprite('dance/baron', 'webp');
   const guardSprite = loadSprite('guards/concealed', 'webp');
   const bartenderSprite = loadSprite('hall/creamery-bartender-idle', 'webp');
@@ -291,6 +294,10 @@ export function createRenderer(canvas) {
     });
     if (danceVisible) {
       actors.push({depth: DANCE_FLOOR.y - 175, draw: () => drawDanceBooth(ctx, danceArt, elapsed)});
+      dancers.forEach((dancer, index) => {
+        const sprite = dancerSprites[index];
+        if (isReady(sprite)) actors.push({depth: dancer.y, draw: () => drawDancer(ctx, sprite, dancer, elapsed)});
+      });
     }
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
@@ -301,6 +308,14 @@ export function createRenderer(canvas) {
       if (lyric.x >= cameraX && lyric.x <= cameraX + ROOM_WIDTH
           && lyric.y >= cameraY && lyric.y <= cameraY + ROOM_HEIGHT) {
         drawSpeech(ctx, lyric.text, lyric.opacity, lyric.x, lyric.y, lyric.y + 110, cameraX, cameraY);
+      }
+    }
+    if (danceVisible) {
+      const speech = dancerSpeech(elapsed);
+      if (speech && isReady(dancerSprites[dancers.indexOf(speech.dancer)])
+          && speech.x >= cameraX && speech.x <= cameraX + ROOM_WIDTH
+          && speech.dancer.y >= cameraY && speech.headY <= cameraY + ROOM_HEIGHT) {
+        drawSpeech(ctx, speech.text, speech.opacity, speech.x, speech.headY, speech.dancer.y, cameraX, cameraY);
       }
     }
     if (baron.speech) {
