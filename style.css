@@ -270,7 +270,7 @@ canvas {
 .coin-counter {
   position: absolute;
   top: 2%;
-  left: 2%;
+  right: 2%;
   width: clamp(100px, 29%, 174px);
   aspect-ratio: 3.02;
   background: url('./assets/hall/coin-counter.webp') center / 100% 100% no-repeat;

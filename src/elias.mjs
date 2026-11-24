@@ -1,0 +1,180 @@
+import {HALL_CENTER, isNpcBlocked, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
+
+export const eliasPost = {x: HALL_CENTER.x + 145, y: HALL_CENTER.y + 130};
+
+export const elias = {
+  id: 'elias', title: 'Elias', ...eliasPost, radius: 22,
+  message: "Elias. The Baron's right-hand man and accountant."
+};
+
+export const eliasPortraits = [
+  'devious', 'insulted', 'evil-laugh', 'self-assured-smirk',
+  'thinking', 'current-smile', 'laugh', 'demonic-angry', 'worried'
+];
+
+const welcomeLines = [
+  ["Velcome, velcome to ze Milk Baron's Games Club! Ah, Master Pip. Ve have been expecting you.", 'current-smile'],
+  ['His Excellency, ze Milk Baron, has taken a most considerable interest in you. Your activism at Milk University has not gone unnoticed.', 'thinking'],
+  ['You are a most intriguing young stickman. Ambitious, resourceful, and, if I may be so bold... delightfully impressionable.', 'devious'],
+  ["Unfortunately, your most recent protest resulted in considerable damage to ze Baron's property holdings. You are now indebted to His Excellency to ze sum of ₥100.", 'insulted'],
+  ['But ze Baron is a generous man. Rather than demand immediate repayment, he vishes to play a little game.', 'self-assured-smirk'],
+  ['Here is a sum of ₥100. If you can double zis investment to ₥200, you vill have proven yourself a true capitalist.', 'current-smile'],
+  ['But should you lose ze money... vell, it is off to ze dairy for you, as an indentured servant.', 'demonic-angry'],
+  ['Consider it a most generous opportunity for professional development, Master Pip.', 'self-assured-smirk']
+];
+
+const questions = {text: 'Now, Master Pip, do you have any questions?', mood: 'current-smile', replies: []};
+const continueTo = next => ({label: 'Continue', playerMood: 'attentive', next});
+const back = [continueTo(questions)];
+
+questions.replies.push(
+  {label: "I didn't do it!", playerMood: 'alarmed',
+    next: {text: 'Zat is not a question.', mood: 'insulted', replies: back}},
+  {label: 'How did I get here?', playerMood: 'thinking',
+    next: {text: 'Ah... one of ze great secrets of ze universe.', mood: 'devious', replies: back}},
+  {label: 'What is this place?', playerMood: 'thinking',
+    next: {
+      text: 'Ah! I am delighted you asked.',
+      mood: 'laugh',
+      replies: [continueTo({
+        text: "It is ze Baron's pride and joy. A place vere ze finest members of ze Milk Aristocracy come to mingle, to vheel and deal.",
+        mood: 'current-smile',
+        replies: [continueTo({
+          text: 'A house of amusement, of profligate pleasure, of economic efficiency and, above all... profitability.',
+          mood: 'self-assured-smirk',
+          replies: [{label: 'I thought the Milk Baron made his money from milk?', playerMood: 'thinking',
+            next: {text: 'Da! But he keeps his fortune by selling pleasure and amusement!', mood: 'laugh', replies: back}}]
+        })]
+      })]
+    }},
+  {label: 'How do I double my money?', playerMood: 'thinking', next: {
+    text: 'As an aspiring capitalist, I am sure you vill figure it out. Zis establishment offers many delightful games through vich you may multiply your fortune.',
+    mood: 'self-assured-smirk', replies: back
+  }},
+  {label: 'I have no more questions.', playerMood: 'attentive', next: {
+    text: 'Vonderful. I vish you a most profitable evening, Master Pip.',
+    mood: 'current-smile', action: 'finishEliasWelcome'
+  }}
+);
+
+export const eliasWelcome = welcomeLines.reduceRight((next, [text, mood]) => ({
+  text, mood, replies: [continueTo(next)]
+}), questions);
+
+export const eliasConversation = {text: elias.message, mood: 'current-smile', replies: []};
+
+function exchange(lines) {
+  let replies = [continueTo(eliasConversation)];
+  for (const [label, text, mood, playerMood = 'thinking'] of [...lines].reverse()) {
+    replies = [{label, playerMood, next: {text, mood, replies}}];
+  }
+  return replies[0];
+}
+
+eliasConversation.replies.push(
+  exchange([
+    ['Why are the guards cows?', 'Zey are not. I am unsure of ze purpose of zis question. Is zis another one of your little activist games?', 'insulted'],
+    ['But the horns...', 'ZEY ARE NOT COWS!', 'demonic-angry', 'alarmed']
+  ]),
+  exchange([
+    ['Who are you?', 'I am Elias.', 'current-smile'],
+    ['But who are you in relation to the Baron?', 'I am his accountant.', 'self-assured-smirk'],
+    ['His accountant?!', 'Vhy, da! Someone must manage all his money!', 'laugh', 'alarmed']
+  ]),
+  exchange([
+    ['Are you a vampire?', 'No. Vampires do not exist.', 'worried'],
+    ['But you look like a vampire.', 'I assure you, I am not.', 'insulted'],
+    ['Do you want some garlic?', 'VHO HAS GARLIC?!', 'worried'],
+    ['...', 'I mean... vho has garlic? Yes, garlic for milk. I am particularly fond of milk-flavoured garlic.', 'self-assured-smirk', 'alarmed']
+  ])
+);
+
+export function advanceEliasRun(actor, destination, dt, stop, speed = 230) {
+  const dx = destination.x - actor.x;
+  const dy = destination.y - actor.y;
+  const distance = Math.hypot(dx, dy);
+  const step = Math.min(speed * dt, Math.max(0, distance - stop));
+  if (step) {
+    actor.x += dx / distance * step;
+    actor.y += dy / distance * step;
+    actor.stride = (actor.stride ?? 0) + step * 0.35;
+  }
+  actor.running = distance - step > stop + 0.001;
+  return !actor.running;
+}
+
+export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
+  const left = cameraX + 24;
+  const right = cameraX + ROOM_WIDTH - 24;
+  const top = cameraY + 66;
+  const bottom = cameraY + ROOM_HEIGHT - 28;
+  const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
+  const outside = actor.x < left || actor.x > right || actor.y < top || actor.y > bottom;
+  const close = Math.hypot(player.x - actor.x, player.y - actor.y) < 60;
+  // Once Pip approaches, hold position until the scrolling camera pushes Elias to an edge.
+  const distanceToPip = Math.hypot(player.x - actor.x, player.y - actor.y);
+  const approached = actor.lastPipPosition && distanceToPip
+    < Math.hypot(actor.lastPipPosition.x - actor.x, actor.lastPipPosition.y - actor.y);
+  actor.lastPipPosition = {x: player.x, y: player.y};
+  if (close && approached) actor.findingEdge = false;
+  if (!outside && !actor.findingEdge) {
+    actor.running = false;
+    actor.followRoute = null;
+    return;
+  }
+
+  const x = actor.findingEdge ? right : clamp(actor.x, left, right);
+  const y = clamp(actor.y, top, bottom);
+  const radius = 11;
+  const clear = point => !isNpcBlocked(point.x, point.y, radius, baron, actor);
+  const target = [{x, y}, {x: x - 40, y}, {x: x + 40, y}, {x, y: y - 50}, {x, y: y + 50}]
+    .find(point => point.x >= left && point.x <= right && point.y >= top && point.y <= bottom && clear(point));
+  if (!target) {
+    actor.running = false;
+    return;
+  }
+
+  const waypoint = actor.followRoute?.[0] ?? target;
+  const distance = Math.hypot(waypoint.x - actor.x, waypoint.y - actor.y);
+  const step = Math.min(distance, 144 * dt);
+  if (step && !clear({
+    x: actor.x + (waypoint.x - actor.x) / distance * step,
+    y: actor.y + (waypoint.y - actor.y) / distance * step
+  })) {
+    actor.followRoute = routeAroundBaron({...actor, radius}, target, baron);
+    actor.running = false;
+    return;
+  }
+  const arrived = advanceEliasRun(actor, waypoint, dt, 0, 144);
+  actor.running = step > 0;
+  if (arrived) {
+    actor.followRoute?.shift();
+    if (!actor.followRoute?.length && Math.hypot(target.x - actor.x, target.y - actor.y) < 1) actor.findingEdge = false;
+  }
+}
+
+export function drawElias(ctx, sprite, actor) {
+  const height = 70;
+  const width = height * sprite.naturalWidth / sprite.naturalHeight;
+  const feet = actor.y + 18;
+  if (!actor.running) {
+    ctx.drawImage(sprite, actor.x - width / 2, feet - height, width, height);
+    return;
+  }
+  const step = Math.sin(actor.stride);
+  const bob = Math.abs(step) * 3;
+  const lower = Math.round(sprite.naturalHeight * 0.74);
+  const half = Math.floor(sprite.naturalWidth / 2);
+  const split = lower * height / sprite.naturalHeight;
+  const left = actor.x - width / 2;
+  const top = feet - height - bob;
+  for (const side of [-1, 1]) {
+    const offset = side === -1 ? 0 : half;
+    const sourceWidth = side === -1 ? half : sprite.naturalWidth - half;
+    const lift = Math.max(0, side * step) * 5;
+    ctx.drawImage(sprite, offset, lower, sourceWidth, sprite.naturalHeight - lower,
+      left + offset * width / sprite.naturalWidth + side * step * 3, top + split,
+      sourceWidth * width / sprite.naturalWidth, height - split - lift);
+  }
+  ctx.drawImage(sprite, 0, 0, sprite.naturalWidth, lower, left, top, width, split);
+}
