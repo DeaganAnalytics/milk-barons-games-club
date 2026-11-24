@@ -930,8 +930,6 @@ test('the snorkel touches alternate swimmers and reaches an edge between touches
   const edges = [];
   const heard = new Set();
   const guardRemarks = new Set();
-  let previousLine;
-  let awaitingPolo = false;
   let firstHit;
   for (let frame = 1; frame <= 12000; frame++) {
     const previous = pool.snorkel.returning;
@@ -943,10 +941,7 @@ test('the snorkel touches alternate swimmers and reaches an edge between touches
     if (previous && !pool.snorkel.returning) edges.push(Math.round(pool.snorkel.x));
     const speech = milkPoolSpeech(pool, frame * 0.05);
     assert.ok(!pool.reaction || !pool.lines.length, 'touch reactions must wait for ambient lines');
-    if (!speech || speech.text === previousLine) continue;
-    if (awaitingPolo) assert.equal(speech.text, 'Polo!');
-    awaitingPolo = speech.text === 'Milko';
-    previousLine = speech.text;
+    if (!speech) continue;
     heard.add(speech.text);
     if (speech.x === lifeguard.x && speech.y === lifeguard.y) guardRemarks.add(speech.text);
   }
@@ -956,7 +951,25 @@ test('the snorkel touches alternate swimmers and reaches an edge between touches
   assert.equal([...guardRemarks].at(-1), 'What happens in the milk pool stays in the milk pool.');
   assert.deepEqual(hits.slice(0, 4), [0, 1, 0, 1]);
   assert.deepEqual(edges.slice(0, 4), [-204, 204, -204, 204]);
-  for (const text of ['He he he, caught me again.', 'This milk is sooo good for my skin!',
-    "I'm glad we don't share milk with peasants!", 'Milko', 'Polo!']) assert.ok(heard.has(text));
-  assert.ok([...heard].indexOf('Milko') < [...heard].indexOf('Polo!'));
+  assert.ok(heard.has("You're certainly an enthusiastic swimmer!"));
+  assert.ok(heard.has('Imagine bathing in something that comes out of a tap!'));
+});
+
+test('a random swimmer exchange plays both lines in order before a pending reaction', () => {
+  const pool = createMilkPool();
+  pool.guardNext = false;
+  pool.remaining = 0;
+  updateMilkPool(pool, 0.05, 0.05, () => 8 / 14);
+  assert.equal(milkPoolSpeech(pool, 0.05).text, 'Milko!');
+
+  pool.pendingReaction = {speaker: 0, text: 'Hey! That tickles!'};
+  updateMilkPool(pool, 1.55, 1.5);
+  assert.equal(milkPoolSpeech(pool, 1.55), null);
+  updateMilkPool(pool, 1.8, 0.25);
+  assert.equal(milkPoolSpeech(pool, 1.8), null);
+  updateMilkPool(pool, 2.05, 0.25);
+  assert.equal(milkPoolSpeech(pool, 2.05).text, 'Polo!');
+  updateMilkPool(pool, 3.55, 1.5);
+  updateMilkPool(pool, 3.6, 0.05);
+  assert.equal(milkPoolSpeech(pool, 3.6).text, 'Hey! That tickles!');
 });
