@@ -1,3 +1,5 @@
+import {createProfessorConversation, professorMoods} from './professor-dialogue.mjs';
+import {professor} from './professor.mjs';
 import {lifeguardDialogue, lifeguardMoods} from './lifeguard-dialogue.mjs';
 import {lifeguard} from './milk-pool.mjs';
 import {availableReports, injuredMiloReply, poolReports} from './report-dialogue.mjs';
@@ -142,6 +144,7 @@ const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-formal', '
 const portraitCache = new Map();
 
 function standalonePortraitUrl(id, withoutMilk = false, mood) {
+  if (id === professor.id) return new URL('../assets/dialogue/professor/' + mood + '.webp', import.meta.url);
   if (id === lifeguard.id) return new URL('../assets/dialogue/lifeguard-' + mood + '.webp', import.meta.url);
   if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
   if (partyGuests.some(guest => guest.id === id)) {
@@ -160,6 +163,7 @@ function warmPortraits() {
     if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
   urls.push(standalonePortraitUrl(bartender.id));
+  for (const mood of professorMoods) urls.push(standalonePortraitUrl(professor.id, false, mood));
   for (const mood of lifeguardMoods) urls.push(standalonePortraitUrl(lifeguard.id, false, mood));
   for (const {id} of partyGuests) {
     urls.push(standalonePortraitUrl(id), standalonePortraitUrl(id, false, 'annoyed'));
@@ -191,6 +195,7 @@ export function createDialogue(baron, {onAction, canReportMilo, canReportPool, t
   let greetingIndex = 0;
   let action = null;
   let activeTarget;
+  const professorOpening = createProfessorConversation();
   let injured = false;
 
   function setPortrait(element, character, mood, withoutMilk) {
@@ -267,6 +272,7 @@ export function createDialogue(baron, {onAction, canReportMilo, canReportPool, t
     activeTarget = target;
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
+      : target.id === professor.id ? professorOpening()
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.postEscort ? postEscortWarning
       : target.guestGate ? guestGateWarning

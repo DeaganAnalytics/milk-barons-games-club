@@ -1,3 +1,5 @@
+import {createProfessorConversation, professorMoods} from '../src/professor-dialogue.mjs';
+import {createProfessorSpeech, professor, professorPose} from '../src/professor.mjs';
 import {createMilkPool, lifeguard, milkPoolSpeech, updateMilkPool} from '../src/milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, ropeWarningSpeech, updateRopeWarning} from '../src/rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort} from '../src/guest-escort.mjs';
@@ -17,7 +19,7 @@ import {test} from 'node:test';
 import {callOutMilo, createBaron, isBaronDancing, speechOpacity, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from '../src/baron.mjs';
 import {facingIndex} from '../src/directions.mjs';
 import {createPlayer, movePlayer, updatePlayer} from '../src/player.mjs';
-import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, guestGateOutside, insideGuestEnclosure, HALL_CENTER, MILK_POOL, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
+import {BARON_DANCE_STOP, cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, guestGateOutside, insideGuestEnclosure, HALL_CENTER, MILK_FOUNTAIN, MILK_POOL, professorFeet, isBlocked, nearestInteraction, onDanceFloor, routeAroundBaron, closestRug, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, RUGS, WEST_EDGE, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y} from '../src/room.mjs';
 
 test('both characters use the same eight facing directions', () => {
   const directions = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
@@ -905,9 +907,11 @@ test('the milk pool sits between four rugs and NPC routes go around it', () => {
   const surrounding = RUGS.filter(rug => Math.abs(rug.x - MILK_POOL.x) === ROOM_WIDTH / 2
     && Math.abs(rug.y - MILK_POOL.y) === ROOM_HEIGHT / 2);
   assert.equal(surrounding.length, 4);
-  assert.ok(surrounding.includes(closestRug(HALL_CENTER)));
+  assert.equal(MILK_POOL.x, HALL_CENTER.x + ROOM_WIDTH / 2);
+  assert.equal(MILK_POOL.y, HALL_CENTER.y + ROOM_HEIGHT / 2 - 2 * ROOM_HEIGHT);
   const baron = createBaron();
   assert.equal(isBlocked(MILK_POOL.x, MILK_POOL.y, 13, baron), true);
+
   const start = {x: MILK_POOL.x, y: MILK_POOL.y - 210, radius: 14};
   const end = {x: MILK_POOL.x, y: MILK_POOL.y + 135};
   const route = routeAroundBaron(start, end, baron);
@@ -1011,4 +1015,77 @@ test('a guard routes around the pool, watches for 15 seconds, then resumes patro
   updateGuards([guard], player, baron, milo, until, 0.05);
   assert.equal(guard.poolWatch, null);
   assert.equal(guard.pursuit, null);
+});
+
+test('the fountain occupies the former pool site and NPCs can route around it', () => {
+  assert.deepEqual(MILK_FOUNTAIN, {x: MILK_POOL.x, y: MILK_POOL.y + 2 * ROOM_HEIGHT});
+  const baron = createBaron();
+  assert.ok(isBlocked(MILK_FOUNTAIN.x, MILK_FOUNTAIN.y, 13, baron));
+  const start = {x: MILK_FOUNTAIN.x, y: MILK_FOUNTAIN.y - 110, radius: 14};
+  const end = {x: MILK_FOUNTAIN.x, y: MILK_FOUNTAIN.y + 110};
+  const route = routeAroundBaron(start, end, baron);
+  assert.equal(route.at(-1), end);
+  assert.ok(route.length > 1);
+  let from = start;
+  for (const to of route) {
+    for (let step = 0; step <= 20; step++) {
+      assert.equal(isBlocked(from.x + (to.x - from.x) * step / 20,
+        from.y + (to.y - from.y) * step / 20, start.radius, baron), false);
+    }
+    from = to;
+  }
+});
+
+test('the professor rocks while he raises, holds, and lowers the straw', () => {
+  assert.equal(professorPose(0).lift, 0);
+  assert.ok(professorPose(1.5).lift > 0 && professorPose(1.5).lift < 1);
+  assert.equal(professorPose(2).lift, 1);
+  assert.equal(professorPose(5).lift, 1);
+  assert.ok(professorPose(5.5).lift > 0 && professorPose(5.5).lift < 1);
+  assert.equal(professorPose(6.1).lift, 0);
+  assert.equal(professorPose(8.32).lift, 0);
+  assert.notEqual(professorPose(2).rock, professorPose(3).rock);
+  assert.equal(isBlocked(professorFeet.x, professorFeet.y, 13, createBaron()), true);
+});
+
+test('the professor gives a random remark every 20 seconds without repeats', () => {
+  const speech = createProfessorSpeech(() => 0);
+  assert.equal(speech(19.9, true), null);
+  assert.equal(speech(20, false), null);
+  assert.equal(speech(21, true).text, 'The milk must flow.');
+  assert.equal(speech(24, true), null);
+  assert.equal(speech(40.9, true), null);
+  assert.equal(speech(41, true).text, 'One man, one vote. Such a barbaric concept.');
+});
+
+test('Pip can meet the professor once and revisit all four topics', () => {
+  const baron = createBaron();
+  const player = {x: professor.x - 44, y: professor.y, radius: 13};
+  assert.equal(isBlocked(player.x, player.y, player.radius, baron), false);
+  assert.equal(nearestInteraction(player, baron, null, [], [professor]).id, professor.id);
+
+  const open = createProfessorConversation();
+  const first = open();
+  const menu = open();
+  assert.match(first.text, /what is your name/);
+  assert.deepEqual(menu.replies.map(reply => reply.label), [
+    'What are you doing here?', 'What do you think of the Baron?',
+    'What do you think about democracy?', 'You seem like a smart man. Why are the guards cows?'
+  ]);
+
+  const seen = new Set();
+  const moods = new Set();
+  const endings = [];
+  function visit(node) {
+    if (seen.has(node)) return;
+    seen.add(node);
+    moods.add(node.mood);
+    if (!node.replies.length) endings.push(node.text);
+    for (const reply of node.replies) visit(reply.next);
+  }
+  visit(first);
+  assert.ok(seen.has(menu), 'the introduction should lead to the topic menu');
+  assert.deepEqual([...moods].sort(), [...professorMoods].sort());
+  assert.deepEqual(endings, ['Guards!']);
+  assert.equal(open(), menu);
 });
