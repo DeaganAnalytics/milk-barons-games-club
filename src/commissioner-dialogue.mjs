@@ -46,10 +46,12 @@ menu.replies.push(
   ], [{label: 'Continue', playerMood: 'attentive', next: guardWarning}])
 );
 
+const afterThrow = {...menu, text: "Oh... it's you. You're just like all the rest.", mood: despondent};
+
 export function createCommissionerConversation() {
   let met = false;
-  return () => {
-    const node = met ? menu : introduction;
+  return (played = false) => {
+    const node = met ? (played ? afterThrow : menu) : introduction;
     met = true;
     return node;
   };

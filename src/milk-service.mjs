@@ -22,7 +22,7 @@ export function createMilkService() {
   return {remaining: interval, scene: null};
 }
 
-function onscreen(member, {x, y}) {
+export function serviceStaffOnscreen(member, {x, y}) {
   // Match the full sprite box so a glass cannot pop in at the edge of view.
   return member.x + 39 > x && member.x - 39 < x + ROOM_WIDTH
     && member.y + 29 > y && member.y - 67 < y + ROOM_HEIGHT;
@@ -84,8 +84,9 @@ function enter(scene, phase) {
 
 export function updateMilkService(service, baron, staff, guards, camera, elapsed, dt, traveling, random = Math.random) {
   for (const member of staff) {
-    if (member.withoutMilk && !member.serviceDuty && !onscreen(member, camera)) {
+    if (member.withoutMilk && !member.serviceDuty && !serviceStaffOnscreen(member, camera)) {
       member.withoutMilk = false;
+      member.emptyServiceGlass = false;
     }
   }
   if (dt <= 0) return;

@@ -1,5 +1,6 @@
-import {createAttendantThrow, createMilkBalloon, updateMilkBalloon} from './milk-balloon.mjs';
-import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
+import {createAttendantMilk, updateAttendantMilk} from './attendant-milk.mjs';
+import {createAttendantThrow, createMilkBalloon, createPilloryReportScene, updateMilkBalloon} from './milk-balloon.mjs';
+import {pilloryAttendant, pilloryCommissioner, pilloryInView} from './pillory.mjs';
 import {professor} from './professor.mjs';
 import {createMilkPool, lifeguard, updateMilkPool} from './milk-pool.mjs';
 import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} from './rope-warning.mjs';
@@ -28,11 +29,14 @@ const guests = [...staff, bartender, lifeguard, professor, pilloryAttendant, pil
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
 const milkService = createMilkService();
+const attendantMilk = createAttendantMilk();
 const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
 const render = createRenderer(document.getElementById('game'));
 let seenMilo = false;
 let seenPoolAndClothes = false;
+let seenPillory = false;
+let reportedPillory = false;
 let guestEscort = null;
 let milkBalloon = null;
 let playedMilkBalloon = false;
@@ -45,6 +49,8 @@ const restart = document.getElementById('restart-game');
 restart.addEventListener('click', () => location.reload());
 const dialogue = createDialogue(baron, {
   hasPlayedMilkBalloon: () => playedMilkBalloon,
+  canReportPillory: guard => seenPillory && !reportedPillory && guard && !guard.pursuit
+    && !guard.poolWatch && !pilloryInView(cameraLeft(player.x), cameraTop(player.y)),
   canReportPool: () => seenPoolAndClothes,
   canReportMilo: () => ({seen: seenMilo, pending: milo.injuryPending || guards.some(guard => guard.pursuit?.milo)}),
   takeMiloInjury: () => {
@@ -80,6 +86,12 @@ const dialogue = createDialogue(baron, {
       player.walking = false;
       milkBalloon = createAttendantThrow();
       info.textContent = 'The attendant throws a milk balloon.';
+    }
+    if (action === 'reportPillory' && !reportedPillory) {
+      reportedPillory = true;
+      clearInput();
+      milkBalloon = createPilloryReportScene(player, target.guard, baron);
+      info.textContent = 'Pip leads the guard to the pillory.';
     }
     if (action === 'inspectPool') dispatchGuardToPool(target.guard);
     if (action === 'reportMilo') dispatchGuardToMilo(target.guard);
@@ -130,7 +142,7 @@ function frame(timestamp) {
   if (ropeWarning.scene) {
     const ended = advanceRopeScene(ropeWarning.scene, player, dt);
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
-      staff, null, partyChatter, null, ropeWarning, gateGuard, milkPool);
+      staff, null, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
     if (ended) {
       gameOver.hidden = false;
       restart.focus();
@@ -141,14 +153,20 @@ function frame(timestamp) {
   if (milkBalloon) {
     const done = updateMilkBalloon(milkBalloon, player, dt);
     if (done) {
-      const {attendant} = milkBalloon;
-      playedMilkBalloon ||= !attendant;
+      const {attendant, guard} = milkBalloon;
+      playedMilkBalloon ||= !attendant && !guard;
       milkBalloon = null;
       clearInput();
+      if (guard) {
+        guard.pauseUntil = elapsed + 1;
+        dialogue.open({id: 'guard', title: 'Bull Guard', pilloryThanks: true});
+        requestAnimationFrame(frame);
+        return;
+      }
       info.textContent = attendant ? 'Splat! The attendant hit the Commissioner.' : 'Splat! You hit the Commissioner.';
     }
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
-      staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, milkBalloon);
+      staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, milkBalloon, attendantMilk.scene);
     requestAnimationFrame(frame);
     return;
   }
@@ -183,6 +201,7 @@ function frame(timestamp) {
   }
   const cameraY = cameraTop(player.y);
   const cameraX = cameraLeft(player.x);
+  seenPillory ||= pilloryInView(cameraX, cameraY);
   seenPoolAndClothes ||= [
     MILK_POOL,
     {x: MILK_POOL.x + 58, y: MILK_POOL.y - 109}
@@ -207,9 +226,10 @@ function frame(timestamp) {
     return;
   }
   updatePartyChatter(partyChatter, {x: cameraX, y: cameraY}, staff, baron, guards, elapsed, dt);
+  updateAttendantMilk(attendantMilk, baron, staff, guards, {x: cameraX, y: cameraY}, dt);
   updateMilkPool(milkPool, elapsed, dt);
   updateStaff(staff, player, baron, guards, elapsed, dt);
-  render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene, partyChatter, guestEscort, ropeWarning, gateGuard, milkPool);
+  render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene, partyChatter, guestEscort, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
   requestAnimationFrame(frame);
 }
 

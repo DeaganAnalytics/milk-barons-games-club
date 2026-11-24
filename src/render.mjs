@@ -9,7 +9,7 @@ import {drawGuestRopes} from './guest-escort.mjs';
 import {createDancerSpeech, dancers, drawDancer} from './dancers.mjs';
 import {danceLayers, danceLyric, drawBaronDance, drawDanceBooth, drawDanceFloor} from './dance-floor.mjs';
 import {bartender, creameryHatch} from './creamery.mjs';
-import {drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
+import {drawAttendantMilk, drawEmptyServiceGlass, drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
 import {partySpeech, refillProgress} from './party-chatter.mjs';
 import {drawGuestRefill, drawPartyGuest, partyGuests} from './party-guests.mjs';
 import {drawPip} from './pip-art.mjs';
@@ -296,7 +296,7 @@ export function createRenderer(canvas) {
 
   const professorSpeech = createProfessorSpeech();
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool, milkBalloon = null) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool, milkBalloon = null, attendantMilk = null) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -325,7 +325,7 @@ export function createRenderer(canvas) {
     const ropeScene = ropeWarning?.scene;
     const pipFalling = ropeScene?.phase === 'fall' || ropeScene?.phase === 'over';
     const actors = [
-      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene.time, drawPip) : drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant ? milkBalloonHand(milkBalloon, player) : null)},
+      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene.time, drawPip) : drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant && !milkBalloon.guard ? milkBalloonHand(milkBalloon, player) : null)},
       {depth: baron.y + 34, draw: () => {
         if (dancing) drawBaronDance(ctx, baronDancePose, baron, elapsed);
         else drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed);
@@ -348,7 +348,8 @@ export function createRenderer(canvas) {
     for (const {id, position, width, height, depth, art, fallback} of pilloryProps) {
       const sprite = isReady(art) ? art : fallback;
       if (!sprite || !isReady(sprite)) continue;
-      const {x, y} = position;
+      const movingAttendant = id === 'attendant' ? milkBalloon?.attendant : null;
+      const {x, y} = movingAttendant ?? position;
       const front = y + depth;
       const top = front - height;
       if (x + width / 2 < cameraX || x - width / 2 > cameraX + ROOM_WIDTH
@@ -357,8 +358,10 @@ export function createRenderer(canvas) {
         pillorySpeakers[id] = {x, head: top + (id === 'commissioner' ? 8 : 0), front};
       }
       actors.push({depth: front, draw: () => {
-        const breath = id === 'attendant' ? Math.sin(elapsed * 2.4) * 0.8 : 0;
-        const sway = id === 'attendant' ? Math.sin(elapsed * 1.6) * 0.4 : 0;
+        const breath = movingAttendant?.walking ? Math.abs(Math.sin(movingAttendant.stride)) * 2.4
+          : id === 'attendant' ? Math.sin(elapsed * 2.4) * 0.8 : 0;
+        const sway = movingAttendant?.walking ? Math.sin(movingAttendant.stride) * 1.1
+          : id === 'attendant' ? Math.sin(elapsed * 1.6) * 0.4 : 0;
         const left = x - width / 2;
         ctx.drawImage(sprite, left + sway, top - breath, width, height + breath);
         if (id === 'commissioner' && sprite === art && (elapsed + 1.3) % 5.7 < 0.13) {
@@ -390,7 +393,10 @@ export function createRenderer(canvas) {
     for (const member of staff) {
       const usingBottle = pouring && member === refill.server;
       const sprite = member.withoutMilk || usingBottle ? emptySprites[member.id] : staffSprites[member.id];
-      actors.push({depth: member.y + 20, draw: () => drawStaff(ctx, sprite, member, elapsed, skimVertical)});
+      actors.push({depth: member.y + 20, draw: () => {
+        drawStaff(ctx, sprite, member, elapsed, skimVertical);
+        if (member.emptyServiceGlass) drawEmptyServiceGlass(ctx, member);
+      }});
     }
     partyGuests.forEach((guest, index) => {
       let milk = chatter?.milk[index];
@@ -417,6 +423,7 @@ export function createRenderer(canvas) {
     });
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
+    if (attendantMilk && !milkBalloon) drawAttendantMilk(ctx, attendantMilk);
     if (milkScene) drawMilkAction(ctx, milkScene, baron, animateBaronArm);
     if (pouring) drawGuestRefill(ctx, partyGuests[refill.guest], partySprites[refill.guest], refill.server, progress);
     if (danceVisible) {
