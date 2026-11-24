@@ -1458,3 +1458,17 @@ test('Elias charges only on Pip’s first exit after dancing, with either reply'
     assert.equal(fee.next.action, 'chargeDanceFee');
   }
 });
+
+test('health starts full, changes in half hearts, and stays at zero after death', async () => {
+  const {createHealth, MAX_HEARTS} = await import('../src/health.mjs');
+  const changes = [];
+  const health = createHealth((hearts, message) => changes.push([hearts, message]));
+  assert.equal(health.hearts, MAX_HEARTS);
+  assert.equal(health.change(1), 3);
+  assert.throws(() => health.change(-0.25), TypeError);
+  for (const hearts of [2.5, 2, 1.5, 1, 0.5]) assert.equal(health.change(-0.5), hearts);
+  assert.equal(health.change(-3, 'Game over test'), 0);
+  assert.equal(health.change(1), 0);
+  assert.deepEqual(changes.map(([hearts]) => hearts), [2.5, 2, 1.5, 1, 0.5, 0]);
+  assert.deepEqual(changes.at(-1), [0, 'Game over test']);
+});

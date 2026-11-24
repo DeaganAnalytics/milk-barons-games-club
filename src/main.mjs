@@ -1,5 +1,6 @@
 import {advanceEliasRun, elias, routeEliasToPip, updateEliasFollow} from './elias.mjs';
 import {createCoinBalance, STARTING_COINS} from './coins.mjs';
+import {createHealth, MAX_HEARTS} from './health.mjs';
 import {createAttendantMilk, updateAttendantMilk} from './attendant-milk.mjs';
 import {createAttendantThrow, createMilkBalloon, createPilloryReportScene, updateMilkBalloon} from './milk-balloon.mjs';
 import {pilloryAttendant, pilloryCommissioner, pilloryInView} from './pillory.mjs';
@@ -67,6 +68,20 @@ function endGame(title, message) {
   gameOver.hidden = false;
   restart.focus();
 }
+
+const healthDisplay = document.getElementById('health-display');
+const healthImages = Array.from({length: MAX_HEARTS * 2 + 1}, (_, index) => {
+  const image = new Image();
+  image.src = new URL(`../assets/health/${index}.webp`, import.meta.url);
+  return image;
+});
+
+export const health = createHealth((hearts, deathMessage) => {
+  if (!gameOver.hidden) return;
+  healthDisplay.src = healthImages[hearts * 2].src;
+  healthDisplay.alt = `${hearts} of ${MAX_HEARTS} hearts`;
+  if (hearts === 0) endGame('Game Over', deathMessage ?? 'You ran out of health.');
+});
 
 export const coinBalance = createCoinBalance((count, outcome) => {
   if (!gameOver.hidden) return;
@@ -245,7 +260,7 @@ function frame(timestamp) {
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
       staff, null, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
     if (ended) {
-      endGame('Game Over', 'You have displeased the Baron!');
+      health.change(-MAX_HEARTS, 'You have displeased the Baron!');
     } else requestAnimationFrame(frame);
     return;
   }

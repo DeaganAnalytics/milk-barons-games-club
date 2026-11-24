@@ -273,6 +273,20 @@ canvas {
   color: #f5dfb3;
 }
 
+.health-meter {
+  position: absolute;
+  top: 2%;
+  left: 2%;
+  width: min(38%, 210px);
+  pointer-events: none;
+}
+
+.health-meter img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .coin-counter {
   position: absolute;
   top: 2%;
