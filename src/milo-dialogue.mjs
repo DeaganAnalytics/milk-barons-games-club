@@ -53,7 +53,7 @@ export function miloMenu(text, hasBeenSlapped, injuryReply, wasInjured, hasSeenG
     ]
   )));
 
-  const remembered = say("Where's my milk indeed.", 'sad', more(say('The answer is right here. With the Baron.', angry, [
+  const remembered = say("Where's my milk indeed.", 'defiant', more(say('The answer is right here. With the Baron.', angry, [
     terminal('You should start campaigning again!', say("Look at what I'm wearing.", 'worried', [
       reply("You've already got a banner!", say('...', 'worried', more(finish("You're going to get us both killed.", 'worried'))))
     ])),

@@ -31,17 +31,19 @@ export function sleepingGamblerDialogue(gambler) {
     text: 'The man is fast asleep.', speaker: 'Narrator', mood: 'asleep',
     mustContinue: true, replies: [reply('Leave him alone', null)]
   };
-  const awake = (text, replies, action) => ({
-    text, mood: 'awake', replies, action, mustContinue: replies.length > 0
+  const awake = (text, replies, action, mood = 'awake') => ({
+    text, mood, replies, action, mustContinue: replies.length > 0
   });
   return {
     text: 'You notice the sleeping man has milk tokens in the payout tray.',
     speaker: 'Narrator', mood: 'asleep', mustContinue: true,
     replies: [
-      reply('Wake the man', awake('What?! What time is it? Where am I?!', [
-        reply('Continue', awake('Who are you?', [
-          reply('You have tokens in the tray.', awake('Mine! Get back! Mine!', [], 'wakeSleepingGambler'))
-        ]))
+      reply('Wake the man', awake('What?!', [
+        reply('Continue', awake('What time is it? Where am I?!', [
+          reply('Continue', awake('Who are you?', [
+            reply('You have tokens in the tray.', awake('Mine! Get back! Mine!', [], 'wakeSleepingGambler', 'protective'))
+          ], undefined, 'drowsy'))
+        ], undefined, 'dismayed'))
       ])),
       reply('Steal the tokens', {exitAction: 'stealSleepingGamblerTokens'}),
       reply('Leave him alone', null)

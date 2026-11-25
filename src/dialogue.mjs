@@ -32,19 +32,19 @@ const partyGuestCallsGuard = {
   text: 'Then get away from me! Guards!', mood: 'annoyed', action: 'callGuard'
 };
 
-const partyGuestOpening = {
-  text: "Where's your milk waiter?", mood: 'attentive', replies: [
+const partyGuestOpening = (id, expressive) => ({
+  text: "Where's your milk waiter?", mood: !expressive ? 'attentive' : id === 'plum' ? 'delighted' : 'amused', replies: [
     {label: "I'm not a waiter.", playerMood: 'thinking', next: partyGuestCallsGuard},
     {label: "I'll go get it.", playerMood: 'attentive', next: {
-      text: "And hurry up with it. And where's your suit?", mood: 'annoyed', replies: [
+      text: "And hurry up with it. And where's your suit?", mood: id === 'plum' ? 'smug' : 'skeptical', replies: [
         {label: "I'm sorry.", playerMood: 'sorry', next: {
-          text: 'Unacceptable. I must raise a complaint with the Baron!', mood: 'annoyed'
+          text: 'Unacceptable. I must raise a complaint with the Baron!', mood: id === 'plum' ? 'shocked' : 'appalled'
         }},
         {label: "Actually I'm not a waiter.", playerMood: 'worried', next: partyGuestCallsGuard}
       ]
     }}
   ]
-};
+});
 
 const postEscortWarning = {
   text: 'Central? Please send a guard to protect our esteemed female guests in the bottom left corner.',
@@ -115,7 +115,7 @@ const baronReplies = [
   },
   {
     label: 'Why do you have cows for guards?', once: 'baronCowFirst', consumeOnSelect: true, playerMood: 'thinking',
-    next: {text: 'What do you mean?', mood: 'pleased', replies: [
+    next: {text: 'What do you mean?', mood: 'flustered', replies: [
       {
         label: 'The guards are cows.', playerMood: 'attentive',
         next: {text: 'I have guards.', mood: 'displeased', replies: [
@@ -128,7 +128,7 @@ const baronReplies = [
 
 const followingReply = {
   label: 'Are you following me?', once: 'baronFollowing', consumeOnSelect: true, playerMood: 'thinking',
-  next: {text: 'Following you? Never! I am merely managing my institution.', mood: 'displeased'}
+  next: {text: 'Following you? Never! I am merely managing my institution.', mood: 'suspicious'}
 };
 
 const watchingReply = {
@@ -154,7 +154,7 @@ const portraits = {
   guard: {row: 3, expressions: ['deadpan', 'suspicious', 'speaking']}
 };
 
-const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-formal', 'milo-angry'].map(name =>
+const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-listening', 'guard-formal', 'milo-angry'].map(name =>
   [name, new URL('../assets/dialogue/' + name + '.webp', import.meta.url)]));
 const portraitCache = new Map();
 
@@ -163,6 +163,8 @@ const npcExpressions = new Map([
   ...dancerTargets.map(({id}) => [id, dancerMoods]),
   ...partyGuests.map(({id}) => [id, ['attentive', 'annoyed']]),
   [skimId, ['attentive', 'distressed']],
+  [sleepingGamblerId, gamblerPortraits],
+  ...staffIds.filter(id => id !== skimId).map(id => [id, ['attentive']]),
   [bartender.id, bartenderMoods],
   [elias.id, eliasPortraits],
   [lifeguard.id, lifeguardMoods],
@@ -172,6 +174,45 @@ const npcExpressions = new Map([
   [executiveId, executiveMoods.filter(mood => mood !== 'tousled')],
   [politicianId, politicianMoods]
 ]);
+
+const extraPortraitMoods = new Map([
+  ['baron', ['suspicious', 'flustered', 'winded']],
+  ['milo', ['defiant']],
+  [bartender.id, ['offended']],
+  [lifeguard.id, ['sheepish']],
+  [skimId, ['exasperated', 'wistful', 'conspiratorial']],
+  ['plum', ['delighted', 'smug', 'shocked']],
+  ['emerald', ['amused', 'skeptical', 'appalled']],
+  [sleepingGamblerId, ['drowsy', 'protective', 'dismayed']],
+  ...staffIds.filter(id => id !== skimId).map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']])
+]);
+
+function extraPortraitUrl(id, mood, withoutMilk) {
+  if (!withoutMilk && extraPortraitMoods.get(id)?.includes(mood)) {
+    return new URL('../assets/dialogue/expressions/' + id + '-' + mood + '.webp', import.meta.url);
+  }
+  return null;
+}
+
+const expressionFamilies = [
+  ['attentive', 'deadpan', 'formal', 'speaking', 'polite', 'reserved', 'weary'],
+  ['thinking', 'skeptical', 'suspicious', 'stern', 'deadpan'],
+  ['happy', 'pleased', 'welcoming', 'amused', 'delighted', 'laughing', 'laugh', 'current-smile', 'exuberant', 'excited', 'big-excited-smile', 'relieved'],
+  ['sad', 'despondent', 'dismayed', 'wistful', 'sorry', 'worried', 'distressed', 'nervous', 'sheepish', 'apologetic'],
+  ['alarmed', 'flustered', 'shocked', 'stressed', 'hurried', 'worried', 'appalled', 'exasperated'],
+  ['angry', 'demonic-angry', 'frown', 'frowning', 'displeased', 'irritated', 'annoyed', 'offended', 'insulted', 'defiant', 'appalled'],
+  ['smug', 'self-assured', 'self-assured-smirk', 'condescending', 'devious', 'conspiratorial', 'evil-laugh']
+];
+
+function chooseExpression(mood, alternatives, history) {
+  let selected = mood;
+  if (history.mood === mood && history.count >= 2) {
+    selected = alternatives.find(expression => expression !== mood) ?? mood;
+  }
+  history.count = history.mood === selected ? history.count + 1 : 1;
+  history.mood = selected;
+  return selected;
+}
 
 const pipReactions = {
   angry: ['alarmed', 'worried'],
@@ -220,6 +261,9 @@ function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false
 function warmPortraits() {
   if (portraitCache.size) return;
   const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values(), cameraPortrait];
+  for (const [id, moods] of extraPortraitMoods) {
+    for (const mood of moods) urls.push(extraPortraitUrl(id, mood));
+  }
   for (const {id} of dancerTargets) {
     for (const mood of dancerMoods) urls.push(standalonePortraitUrl(id, false, mood));
   }
@@ -302,6 +346,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
   const professorOpening = createProfessorConversation();
+  const guestGreetingSeen = new Set();
   const miloGreeting = createMiloGreeting();
   let metMilo = false;
   let miloWasInjured = false;
@@ -321,27 +366,35 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     return miloMenu(miloGreeting(miloWasInjured), slappedByBaron, injuryReply, miloWasInjured, hasSeenCowGuard?.());
   }
 
+  const npcHistory = {};
+  const pipHistory = {};
+
   function setPortrait(element, character, mood, withoutMilk) {
-    const expressions = npcExpressions.get(character);
-    const sameSpeaker = element.dataset.portrait === character;
-    const previous = sameSpeaker ? element.dataset.expression : null;
-    const hasSpecialArt = reportPortraits.has(character + '-' + mood) || mood === 'tousled';
-    if (expressions && !hasSpecialArt && !expressions.includes(mood)) mood = expressions[0];
-    if (expressions && !hasSpecialArt && mood === previous) {
-      const index = expressions.indexOf(mood);
-      mood = expressions[(index + 1) % expressions.length];
+    const expressions = [
+      ...(npcExpressions.get(character) ?? []),
+      ...(!withoutMilk ? extraPortraitMoods.get(character) ?? [] : [])
+    ];
+    const special = reportPortraits.has(character + '-' + mood) || mood === 'tousled' || mood === 'asleep';
+    if (expressions.length && !special && !expressions.includes(mood)) mood = expressions[0];
+    if (npcHistory.character !== character) {
+      npcHistory.character = character;
+      npcHistory.mood = null;
     }
-    // Fixed artwork keeps its state, with a small change of posture on each line.
-    const fixedArt = !expressions || (hasSpecialArt && mood === previous);
-    element.dataset.portraitPose = fixedArt && sameSpeaker && element.dataset.portraitPose !== 'shifted'
-      ? 'shifted' : 'resting';
+    const family = expressionFamilies.find(group => group.includes(mood)) ?? [];
+    const alternatives = special || withoutMilk ? [] : [
+      ...family.filter(expression => expressions.includes(expression)),
+      ...['attentive', 'deadpan', 'thinking', 'reserved', 'worried', 'skeptical', 'suspicious', 'polite', 'stern'].filter(expression => expressions.includes(expression)),
+      ...expressions
+    ];
+    mood = chooseExpression(mood, alternatives, npcHistory);
+    const extraPortrait = extraPortraitUrl(character, mood, withoutMilk);
     const reportPortrait = reportPortraits.get(character + '-' + mood);
     element.dataset.injured = String(character === 'milo' && miloWasInjured && !reportPortrait);
     element.classList.toggle('report-portrait', Boolean(reportPortrait));
     element.dataset.portrait = character;
-    if (reportPortrait || !portraits[character]) {
+    if (extraPortrait || reportPortrait || !portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.style.setProperty('--portrait-image', `url(${reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.(), pipLipstick)})`);
+      element.style.setProperty('--portrait-image', `url(${extraPortrait ?? reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.(), pipLipstick)})`);
       element.dataset.expression = mood;
       return;
     }
@@ -413,10 +466,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     }
     const reactions = pipReactions[node.mood] ?? ['attentive', 'thinking'];
     const preferred = node.playerMood ?? playerMood ?? reactions[0];
-    const previous = playerPortrait.dataset.expression?.split(':')[0];
-    const playerExpression = preferred === previous
-      ? [...reactions, 'thinking', 'attentive'].find(mood => mood !== previous)
-      : preferred;
+    const playerExpression = chooseExpression(preferred, [...reactions, 'thinking', 'attentive'], pipHistory);
     const portraitKey = playerExpression + ':' + (disguise ?? '') + ':' + pipLipstick;
     if (playerPortrait.dataset.expression !== portraitKey) {
       drawPipPortrait(playerArt, playerExpression, disguise, pipLipstick);
@@ -553,14 +603,17 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   }
 
   function open(target) {
+    npcHistory.mood = pipHistory.mood = null;
     activeTarget = target;
     pokieCounter.hidden = target.id !== pokieId;
     disguise = target.executiveFraud ? 'woman' : null;
+    const firstGuestGreeting = !guestGreetingSeen.has(target.id);
+    if (partyGuests.some(guest => guest.id === target.id)) guestGreetingSeen.add(target.id);
     const opening = target.slotReaction ? {
-      text: target.slotReaction.text, mood: 'speaking', mustContinue: true,
+      text: target.slotReaction.text, mood: staffIds.includes(target.id) ? 'pleased' : 'speaking', mustContinue: true,
       playerMood: target.slotReaction.playerMood,
       replies: [{label: target.slotReaction.response, next: null}]
-    } : partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
+    } : partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening(target.id, !firstGuestGreeting)
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.(), isCommissionerSplattered?.(), baronDiscoveries?.()?.pool)
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
       : target.id === elias.id && target.pokieBan ? eliasPokieBan

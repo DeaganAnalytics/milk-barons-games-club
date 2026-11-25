@@ -46,7 +46,7 @@ export function baronGreetings(karma, coins) {
 
 export function baronDanceDialogue(used) {
   const exhausted = say('Good heavens... that was exhausting. Next time, I ought to just fine you.', 'displeased');
-  const breathing = say('', 'displeased', {direction: 'Heavy breathing', replies: more(exhausted), mustContinue: true});
+  const breathing = say('', 'winded', {direction: 'Heavy breathing', replies: more(exhausted), mustContinue: true});
   const slap = say('I SAID NO!', 'displeased', {
     playerMood: 'alarmed', enterAction: 'baronSlap', replies: more(breathing), mustContinue: true
   });

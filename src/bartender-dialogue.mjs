@@ -73,7 +73,7 @@ menu.replies.push(
     ['We also serve cocktails. Milk Martinis, Dairy Daiquiris, Piña Cow-ladas and White Russians.', polite],
     ["Whatever a Russian is. I'm not Russian to find out.", deadpan]
   ])),
-  reply('Do you have anything non-milk-related?', say('Non-milk, you say, sir? Surely you jest.', skeptical, back)),
+  reply('Do you have anything non-milk-related?', say('Non-milk, you say, sir? Surely you jest.', 'offended', back)),
   reply("I'll have a milk, please.", orderDrink),
   reply('Why is there an armed guard?', say('To protect the milk, of course, sir.', deadpan, [
     reply('But an assault rifle?', say('Bullets are cheaper than milk, sir.', deadpan, back)),

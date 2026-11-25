@@ -29,10 +29,10 @@ function financial({gained, lost, value}) {
   const net = gained - lost;
   return [
     line('Ah! You vish to review your financial performance? Excellent!', 'current-smile'),
-    line(`Your total earnings amount to ₥${gained}.`),
-    line(`Your total expenditure and losses amount to ₥${lost}.`),
-    line(`Zis gives you a net financial result of ₥${signed(net)}.`),
-    line(`Your current balance is ₥${value}.`),
+    line(`Your total earnings amount to ₥${gained}.`, 'reading-figures'),
+    line(`Your total expenditure and losses amount to ₥${lost}.`, 'reading-figures'),
+    line(`Zis gives you a net financial result of ₥${signed(net)}.`, 'self-assured-smirk'),
+    line(`Your current balance is ₥${value}.`, 'reading-figures'),
     net > 0 ? line('A positive return on capital! Most encouraging, Master Pip.', 'current-smile')
       : net < 0 ? line('A negative return on capital. Perhaps you are better suited to government employment.', 'devious')
       : line('You have achieved absolutely nothing, financially speaking.', 'insulted')
@@ -43,8 +43,8 @@ function alignment({gained, lost, value}) {
   return [
     line('Aristocratic alignment, Master Pip. Ve do not use such peasant terminology.', 'insulted'),
     line(`You have accumulated ${gained} points through acts of compassion, generosity and other financially questionable activities.`),
-    line(`You have accumulated ${lost} points through acts of selfishness, deception and entrepreneurial initiative.`),
-    line(`Your net alignment currently stands at ${signed(value)}.`),
+    line(`You have accumulated ${lost} points through acts of selfishness, deception and entrepreneurial initiative.`, 'self-assured-smirk'),
+    line(`Your net alignment currently stands at ${signed(value)}.`, 'reading-figures'),
     value < -5 ? line('Magnificent! You possess all ze moral qualities of a successful aristocrat.', 'current-smile')
       : value < 0 ? line('Your moral development is progressing satisfactorily.', 'self-assured-smirk')
       : value === 0 ? line('You appear to be suffering from moral indecision.')
@@ -57,10 +57,10 @@ function health({gained, lost, value}) {
   return [
     line('Ah, yes. Your physical depreciation.'),
     line('You are, after all, an asset of ze Baron until your debt is repaid.', 'devious', 'My what?'),
-    line(`You have sustained ${lost} hearts of damage.`),
-    line(`You have recovered ${gained} hearts.`),
+    line(`You have sustained ${lost} hearts of damage.`, lost ? 'worried' : 'thinking'),
+    line(`You have recovered ${gained} hearts.`, gained ? 'current-smile' : 'thinking'),
     line(`Your net change in health is ${signed(gained - lost)} hearts.`),
-    line(`You currently possess ${value} out of 3 hearts.`),
+    line(`You currently possess ${value} out of 3 hearts.`, 'reading-figures'),
     value === 3 ? line('Excellent! No physical depreciation whatsoever.', 'current-smile')
       : value >= 2 ? line('Some minor wear and tear. Nothing zat should affect your resale value.')
       : value >= 1 ? line('Your physical condition is becoming a matter of financial concern.', 'worried')
