@@ -459,3 +459,66 @@ canvas {
 .conversation-heading .coin-counter {
   flex: 0 0 clamp(82px, 25%, 145px);
 }
+
+@media (min-width: 601px) and (max-width: 899px) {
+  .viewport:has(#game-over),
+  .conversation-portraits {
+    width: min(100%, max(230px, calc((100svh - 356px) * 0.89)));
+    margin-inline: auto;
+  }
+
+  .dpad {
+    --key: 48px;
+  }
+}
+
+@media (min-width: 900px) {
+  .shell {
+    display: grid;
+    grid-template-columns: minmax(0, min(710px, calc((100svh - 103px) * 0.89))) minmax(0, 300px);
+    grid-template-rows: auto auto 1fr;
+    gap: 10px 16px;
+    max-width: 1026px;
+    justify-content: center;
+  }
+
+  .shell > header,
+  .shell > .conversation {
+    grid-column: 1 / -1;
+  }
+
+  .shell > .viewport {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    align-self: start;
+  }
+
+  .shell > .status-panel,
+  .shell > .controls {
+    grid-column: 2;
+    align-self: start;
+  }
+
+  .shell > .status-panel { grid-row: 2; }
+  .shell > .controls { grid-row: 3; }
+
+  .shell > .panel,
+  .conversation > .panel {
+    margin-top: 0;
+  }
+
+  .dpad {
+    --key: 48px;
+  }
+
+  .conversation {
+    display: grid;
+    grid-template-columns: subgrid;
+    align-items: start;
+  }
+
+  .conversation > .panel {
+    max-height: calc(100svh - 100px);
+    overflow-y: auto;
+  }
+}
