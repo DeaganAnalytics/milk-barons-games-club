@@ -2130,3 +2130,28 @@ test('balloons from Pip, the attendant, and the guard all mark the Commissioner 
     assert.equal(scene.hitCommissioner, true);
   }
 });
+
+test('the Commissioner’s milk pool topic unlocks on sight and each branch exhausts it', async () => {
+  const {createCommissionerConversation} = await import('../src/commissioner-dialogue.mjs');
+  const open = createCommissionerConversation();
+  open();
+  const topic = 'commissionerMilkPool';
+  assert.ok(!open().replies.some(reply => reply.once === topic));
+  const question = open(false, false, true).replies.find(reply => reply.once === topic);
+  assert.ok(question);
+  assert.equal(question.consumeOnSelect, undefined);
+  const branches = question.next.replies;
+  assert.equal(branches.length, 3);
+  const endings = ['What... are you? A... child?', 'God help me.', "I'm surrounded by idiots."];
+  for (const [index, branch] of branches.entries()) {
+    assert.equal(branch.once, topic);
+    assert.equal(branch.consumeOnSelect, true);
+    let node = branch.next;
+    while (node.replies[0].label !== 'Continue') {
+      assert.equal(node.action, undefined);
+      node = node.replies[0].next;
+    }
+    assert.equal(node.text, endings[index]);
+    assert.equal(node.action, undefined);
+  }
+});

@@ -112,6 +112,25 @@ export function createCommissionerConversation() {
     ], [{label: 'Continue', playerMood: 'attentive', next: guardWarning}])
   );
 
+  const poolTopic = 'commissionerMilkPool';
+  const poolBranches = [
+    exchange([['I just thought it was cool.', 'What... are you? A... child?', frowning]]),
+    exchange([
+      ["Apparently, it's good for your skin.", 'How... is this... relevant?', deadpan],
+      ['It might help you see the bright side of all this?', 'God help me.', despondent]
+    ]),
+    exchange([
+      ['Just another display of wastefulness.', "Be quiet! That's how I ended up here.", stressed],
+      ['By complaining about the pool?', "I'm surrounded by idiots.", frowning]
+    ])
+  ];
+  poolBranches[2].next.direction = 'Whispers';
+  const poolQuestion = {
+    ...exchange([["Did you know there's a milk pool here?", 'Why... are you telling me this?', deadpan]],
+      poolBranches.map(branch => ({...branch, once: poolTopic, consumeOnSelect: true}))),
+    once: poolTopic
+  };
+
   let milkQuestionAnswered = false;
   const milkQuestion = {
     label: "What's that on your face?",
@@ -127,7 +146,8 @@ export function createCommissionerConversation() {
     }
   };
 
-  return (played = false, splattered = false) => {
+  return (played = false, splattered = false, seenMilkPool = false) => {
+    if (seenMilkPool && !menu.replies.includes(poolQuestion)) menu.replies.push(poolQuestion);
     menu.replies = menu.replies.filter(reply => reply !== milkQuestion);
     if (splattered && !milkQuestionAnswered) {
       milkQuestion.next = {
