@@ -96,8 +96,10 @@ export const health = createHealth((hearts, deathMessage) => {
 const clothingTheftKarma = {all: -2, man: -0.5, women: -1.5};
 const pendingBaronKarma = [];
 const triggeredBaronKarma = new Set();
+let hasChangedKarma = false;
 const karmaMeter = document.getElementById('karma-meter');
 export const karma = createKarma((score, position) => {
+  hasChangedKarma = true;
   karmaMeter.style.setProperty('--karma-position', `${position * 100}%`);
   karmaMeter.setAttribute('aria-valuenow', score);
   karmaMeter.setAttribute('aria-valuetext', score === 0 ? 'Neutral' : String(score));
@@ -177,6 +179,7 @@ const clothingEvents = {
 
 const dialogue = createDialogue(baron, {
   hasSeenCowGuard: () => seenCowGuard,
+  hasKarmaChanged: () => hasChangedKarma,
   baronDiscoveries: () => ({
     pillory: seenPillory, attendant: spokeToPilloryAttendant, pool: seenMilkPool, fountain: seenMilkFountain
   }),

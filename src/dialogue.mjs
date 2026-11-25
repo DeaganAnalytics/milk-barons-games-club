@@ -198,7 +198,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries, hasSeenCowGuard, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -319,6 +319,7 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
     const seenCowGuard = hasSeenCowGuard?.();
     const availableReplies = replies.filter(reply => !usedReplies.has(reply.once)
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
+      && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
     replyList.replaceChildren(...availableReplies.map(reply => {
       const button = document.createElement('button');

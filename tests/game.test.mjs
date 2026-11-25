@@ -1696,3 +1696,18 @@ test('Milo skips the southwest corner and reroutes if the ropes go up mid-walk',
     guestEnclosure.active = false;
   }
 });
+
+test('Elias’s karma topic requires a change and both token branches return to his menu', async () => {
+  const {eliasConversation, eliasFollowingConversation} = await import('../src/elias.mjs');
+  for (const menu of [eliasConversation, eliasFollowingConversation]) {
+    const karmaQuestion = menu.replies.find(reply => reply.label === 'Are you tracking my... karma?');
+    assert.equal(karmaQuestion.requiresKarmaChange, true);
+    const tokens = menu.replies.find(reply => reply.label === 'What are these coins?');
+    assert.equal(tokens.consumeOnSelect, true);
+    const [valuation, future] = tokens.next.replies[0].next.replies;
+    assert.match(valuation.next.replies[0].next.text, /Ze Baron, naturally/);
+    assert.equal(valuation.next.replies[0].next.replies[0].next, menu);
+    assert.match(future.next.text, /currency of ze future/);
+    assert.equal(future.next.replies[0].next, menu);
+  }
+});
