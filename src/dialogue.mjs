@@ -192,7 +192,7 @@ const pipReactions = {
   skeptical: ['thinking', 'attentive']
 };
 
-function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false) {
+function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false, tousled = false) {
   if (id.startsWith('dancer-')) return new URL('../assets/dance/portraits/' + dancerPortraitName(id, mood), import.meta.url);
   if (id === skimId && mood === 'distressed') return new URL('../assets/waiters/edmund-vale-distressed-portrait.webp', import.meta.url);
   if (id === sleepingGamblerId) return new URL('../assets/slots/gambler-' + mood + '.webp', import.meta.url);
@@ -210,7 +210,8 @@ function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false
     return new URL('../assets/guests/' + id + suffix, import.meta.url);
   }
   if (id === executiveId && executiveMoods.includes(mood)) {
-    return new URL('../assets/slots/' + id + '-' + mood + '-portrait.webp', import.meta.url);
+    const variant = tousled && mood !== 'tousled' ? '-tousled' : '';
+    return new URL('../assets/slots/' + id + '-' + mood + variant + '-portrait.webp', import.meta.url);
   }
   if (id === politicianId && politicianMoods.includes(mood) && mood !== 'weary') {
     return new URL('../assets/slots/' + id + '-' + mood + '-portrait.webp', import.meta.url);
@@ -242,7 +243,10 @@ function warmPortraits() {
   for (const mood of lifeguardMoods) urls.push(standalonePortraitUrl(lifeguard.id, false, mood));
   for (const mood of gamblerPortraits) urls.push(standalonePortraitUrl(sleepingGamblerId, false, mood));
   for (const mood of pokiePortraits) urls.push(standalonePortraitUrl(pokieId, false, mood));
-  for (const mood of executiveMoods) urls.push(standalonePortraitUrl(executiveId, false, mood));
+  for (const mood of executiveMoods) {
+    urls.push(standalonePortraitUrl(executiveId, false, mood));
+    if (mood !== 'tousled') urls.push(standalonePortraitUrl(executiveId, false, mood, false, true));
+  }
   for (const mood of politicianMoods) urls.push(standalonePortraitUrl(politicianId, false, mood));
   for (const {id} of slotPlayers.filter(player => player.id !== politicianId)) urls.push(standalonePortraitUrl(id));
   for (const {id} of partyGuests) {
@@ -322,7 +326,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     element.dataset.portrait = character;
     if (reportPortrait || !portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.style.setProperty('--portrait-image', `url(${reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.())})`);
+      element.style.setProperty('--portrait-image', `url(${reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.(), pipLipstick)})`);
       element.dataset.expression = mood;
       return;
     }
@@ -458,7 +462,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     if (node.enterAction) finishAction(node.enterAction, activeTarget);
     if (node.fadeTo) {
       autoClose = setTimeout(() => show(node.fadeTo, character, playerMood, withoutMilk), 1200);
-    } else if (node.autoCloseMs) autoClose = setTimeout(close, node.autoCloseMs);
+    } else if (node.autoCloseMs && activeTarget) autoClose = setTimeout(close, node.autoCloseMs);
   }
 
   closeButton.addEventListener('click', requestClose);

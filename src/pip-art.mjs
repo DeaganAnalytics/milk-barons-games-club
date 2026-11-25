@@ -6,7 +6,7 @@ export function drawPip(ctx, player, elapsed, milkBalloonHand = null) {
   const breath = player.walking ? 0 : Math.sin(elapsed * 2.8 + 0.8) * 0.9;
   const dancing = !player.walking && player.danceIdle > 3;
   if (dancing || (!player.walking && player.facing === 0)) {
-    drawFrontIdle(ctx, x, y, elapsed, dancing);
+    drawFrontIdle(ctx, x, y, elapsed, dancing, player.lipstick);
     return;
   }
 
@@ -67,7 +67,7 @@ export function drawPip(ctx, player, elapsed, milkBalloonHand = null) {
     ctx.fill();
   }
 
-  drawPipHead(ctx, 0, -33, angle, 'attentive');
+  drawPipHead(ctx, 0, -33, angle, 'attentive', false, player.lipstick);
   ctx.restore();
 }
 
@@ -88,7 +88,7 @@ function stroke(ctx, width, color, paint) {
   ctx.stroke();
 }
 
-function drawFrontIdle(ctx, x, y, elapsed, dancing) {
+function drawFrontIdle(ctx, x, y, elapsed, dancing, lipstick) {
   const beat = Math.sin(elapsed * 6);
   const breath = dancing ? Math.abs(beat) * 1.7 : Math.sin(elapsed * 1.8) * 0.55;
   const sway = dancing ? beat * 3.2 : Math.sin(elapsed * 1.15) * 0.4;
@@ -145,11 +145,11 @@ function drawFrontIdle(ctx, x, y, elapsed, dancing) {
   bib.addColorStop(1, '#ddbf98');
   ellipse(ctx, 0, -12.7, 3.35, 6.45 + breath * 0.24, bib);
 
-  drawPipHead(ctx, 0, -32.2, 0, 'attentive');
+  drawPipHead(ctx, 0, -32.2, 0, 'attentive', false, lipstick);
   ctx.restore();
 }
 
-function drawPipHead(ctx, x, y, angle, mood, portrait = false) {
+function drawPipHead(ctx, x, y, angle, mood, portrait = false, lipstick = false) {
   ctx.save();
   ctx.translate(x, y);
   const side = Math.sin(angle);
@@ -167,6 +167,11 @@ function drawPipHead(ctx, x, y, angle, mood, portrait = false) {
   }
 
   const face = portrait ? 4 : side * (front < 0 ? 7 : 5.4);
+  if (lipstick) {
+    const cheek = side < -0.3 ? 3.8 : -3.8;
+    drawLipstickMark(ctx, cheek, 3.5, -0.48, 0.94);
+    if (front > 0.4) drawLipstickMark(ctx, side * 3 - 2, -6.4, 0.29, 0.8);
+  }
   const eyes = portrait ? [2, 8.2] : Math.abs(side) < 0.8 ? [face - 3.55, face + 3.55] : [face];
   for (const eye of eyes) {
     if (mood === 'happy') {

@@ -330,6 +330,7 @@ const dialogue = createDialogue(baron, {
       clubEvent('Elias opens your account. The Baron expects you to double it.');
     }
     if (action === 'executivePrivateNetworking') {
+      player.lipstick = true;
       clubEvent('Private networking costs Pip ₥100. Health restored.', () => {
         health.change(MAX_HEARTS);
         coinBalance.change(-100);
@@ -380,6 +381,14 @@ const dialogue = createDialogue(baron, {
       clearInput();
       milkBalloon = createMilkBalloon(player, baron);
       info.textContent = 'Pip is picking up a milk balloon.';
+    }
+    if (action === 'commissionerGift' || action === 'commissionerBetrayal' || action === 'commissionerTheft') {
+      const theft = action === 'commissionerTheft';
+      clubEvent(theft ? "Pip takes the Commissioner's coins." : 'The Commissioner gives Pip ₥5.', () => {
+        if (theft) karma.change(-3);
+        if (action === 'commissionerBetrayal') karma.change(-2);
+        coinBalance.change(5);
+      });
     }
     if (action === 'attendantMilkBalloon') {
       clearInput();
