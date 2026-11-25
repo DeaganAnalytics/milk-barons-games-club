@@ -1,3 +1,4 @@
+import {leaveSlot, openSlot, sitAtSlot, slotPlayers} from './slot-machines.mjs';
 import {clubSightLines} from './club-sight-lines.mjs';
 import {facingIndex} from './directions.mjs';
 import {advanceEliasRun, elias, routeEliasToPip, updateEliasFollow} from './elias.mjs';
@@ -32,7 +33,7 @@ const guards = createGuards(player, baron, milo);
 const creameryGuard = createCreameryGuard();
 guards.push(creameryGuard);
 const staff = createStaff(player, baron, milo, guards);
-const guests = [...staff, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
+const guests = [...staff, ...slotPlayers, openSlot, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
 const milkService = createMilkService();
@@ -323,18 +324,30 @@ function warnAtGuestGate() {
 const {readMovement, clearInput} = bindControls({
   isPaused: () => eliasApproaching || Boolean(eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
   nudge: (dx, dy) => {
-    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon) return;
+    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || player.slotSeat) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else movePlayer(player, baron, dx, dy, guards);
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
     if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon) return;
+    if (player.slotSeat) {
+      leaveSlot(player);
+      clearInput();
+      clubEvent('Pip leaves the milk slot machine.');
+      return;
+    }
     const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
       && !(guestEnclosure.active && insideGuestEnclosure(guest)));
     if (!milkPool.stolenClothing) nearbyGuests.push(poolClothing);
     const target = nearestInteraction(player, baron, milo, guards, nearbyGuests);
     if (target) {
+      if (target.id === openSlot.id) {
+        sitAtSlot(player);
+        clearInput();
+        clubEvent('Pip takes the empty seat. Interact again to stand up.');
+        return;
+      }
       if (target.id === pilloryAttendant.id) spokeToPilloryAttendant = true;
       if (target.id === 'milo') seenMilo = true;
       if (target.id === lifeguard.id && !milkPool.clothingReported) target.missingClothing = milkPool.stolenClothing;
@@ -466,7 +479,7 @@ function frame(timestamp) {
       requestAnimationFrame(frame);
       return;
     }
-    updatePlayer(player, baron, movement, dt, guards);
+    if (!player.slotSeat) updatePlayer(player, baron, movement, dt, guards);
   }
   if (!guestEscort && takeDanceExit(player)) {
     startEliasScene({danceFee: true});

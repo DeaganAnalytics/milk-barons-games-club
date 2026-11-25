@@ -1,3 +1,4 @@
+import {drawSlotStation, slotPlayers} from './slot-machines.mjs';
 import {drawElias, elias} from './elias.mjs';
 import {drawMilkBalloon, guardBalloonPose, milkBalloonHand} from './milk-balloon.mjs';
 import {createPillorySpeech} from './pillory.mjs';
@@ -18,7 +19,7 @@ import {staffFrame, staffIds} from './staff.mjs';
 import {speechBubbleLayout} from './speech-layout.mjs';
 import {TURN} from './directions.mjs';
 import {isBaronDancing, isOnscreen, speechOpacity} from './baron.mjs';
-import {DANCE_FLOOR, guestEnclosure, MILK_BAG_BASKET, MILK_FOUNTAIN, MILK_POOL, NORTH_EDGE, PILLORY, PILLORY_ATTENDANT, professorFeet, ROOM_WIDTH, ROOM_HEIGHT, WEST_EDGE} from './room.mjs';
+import {DANCE_FLOOR, guestEnclosure, MILK_BAG_BASKET, MILK_FOUNTAIN, MILK_POOL, NORTH_EDGE, PILLORY, PILLORY_ATTENDANT, professorFeet, ROOM_WIDTH, ROOM_HEIGHT, SLOT_STATIONS, WEST_EDGE} from './room.mjs';
 import {composeHall, loadHallArt} from './hall-art.mjs';
 
 function loadSprite(name, extension = "png") {
@@ -274,6 +275,8 @@ export function createRenderer(canvas, onCowGuardSeen) {
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
   const eliasArt = loadSprite('hall/elias', 'webp');
+  const slotArt = loadSprite('slots/milk-slot', 'webp');
+  const seatedSlotArt = slotPlayers.map(({id}) => loadSprite('slots/' + id + '-seated', 'webp'));
   const professorArt = loadSprite('hall/professor', 'webp');
   const professorSipping = loadSprite('hall/professor-sipping', 'webp');
   const pillorySpeech = createPillorySpeech();
@@ -363,13 +366,19 @@ export function createRenderer(canvas, onCowGuardSeen) {
     const ropeScene = ropeWarning?.scene;
     const pipFalling = ropeScene?.phase === 'fall' || ropeScene?.phase === 'over';
     const actors = [
-      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene, drawPip) : drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant && !milkBalloon.guard ? milkBalloonHand(milkBalloon, player) : null)},
+      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene, drawPip) : !player.slotSeat && drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant && !milkBalloon.guard ? milkBalloonHand(milkBalloon, player) : null)},
       {depth: baron.y + 34, draw: () => {
         if (dancing) drawBaronDance(ctx, baronDancePose, baron, elapsed);
         else drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed);
       }},
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
+    SLOT_STATIONS.forEach((station, index) => {
+      if (station.x + 39 < cameraX || station.x - 39 > cameraX + ROOM_WIDTH
+        || station.y < cameraY || station.y - 148 > cameraY + ROOM_HEIGHT) return;
+      actors.push({depth: station.y, draw: () => drawSlotStation(ctx, slotArt, station, seatedSlotArt[index],
+        player.slotSeat?.station === station, elapsed, index)});
+    });
     const fountainFront = MILK_FOUNTAIN.y + 58;
     if (isReady(fountainArt) && fountainFront >= cameraY && fountainFront - fountainHeight <= cameraY + ROOM_HEIGHT
         && MILK_FOUNTAIN.x + fountainWidth / 2 >= cameraX && MILK_FOUNTAIN.x - fountainWidth / 2 <= cameraX + ROOM_WIDTH) {

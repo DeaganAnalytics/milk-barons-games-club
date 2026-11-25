@@ -246,3 +246,78 @@ export function drawPipPortrait(canvas, expression) {
   drawPipHead(ctx, 0, 0, 0, expression, true);
   ctx.restore();
 }
+
+export function drawPipAtSlot(ctx, x, y, elapsed) {
+  const breath = Math.sin(elapsed * 2.8) * 0.65;
+  ctx.save();
+  ctx.translate(x, y);
+  stroke(ctx, 5, '#100d0b', c => {
+    c.moveTo(1, -6);
+    c.lineTo(-12, -4);
+    c.lineTo(-12, 13);
+    c.lineTo(-18, 13);
+  });
+  ellipse(ctx, 1, -15, 6, 14, '#100d0b');
+  stroke(ctx, 4, '#100d0b', c => {
+    c.moveTo(-1, -23 + breath);
+    c.lineTo(-12, -18);
+    c.lineTo(-22, -18);
+  });
+  drawPipHead(ctx, 0, -39 + breath, -Math.PI / 2, 'attentive');
+  ctx.restore();
+}
+
+export function drawSleepingSlotPlayer(ctx, x, y, elapsed) {
+  const ink = '#100d0b';
+  const jacket = '#58463d';
+  const breath = Math.sin(elapsed * 2.4) * 0.9;
+  ctx.save();
+  ctx.translate(x, y);
+  stroke(ctx, 6, ink, c => {
+    c.moveTo(1, -5);
+    c.lineTo(-10, -3);
+    c.lineTo(-9, 12);
+    c.lineTo(-16, 13);
+  });
+  stroke(ctx, 15, ink, c => {
+    c.moveTo(0, -7);
+    c.quadraticCurveTo(-7, -17, -20, -23 + breath);
+  });
+  stroke(ctx, 11, jacket, c => {
+    c.moveTo(0, -7);
+    c.quadraticCurveTo(-7, -17, -20, -23 + breath);
+  });
+  stroke(ctx, 5, ink, c => {
+    c.moveTo(-15, -23 + breath);
+    c.lineTo(-23, -20);
+    c.lineTo(-30, -22);
+  });
+  ellipse(ctx, -31, -22, 3.4, 2.8, '#e8ca9e');
+
+  ctx.save();
+  ctx.translate(-26, -32 + breath);
+  ctx.rotate(-0.35);
+  ellipse(ctx, 0, 0, 12, 12, ink);
+  ellipse(ctx, 0, 0, 10.3, 10.3, '#f3dfbf');
+  ellipse(ctx, 0.8, -7, 8.7, 4, '#71625b');
+  stroke(ctx, 1.4, ink, c => {
+    c.moveTo(-8, -0.5);
+    c.quadraticCurveTo(-5.8, 1.4, -3.5, -0.5);
+  });
+  ellipse(ctx, -6.5, 5.1, 1.7, 1.3 + Math.max(0, breath), ink);
+  ctx.restore();
+
+  const snore = (elapsed % 3.6) / 1.35;
+  if (snore < 1) {
+    ctx.globalAlpha = Math.sin(snore * Math.PI);
+    ctx.font = 'bold 11px sans-serif';
+    ctx.lineWidth = 2.4;
+    ctx.strokeStyle = ink;
+    ctx.fillStyle = '#fff0c8';
+    const snoreX = -24 + snore * 9;
+    const snoreY = -45 - snore * 16;
+    ctx.strokeText('Zzz', snoreX, snoreY);
+    ctx.fillText('Zzz', snoreX, snoreY);
+  }
+  ctx.restore();
+}
