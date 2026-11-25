@@ -2017,3 +2017,39 @@ test('Skim remembers whether Pip confirmed his identity on the first meeting', a
   assert.equal(line.replies[0].next().replies.length, 6);
   assert.equal(recognised().text, "Oh, bloody hell. It's you again.");
 });
+
+test('Elias accounts for cumulative actual changes and unlocks each tally independently', async () => {
+  const {accountingReplies, createTally} = await import('../src/elias-accounting.mjs');
+  const tallies = {coins: createTally(100), karma: createTally(0), health: createTally(3)};
+  const menu = {text: 'Elias'};
+  const replies = () => accountingReplies(tallies, menu);
+  assert.deepEqual(replies(), []);
+
+  const coins = createCoinBalance((count, _outcome, movement) => tallies.coins.record(count, movement));
+  coins.wager(5, () => 1);
+  assert.equal(coins.count, 100);
+  assert.deepEqual(replies().map(reply => reply.label), ['How am I doing financially?']);
+  const begin = replies()[0].next;
+  const heard = [];
+  let line = begin();
+  while (line !== menu) {
+    heard.push(line.text);
+    const next = line.replies[0].next;
+    line = typeof next === 'function' ? next() : next;
+  }
+  assert.ok(heard.includes('Your total earnings amount to ₥5.'));
+  assert.ok(heard.includes('Your total expenditure and losses amount to ₥5.'));
+  assert.ok(heard.includes('You have achieved absolutely nothing, financially speaking.'));
+  assert.deepEqual(replies(), []);
+
+  coins.change(-1);
+  tallies.karma.record(-5);
+  tallies.karma.record(0);
+  tallies.health.record(3);
+  assert.deepEqual(replies().map(reply => reply.label), ['How am I doing financially?', "How's my karma looking?"]);
+  assert.deepEqual(tallies.coins.snapshot(), {value: 99, gained: 5, lost: 6, revision: 2});
+  assert.deepEqual(tallies.karma.snapshot(), {value: 0, gained: 5, lost: 5, revision: 2});
+  tallies.health.record(2);
+  const health = replies()[2].next();
+  assert.equal(health.replies[0].label, 'My what?');
+});

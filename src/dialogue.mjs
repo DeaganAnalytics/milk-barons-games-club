@@ -1,3 +1,4 @@
+import {accountingReplies} from './elias-accounting.mjs';
 import {createSkimConversation, skimId} from './skim-dialogue.mjs';
 import {createPracticeGuardConversation} from './practice-range-dialogue.mjs';
 import {gamblerPortraits, sleepingGamblerDialogue, sleepingGamblerId} from './sleeping-gambler.mjs';
@@ -222,7 +223,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -356,8 +357,10 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
     const options = character === lifeguard.id
       ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
       : node.replies ?? [];
-    const vampire = node === eliasConversation || node === eliasFollowingConversation ? vampireFollowup(node, vampireStage) : null;
-    const replies = report ? [report, ...options] : vampire ? [...options, vampire] : options;
+    const eliasMenu = node === eliasConversation || node === eliasFollowingConversation;
+    const vampire = eliasMenu ? vampireFollowup(node, vampireStage) : null;
+    const replies = eliasMenu ? [...options, ...(vampire ? [vampire] : []), ...accountingReplies(tallies, node)]
+      : report ? [report, ...options] : options;
     const seenCowGuard = hasSeenCowGuard?.();
     const availableReplies = replies.filter(reply => !usedReplies.has(reply.once)
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))

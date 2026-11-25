@@ -1,3 +1,4 @@
+import {createTally} from './elias-accounting.mjs';
 import {WAITER_MILK_PRICE} from './waiter-dialogue.mjs';
 import {nearbyPracticeGuard} from './practice-range-dialogue.mjs';
 import {practiceRangeHit} from './practice-range.mjs';
@@ -97,7 +98,10 @@ const healthImages = Array.from({length: MAX_HEARTS * 2 + 1}, (_, index) => {
   return image;
 });
 
+const tallies = {coins: createTally(STARTING_COINS), karma: createTally(0), health: createTally(MAX_HEARTS)};
+
 export const health = createHealth((hearts, deathMessage) => {
+  tallies.health.record(hearts);
   if (!gameOver.hidden) return;
   healthDisplay.src = healthImages[hearts * 2].src;
   healthDisplay.alt = `${hearts} of ${MAX_HEARTS} hearts`;
@@ -110,6 +114,7 @@ const triggeredBaronKarma = new Set();
 let hasChangedKarma = false;
 const karmaMeter = document.getElementById('karma-meter');
 export const karma = createKarma((score, position) => {
+  tallies.karma.record(score);
   hasChangedKarma = true;
   karmaMeter.style.setProperty('--karma-position', `${position * 100}%`);
   karmaMeter.setAttribute('aria-valuenow', score);
@@ -127,7 +132,8 @@ function showCoinOutcome(outcome) {
   if (outcome === 'win') endGame('You Win!', 'You reached 200 coins.');
 }
 
-export const coinBalance = createCoinBalance((count, outcome) => {
+export const coinBalance = createCoinBalance((count, outcome, movement) => {
+  tallies.coins.record(count, movement);
   if (!gameOver.hidden) return;
   coinCount.textContent = pokieCoinCount.textContent = count;
   coinAnnouncement.textContent = `${count} coins`;
@@ -194,6 +200,7 @@ const clothingEvents = {
 };
 
 const dialogue = createDialogue(baron, {
+  tallies,
   placePokieWager(stake, rollMultiplier) {
     if (pokieProfit.banned) return null;
     placingPokieWager = true;
