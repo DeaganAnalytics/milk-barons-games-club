@@ -245,7 +245,7 @@ const dialogue = createDialogue(baron, {
       if (action === 'rewardMissingDresses') clubEvent('The lifeguard pays you for the good news.', () => coinBalance.change(15));
       if (action === 'fineMissingSuit') clubEvent('The lifeguard takes a dim view of the missing suit.', () => coinBalance.change(-10));
     }
-    if (action === 'baronSlap') health.change(-0.5);
+    if (action === 'baronSlap') health.change(-0.5, 'You have displeased the Baron!');
     if (action === 'baronKarmaReward') clubEvent('The Baron awards a performance incentive.', () => coinBalance.change(15));
     if (action === 'baronKarmaFine') clubEvent('The Baron charges a behavioural compliance levy.', () => coinBalance.change(-15));
     if (action === 'eliasVampireFine') clubEvent('Elias charges you for bringing up vampires again.', () => coinBalance.change(-1));
@@ -415,7 +415,7 @@ function frame(timestamp) {
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
       staff, null, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
     if (ended) {
-      health.change(-MAX_HEARTS, ropeWarning.scene.deathMessage ?? 'You have displeased the Baron!');
+      health.change(-MAX_HEARTS, ropeWarning.scene.deathMessage ?? 'You have bothered women for the last time!');
     } else requestAnimationFrame(frame);
     return;
   }
