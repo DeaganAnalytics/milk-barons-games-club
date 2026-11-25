@@ -192,12 +192,12 @@ const pipReactions = {
   skeptical: ['thinking', 'attentive']
 };
 
-function standalonePortraitUrl(id, withoutMilk = false, mood) {
+function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false) {
   if (id.startsWith('dancer-')) return new URL('../assets/dance/portraits/' + dancerPortraitName(id, mood), import.meta.url);
   if (id === skimId && mood === 'distressed') return new URL('../assets/waiters/edmund-vale-distressed-portrait.webp', import.meta.url);
   if (id === sleepingGamblerId) return new URL('../assets/slots/gambler-' + mood + '.webp', import.meta.url);
   if (id === pokieId) return new URL('../assets/slots/pokie-' + mood + '.webp', import.meta.url);
-  if (id === pilloryCommissioner.id) return new URL('../assets/dialogue/commissioner/' + mood + '.webp', import.meta.url);
+  if (id === pilloryCommissioner.id) return new URL('../assets/dialogue/commissioner/' + mood + (splattered ? '-milk.webp' : '.webp'), import.meta.url);
   if (id === pilloryAttendant.id) return new URL('../assets/dialogue/attendant/' + mood + '.webp', import.meta.url);
   if (id === elias.id) return new URL('../assets/dialogue/elias/' + mood + '.webp', import.meta.url);
   if (id === professor.id) return new URL('../assets/dialogue/professor/' + mood + '.webp', import.meta.url);
@@ -232,7 +232,10 @@ function warmPortraits() {
   }
   urls.push(standalonePortraitUrl(poolClothing.id), standalonePortraitUrl(skimId, false, 'distressed'));
   for (const mood of bartenderMoods) urls.push(standalonePortraitUrl(bartender.id, false, mood));
-  for (const mood of commissionerMoods) urls.push(standalonePortraitUrl(pilloryCommissioner.id, false, mood));
+  for (const mood of commissionerMoods) {
+    urls.push(standalonePortraitUrl(pilloryCommissioner.id, false, mood),
+      standalonePortraitUrl(pilloryCommissioner.id, false, mood, true));
+  }
   for (const mood of attendantMoods) urls.push(standalonePortraitUrl(pilloryAttendant.id, false, mood));
   for (const mood of eliasPortraits) urls.push(standalonePortraitUrl(elias.id, false, mood));
   for (const mood of professorMoods) urls.push(standalonePortraitUrl(professor.id, false, mood));
@@ -255,7 +258,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -319,7 +322,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     element.dataset.portrait = character;
     if (reportPortrait || !portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.style.setProperty('--portrait-image', `url(${reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood)})`);
+      element.style.setProperty('--portrait-image', `url(${reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.())})`);
       element.dataset.expression = mood;
       return;
     }

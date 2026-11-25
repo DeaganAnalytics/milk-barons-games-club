@@ -82,7 +82,9 @@ export function updateMilkBalloon(scene, player, dt) {
     scene.phase = 'throw';
     scene.time = 0;
   }
-  if (scene.phase !== 'throw' || scene.time < 1.8) return false;
+  if (scene.phase !== 'throw') return false;
+  if (scene.time >= impact) scene.hitCommissioner = true;
+  if (scene.time < 1.8) return false;
   if (!scene.attendant && !scene.guard) return true;
   scene.phase = 'return';
   scene.route = scene.guard ? routeAroundBaron(actor, returnSpot, scene.baron) : [PILLORY_ATTENDANT];

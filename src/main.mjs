@@ -67,6 +67,7 @@ let guestEscort = null;
 let seenGuestRopes = false;
 let milkBalloon = null;
 let playedMilkBalloon = false;
+let commissionerSplattered = false;
 let completedGuestEscorts = 0;
 let gateWarned = false;
 let gateGuard;
@@ -222,6 +223,7 @@ const dialogue = createDialogue(baron, {
   baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
   getStolenClothing: () => milkPool.stolenClothing,
   hasPlayedMilkBalloon: () => playedMilkBalloon,
+  isCommissionerSplattered: () => commissionerSplattered,
   canReportPillory: guard => seenPillory && !reportedPillory && guard && !guard.pursuit
     && !guard.poolWatch && !pilloryInView(cameraLeft(player.x), cameraTop(player.y)),
   canReportPool: () => seenPoolAndClothes,
@@ -546,6 +548,7 @@ function frame(timestamp) {
 
   if (milkBalloon) {
     const done = updateMilkBalloon(milkBalloon, player, dt);
+    commissionerSplattered ||= Boolean(milkBalloon.hitCommissioner);
     if (done) {
       const {attendant, guard} = milkBalloon;
       milkBalloon = null;
