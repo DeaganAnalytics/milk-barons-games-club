@@ -1,3 +1,4 @@
+import {createCoinBalance} from '../src/coins.mjs';
 import {createProfessorConversation, professorMoods} from '../src/professor-dialogue.mjs';
 import {createProfessorSpeech, professor, professorPose} from '../src/professor.mjs';
 import {createMilkPool, lifeguard, milkPoolSpeech, poolClothing, remainingClothing, takePoolClothing, updateMilkPool} from '../src/milk-pool.mjs';
@@ -1709,5 +1710,115 @@ test('Elias’s karma topic requires a change and both token branches return to 
     assert.equal(valuation.next.replies[0].next.replies[0].next, menu);
     assert.match(future.next.text, /currency of ze future/);
     assert.equal(future.next.replies[0].next, menu);
+  }
+});
+
+test('post-seduction reactions follow arrival order and release each NPC after one line', async () => {
+  const {createSlotReactions} = await import('../src/slot-reactions.mjs');
+  const staff = [
+    {id: 'male-waiter', x: -320, y: 85},
+    {id: 'handlebar-waiter', x: -380, y: 225},
+    {id: 'martini-waiter', x: -230, y: 375},
+    {id: 'female-waiter', x: -480, y: 250}
+  ].map(actor => ({...actor, title: 'Waiter', radius: 14, walkTime: 0}));
+  const guards = [{x: -479, y: 250}, {x: -360, y: 430}, {x: -481, y: 250, posted: true}]
+    .map(actor => ({...actor, radius: 14, stride: 0}));
+  const reactions = createSlotReactions(staff, guards);
+  const executive = {x: -620, y: 250};
+  const player = {x: -620, y: 250, walking: true};
+  const baron = {x: 345, y: 345};
+  reactions.queue(player, executive);
+  player.x += 139;
+  assert.equal(reactions.update(player, baron, 0.05), undefined);
+  player.x += 1;
+  const arrivals = [reactions.update(player, baron, 0.05)];
+  for (let tick = 0; tick < 200 && arrivals.length < 5; tick++) {
+    const arrival = reactions.update(player, baron, 0.05);
+    if (arrival) arrivals.push(arrival);
+  }
+  assert.equal(arrivals[0]?.id, 'guard');
+  assert.deepEqual(arrivals.map(arrival => arrival?.slotReaction), [
+    'Nice!', 'You absolute legend!', 'A man of exceptional talent, I see!',
+    'Respect, brother. Respect.', 'Respect, brother. Respect.'
+  ]);
+  assert.deepEqual(arrivals.map(arrival => arrival.id).sort(), [
+    'guard', 'guard', 'handlebar-waiter', 'male-waiter', 'martini-waiter'
+  ]);
+  assert.ok(staff.every(actor => !actor.serviceDuty));
+  assert.ok(guards.every(actor => !actor.slotReaction));
+  assert.equal(reactions.update(player, baron, 0.05), undefined);
+});
+
+test('pokie rolls cover all 100 values and return 75 percent across every stake', async () => {
+  const {createPokieConversation} = await import('../src/pokie-dialogue.mjs');
+  for (const stake of [1, 5, 10]) {
+    let total = 0;
+    const outcomes = {};
+    for (let roll = 1; roll <= 100; roll++) {
+      const coins = createCoinBalance();
+      const random = () => (roll - 0.5) / 100;
+      const open = createPokieConversation(coins.wager.bind(coins), random);
+      const menu = open();
+      assert.equal(menu.mood, 'default');
+      const result = menu.replies.find(reply => reply.label === 'Bet ₥' + stake).next();
+      const payout = coins.count - 100 + stake;
+      total += payout;
+      outcomes[result.mood] = (outcomes[result.mood] ?? 0) + 1;
+      assert.equal(payout, stake * (roll <= 65 ? 0 : roll <= 80 ? 1 : roll <= 95 ? 2 : roll <= 99 ? 5 : 10));
+      assert.equal(open().mood, 'default');
+    }
+    assert.deepEqual(outcomes, {loss: 65, 'break-even': 15, 'small-win': 15, 'big-win': 4, jackpot: 1});
+    assert.equal(total, stake * 75);
+  }
+});
+
+test('pokie wagers settle all-in balances, preserve portraits on rejected bets, and show terminal outcomes', async () => {
+  const {createPokieConversation} = await import('../src/pokie-dialogue.mjs');
+  const coins = createCoinBalance();
+  coins.change(-95);
+  const rolls = [0.70, 0, 0.01, 0];
+  const open = createPokieConversation(coins.wager.bind(coins), () => rolls.shift());
+  const menu = open();
+  const even = menu.replies[1].next();
+  assert.equal(even.mood, 'break-even');
+  assert.equal(coins.count, 5);
+  const rejected = even.replies[2].next();
+  assert.equal(rejected.text, 'No money, no honey!');
+  assert.equal(rejected.mood, 'break-even');
+  const loss = rejected.replies[1].next();
+  assert.equal(loss.action, 'finishPokieGame');
+  assert.equal(coins.outcome, 'loss');
+  assert.deepEqual(loss.replies.map(reply => reply.label), ['Walk away']);
+
+  const allIn = createCoinBalance();
+  allIn.change(-90);
+  assert.deepEqual(allIn.wager(10, () => {
+    assert.equal(allIn.count, 0); // Debit is applied before the draw.
+    return 10;
+  }), {payout: 100, outcome: null});
+  assert.equal(allIn.count, 100);
+  allIn.change(95);
+  assert.deepEqual(allIn.wager(10, () => 10), {payout: 100, outcome: 'win'});
+  assert.equal(allIn.count, 200);
+});
+
+test('the sleeping gambler allows exactly one token choice and only waking plays the scripted loss', async () => {
+  const {createSleepingGambler, sleepingGamblerDialogue} = await import('../src/sleeping-gambler.mjs');
+  for (const wake of [true, false]) {
+    const man = createSleepingGambler();
+    const opening = sleepingGamblerDialogue(man);
+    assert.equal(opening.mood, 'asleep');
+    assert.equal(opening.replies[2].next, null);
+    assert.equal(sleepingGamblerDialogue(man).replies.length, 3);
+    assert.equal(opening.replies[0].next.mood, 'awake');
+    assert.equal(opening.replies[1].next.exitAction, 'stealSleepingGamblerTokens');
+    assert.equal(man.takeTokens(wake, 10), true);
+    assert.equal(man.takeTokens(!wake, 11), false);
+    assert.equal(man.pose(10.3).tokens, wake);
+    assert.equal(man.pose(11.4).pull > 0, wake);
+    assert.equal(man.pose(12.2).remark, wake ? 'Damn it! There goes breakfast.' : null);
+    assert.equal(man.pose(16).awake, false);
+    assert.equal(man.pose(16).tokens, false);
+    assert.equal(sleepingGamblerDialogue(man).text, 'The man is fast asleep.');
   }
 });

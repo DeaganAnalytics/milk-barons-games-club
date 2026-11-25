@@ -274,30 +274,13 @@ export function drawPipPortrait(canvas, expression, disguise) {
   ctx.restore();
 }
 
-export function drawPipAtSlot(ctx, x, y, elapsed) {
-  const breath = Math.sin(elapsed * 2.8) * 0.65;
-  ctx.save();
-  ctx.translate(x, y);
-  stroke(ctx, 5, '#100d0b', c => {
-    c.moveTo(1, -6);
-    c.lineTo(-12, -4);
-    c.lineTo(-12, 13);
-    c.lineTo(-18, 13);
-  });
-  ellipse(ctx, 1, -15, 6, 14, '#100d0b');
-  stroke(ctx, 4, '#100d0b', c => {
-    c.moveTo(-1, -23 + breath);
-    c.lineTo(-12, -18);
-    c.lineTo(-22, -18);
-  });
-  drawPipHead(ctx, 0, -39 + breath, -Math.PI / 2, 'attentive');
-  ctx.restore();
-}
-
-export function drawSleepingSlotPlayer(ctx, x, y, elapsed) {
+export function drawSleepingSlotPlayer(ctx, x, y, elapsed, {awake, reach, pull}) {
   const ink = '#100d0b';
   const jacket = '#58463d';
   const breath = Math.sin(elapsed * 2.4) * 0.9;
+  const lift = awake ? 6 : 0;
+  const handX = -31 + reach * 12 - pull * 6;
+  const handY = -22 + reach * 3 - pull * 11;
   ctx.save();
   ctx.translate(x, y);
   stroke(ctx, 6, ink, c => {
@@ -308,26 +291,27 @@ export function drawSleepingSlotPlayer(ctx, x, y, elapsed) {
   });
   stroke(ctx, 15, ink, c => {
     c.moveTo(0, -7);
-    c.quadraticCurveTo(-7, -17, -20, -23 + breath);
+    c.quadraticCurveTo(-7, -17, -20, -23 - lift + breath);
   });
   stroke(ctx, 11, jacket, c => {
     c.moveTo(0, -7);
-    c.quadraticCurveTo(-7, -17, -20, -23 + breath);
+    c.quadraticCurveTo(-7, -17, -20, -23 - lift + breath);
   });
   stroke(ctx, 5, ink, c => {
     c.moveTo(-15, -23 + breath);
     c.lineTo(-23, -20);
-    c.lineTo(-30, -22);
+    c.lineTo(handX, handY);
   });
-  ellipse(ctx, -31, -22, 3.4, 2.8, '#e8ca9e');
+  ellipse(ctx, handX, handY, 3.4, 2.8, '#e8ca9e');
 
   ctx.save();
-  ctx.translate(-26, -32 + breath);
+  ctx.translate(-26 + lift / 2, -32 - lift + breath);
   ctx.rotate(-0.35);
   ellipse(ctx, 0, 0, 12, 12, ink);
   ellipse(ctx, 0, 0, 10.3, 10.3, '#f3dfbf');
   ellipse(ctx, 0.8, -7, 8.7, 4, '#71625b');
-  stroke(ctx, 1.4, ink, c => {
+  if (awake) ellipse(ctx, -6, -0.5, 1.5, 2.2, ink);
+  else stroke(ctx, 1.4, ink, c => {
     c.moveTo(-8, -0.5);
     c.quadraticCurveTo(-5.8, 1.4, -3.5, -0.5);
   });
@@ -335,7 +319,7 @@ export function drawSleepingSlotPlayer(ctx, x, y, elapsed) {
   ctx.restore();
 
   const snore = (elapsed % 3.6) / 1.35;
-  if (snore < 1) {
+  if (!awake && snore < 1) {
     ctx.globalAlpha = Math.sin(snore * Math.PI);
     ctx.font = 'bold 11px sans-serif';
     ctx.lineWidth = 2.4;

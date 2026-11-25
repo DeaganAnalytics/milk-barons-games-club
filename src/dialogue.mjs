@@ -1,3 +1,5 @@
+import {gamblerPortraits, sleepingGamblerDialogue, sleepingGamblerId} from './sleeping-gambler.mjs';
+import {createPokieConversation, pokieId, pokiePortraits} from './pokie-dialogue.mjs';
 import {createExecutiveConversation, executiveFraudWarning, executiveId, executiveMoods} from './executive-dialogue.mjs';
 import {createPoliticianConversation, politicianId, politicianMoods} from './politician-dialogue.mjs';
 import {slotPlayers} from './slot-machines.mjs';
@@ -158,6 +160,8 @@ const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-formal', '
 const portraitCache = new Map();
 
 function standalonePortraitUrl(id, withoutMilk = false, mood) {
+  if (id === sleepingGamblerId) return new URL('../assets/slots/gambler-' + mood + '.webp', import.meta.url);
+  if (id === pokieId) return new URL('../assets/slots/pokie-' + mood + '.webp', import.meta.url);
   if (id === pilloryCommissioner.id) return new URL('../assets/dialogue/commissioner/' + mood + '.webp', import.meta.url);
   if (id === pilloryAttendant.id) return new URL('../assets/dialogue/attendant/' + mood + '.webp', import.meta.url);
   if (id === elias.id) return new URL('../assets/dialogue/elias/' + mood + '.webp', import.meta.url);
@@ -195,6 +199,8 @@ function warmPortraits() {
   for (const mood of eliasPortraits) urls.push(standalonePortraitUrl(elias.id, false, mood));
   for (const mood of professorMoods) urls.push(standalonePortraitUrl(professor.id, false, mood));
   for (const mood of lifeguardMoods) urls.push(standalonePortraitUrl(lifeguard.id, false, mood));
+  for (const mood of gamblerPortraits) urls.push(standalonePortraitUrl(sleepingGamblerId, false, mood));
+  for (const mood of pokiePortraits) urls.push(standalonePortraitUrl(pokieId, false, mood));
   for (const mood of executiveMoods) urls.push(standalonePortraitUrl(executiveId, false, mood));
   for (const mood of politicianMoods) urls.push(standalonePortraitUrl(politicianId, false, mood));
   for (const {id} of slotPlayers.filter(player => player.id !== politicianId)) urls.push(standalonePortraitUrl(id));
@@ -211,7 +217,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -242,6 +248,7 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
   let autoClose;
   let disguise;
   const executiveOpening = createExecutiveConversation(() => baronStanding?.()?.coins ?? 0);
+  const pokieOpening = createPokieConversation(placePokieWager);
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
@@ -449,7 +456,9 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
     activeTarget = target;
     disguise = target.executiveFraud ? 'woman' : null;
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
-    const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
+    const opening = target.slotReaction ? {
+      text: target.slotReaction, mood: 'speaking', mustContinue: true, autoCloseMs: 2400
+    } : partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
       : target.id === elias.id && target.tax ? eliasTaxConversation(target.tax)
@@ -458,6 +467,8 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
       : target.id === 'baron' && target.baronKarma ? baronKarmaDialogue[target.baronKarma]
       : target.id === bartender.id ? bartenderOpening(bartenderGreetingIndex++)
       : target.id === professor.id ? professorOpening()
+      : target.id === sleepingGamblerId ? sleepingGamblerDialogue(sleepingGambler)
+      : target.id === pokieId ? pokieOpening()
       : target.id === politicianId ? politicianOpening()
       : target.id === executiveId ? executiveOpening()
       : target.executiveFraud ? executiveFraudWarning

@@ -106,7 +106,7 @@ export function dispatchRovingGuardsToPool(guards) {
 export function updateGuards(guards, player, baron, milo, elapsed, dt) {
   let arrivedGuard = null;
   for (const guard of guards) {
-    if (guard.posted || guard.escorting) continue;
+    if (guard.posted || guard.escorting || (guard.slotReaction && !guard.pursuit && !guard.poolReportPending)) continue;
     guard.walking = false;
     if (guard.poolWatch) {
       if (elapsed < guard.poolWatch.until) continue;
