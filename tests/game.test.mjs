@@ -1829,3 +1829,35 @@ test('the sleeping gambler allows exactly one token choice and only waking plays
     assert.equal(sleepingGamblerDialogue(man).text, 'The man is fast asleep.');
   }
 });
+
+test('the pokie ban counts net winnings and stops betting at exactly ₥95', async () => {
+  const {createPokieProfit, createPokieConversation} = await import('../src/pokie-dialogue.mjs');
+  const profit = createPokieProfit();
+  assert.equal(profit.record(10, 100), false);
+  assert.equal(profit.record(5, 0), false);
+  assert.equal(profit.record(1, 10), false);
+  const open = createPokieConversation((stake, roll) => {
+    const payout = stake * roll();
+    return {payout, banned: profit.record(stake, payout)};
+  }, () => 0.8);
+  const result = open().replies[0].next();
+  assert.equal(profit.banned, true);
+  assert.deepEqual(result.replies, []);
+  assert.equal(result.action, 'summonEliasForPokieBan');
+});
+
+test('the Baron walks to his nearest rug after a karma audience without counting a follow trip', async () => {
+  const {returnBaronToRug} = await import('../src/baron.mjs');
+  const baron = createBaron();
+  baron.x += 110;
+  baron.y += 80;
+  const rug = closestRug(baron);
+  returnBaronToRug(baron);
+  assert.equal(baron.route.at(-1), rug);
+  for (let tick = 0; tick < 600 && baron.returningToRug; tick++) {
+    updateBaronWalk(baron, rug, 0, tick * 0.05, 0.05);
+  }
+  assert.deepEqual([baron.x, baron.y], [rug.x, rug.y]);
+  assert.equal(baron.returningToRug, false);
+  assert.equal(baron.completedRugTrips, 0);
+});

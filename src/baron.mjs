@@ -74,6 +74,15 @@ function routeToDanceStop(from) {
   return [{x: from.x, y}, {x: BARON_DANCE_STOP.x, y}, BARON_DANCE_STOP];
 }
 
+export function returnBaronToRug(baron) {
+  const rug = closestRug(baron);
+  baron.offscreenSince = null;
+  baron.speech = null;
+  baron.returningToRug = baron.x !== rug.x || baron.y !== rug.y;
+  baron.route = baron.returningToRug
+    ? routeAroundBaron({...baron, radius: 24}, rug, {x: -1000, y: 0}) : [];
+}
+
 export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0, guards = []) {
   if (!baron.route.length) {
     if (isOnscreen(baron, cameraX, cameraY)) {
@@ -122,7 +131,7 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
       baron.y = target.y;
       baron.route.shift();
       if (!baron.route.length && step > 0) {
-        baron.completedRugTrips++;
+        if (!baron.returningToRug) baron.completedRugTrips++;
         if (target === BARON_DANCE_STOP) baron.speech = null;
       }
     } else {
@@ -131,6 +140,7 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
     }
     remaining -= step;
   }
+  if (!baron.route.length) baron.returningToRug = false;
   if (!baron.walking) baron.stride = 0;
 
   if (baron.speech) {

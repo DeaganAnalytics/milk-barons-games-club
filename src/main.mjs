@@ -1,3 +1,4 @@
+import {createPokieProfit} from './pokie-dialogue.mjs';
 import {createSleepingGambler} from './sleeping-gambler.mjs';
 import {createSlotReactions} from './slot-reactions.mjs';
 import {openSlot, sleepingGamblerTarget, slotPlayers} from './slot-machines.mjs';
@@ -16,7 +17,7 @@ import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} 
 import {advanceGuestEscort, beginGuestEscort, guestRopesInView} from './guest-escort.mjs';
 import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
-import {advanceBaronApproach, callOutMilo, createBaron, isBaronDancing, isOnscreen, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
+import {advanceBaronApproach, returnBaronToRug, callOutMilo, createBaron, isBaronDancing, isOnscreen, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
 import {createGuards, dispatchGuardToMilo, dispatchRovingGuardsToPool, summonGuard, summonGuardFromOffscreen, updateGuards} from './guards.mjs';
 import {createMilo, fleeMilo, updateMilo} from './milo.mjs';
@@ -70,8 +71,10 @@ const restart = document.getElementById('restart-game');
 restart.addEventListener('click', () => location.reload());
 const info = document.getElementById('info');
 const coinCount = document.getElementById('coin-count');
+const pokieCoinCount = document.getElementById('pokie-coin-count');
+const pokieProfit = createPokieProfit();
 const coinAnnouncement = document.getElementById('coin-announcement');
-coinCount.textContent = STARTING_COINS;
+coinCount.textContent = pokieCoinCount.textContent = STARTING_COINS;
 coinAnnouncement.textContent = `${STARTING_COINS} coins`;
 
 function endGame(title, message) {
@@ -123,7 +126,7 @@ function showCoinOutcome(outcome) {
 
 export const coinBalance = createCoinBalance((count, outcome) => {
   if (!gameOver.hidden) return;
-  coinCount.textContent = count;
+  coinCount.textContent = pokieCoinCount.textContent = count;
   coinAnnouncement.textContent = `${count} coins`;
   if (!placingPokieWager) showCoinOutcome(outcome);
 });
@@ -189,9 +192,12 @@ const clothingEvents = {
 
 const dialogue = createDialogue(baron, {
   placePokieWager(stake, rollMultiplier) {
+    if (pokieProfit.banned) return null;
     placingPokieWager = true;
     try {
-      return coinBalance.wager(stake, rollMultiplier);
+      const result = coinBalance.wager(stake, rollMultiplier);
+      if (result) result.banned = pokieProfit.record(stake, result.payout);
+      return result;
     } finally {
       placingPokieWager = false;
     }
@@ -216,6 +222,7 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    if (action === 'summonEliasForPokieBan') startEliasScene({pokieBan: true});
     if (action === 'finishPokieGame') showCoinOutcome(coinBalance.outcome);
     if (action === 'wakeSleepingGambler' && sleepingGambler.takeTokens(true, elapsed)) {
       clubEvent('Pip wakes the gambler and points out his tokens.', () => karma.change(2));
@@ -288,6 +295,7 @@ const dialogue = createDialogue(baron, {
       if (action === 'fineMissingSuit') clubEvent('The lifeguard takes a dim view of the missing suit.', () => coinBalance.change(-10));
     }
     if (action === 'baronSlap') health.change(-0.5, 'You have displeased the Baron!');
+    if (action === 'baronKarmaReward' || action === 'baronKarmaFine') returnBaronToRug(baron);
     if (action === 'baronKarmaReward') clubEvent('The Baron awards a performance incentive.', () => coinBalance.change(15));
     if (action === 'baronKarmaFine') clubEvent('The Baron charges a behavioural compliance levy.', () => coinBalance.change(-15));
     if (action === 'eliasVampireFine') clubEvent('Elias charges you for bringing up vampires again.', () => coinBalance.change(-1));
@@ -416,7 +424,7 @@ const {readMovement, clearInput} = bindControls({
         target.poolClothesThanks = true;
       }
       clearInput();
-      dialogue.open(target);
+      dialogue.open(target.id === openSlot.id && pokieProfit.banned ? {...elias, pokieRefusal: true} : target);
     } else info.textContent = 'Nobody is close enough to talk to.';
   }
 });
@@ -447,7 +455,7 @@ function frame(timestamp) {
     return;
   }
   if (!eliasScene && !guestEscort && !ropeWarning.scene && !milkBalloon) {
-    if (pendingBaronKarma.length && !milkService.scene && !onDanceFloor(player.x, player.y)) {
+    if (pendingBaronKarma.length && !baron.returningToRug && !milkService.scene && !onDanceFloor(player.x, player.y)) {
       clearInput();
       player.walking = false;
       baron.walking = false;
