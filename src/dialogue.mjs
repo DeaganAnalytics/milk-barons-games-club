@@ -1,4 +1,4 @@
-import {miloMenu} from './milo-dialogue.mjs';
+import {miloIntroduction, miloMenu} from './milo-dialogue.mjs';
 import {createMiloGreeting} from './milo.mjs';
 import {createDancerConversation, dancerMoods, dancerPortraitName, dancerTargets} from './dancer-dialogue.mjs';
 import {accountingReplies} from './elias-accounting.mjs';
@@ -79,7 +79,7 @@ const cowGuardQuestions = new Set([
 ]);
 
 const cowReply = {
-  label: 'Are you a cow?', playerMood: 'thinking',
+  label: 'Are you a cow?', playerMood: 'thinking', once: 'guardCowQuestion', consumeOnSelect: true,
   next: {text: 'I am a guard.', mood: 'deadpan', replies: [
     {label: 'But you have horns.', playerMood: 'thinking', next: {text: 'I am a guard.', mood: 'deadpan'}}
   ]}
@@ -270,6 +270,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const speaker = document.getElementById('conversation-speaker');
   const line = document.getElementById('conversation-line');
   const replyList = document.getElementById('conversation-replies');
+  const advance = document.getElementById('conversation-advance');
   const playerPortrait = document.getElementById('conversation-player');
   const playerArt = playerPortrait.querySelector('canvas');
   const npcPortrait = document.getElementById('conversation-npc');
@@ -302,7 +303,23 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const attendantOpening = createAttendantConversation();
   const professorOpening = createProfessorConversation();
   const miloGreeting = createMiloGreeting();
+  let metMilo = false;
   let miloWasInjured = false;
+  let miloInjuryReplyPending = false;
+
+  function openMilo() {
+    const newlyInjured = Boolean(takeMiloInjury?.());
+    miloWasInjured ||= newlyInjured;
+    miloInjuryReplyPending ||= newlyInjured;
+    if (!metMilo) {
+      metMilo = true;
+      const greeting = miloWasInjured ? "Shh! I'm trying to stay out of the Baron's way." : miloGreeting();
+      return miloIntroduction(greeting);
+    }
+    const injuryReply = miloInjuryReplyPending ? injuredMiloReply : null;
+    miloInjuryReplyPending = false;
+    return miloMenu(miloGreeting(miloWasInjured), slappedByBaron, injuryReply, miloWasInjured, hasSeenCowGuard?.());
+  }
 
   function setPortrait(element, character, mood, withoutMilk) {
     const expressions = npcExpressions.get(character);
@@ -386,6 +403,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
+    closeButton.classList.toggle('conversation-exit', closeButton.textContent === 'End conversation');
     line.textContent = node.text;
     line.hidden = !node.text && !node.direction;
     if (node.direction) {
@@ -423,10 +441,13 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
-    replyList.replaceChildren(...availableReplies.map(reply => {
+    const choiceButtons = [];
+    const advanceButtons = [];
+    for (const reply of availableReplies) {
+      const isContinue = reply.label === 'Continue';
       const button = document.createElement('button');
       button.type = 'button';
-      button.textContent = reply.label;
+      button.textContent = isContinue ? 'Continue →' : reply.label;
       button.addEventListener('click', () => {
         if (character === elias.id && reply.label === 'Are you a vampire?') askedEliasAboutVampires = true;
         if (character === 'baron' && reply.label === 'Can I speak to DJ Dairy?') askedDancingBaron = true;
@@ -449,15 +470,17 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
           show(next, character, reply.playerMood, withoutMilk);
         }
       });
-      return button;
-    }));
-    (replyList.firstElementChild ?? closeButton).focus();
+      (isContinue ? advanceButtons : choiceButtons).push(button);
+    }
+    replyList.replaceChildren(...choiceButtons);
+    advance.replaceChildren(...advanceButtons);
     if (node.order) {
       activeTarget.order = node.order;
       activeTarget.boughtDrink = true;
       activeTarget.bartenderExitPending = false;
       closeButton.hidden = false;
     }
+    (replyList.firstElementChild ?? advance.firstElementChild ?? (closeButton.hidden ? null : closeButton))?.focus();
     if (node.enterAction) finishAction(node.enterAction, activeTarget);
     if (node.advanceTo) {
       if (node.mood === 'toward') {
@@ -533,8 +556,6 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     activeTarget = target;
     pokieCounter.hidden = target.id !== pokieId;
     disguise = target.executiveFraud ? 'woman' : null;
-    const newlyInjured = target.id === 'milo' && Boolean(takeMiloInjury?.());
-    miloWasInjured ||= newlyInjured;
     const opening = target.slotReaction ? {
       text: target.slotReaction.text, mood: 'speaking', mustContinue: true,
       playerMood: target.slotReaction.playerMood,
@@ -579,7 +600,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
           replies: target.posted ? postedGuardReplies : reportingReplies(target),
           mood: 'deadpan'
         }
-      : target.id === 'milo' ? miloMenu(miloGreeting(miloWasInjured), slappedByBaron, newlyInjured ? injuredMiloReply : null, miloWasInjured, hasSeenCowGuard?.())
+      : target.id === 'milo' ? openMilo()
         : baronConversation();
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;

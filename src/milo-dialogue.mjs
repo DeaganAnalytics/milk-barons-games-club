@@ -2,6 +2,24 @@ const reply = (label, next) => ({label, next, playerMood: 'thinking'});
 const say = (text, mood, replies, details) => ({text, mood, replies, ...details});
 const more = next => [reply('Continue', next)];
 
+const introduction = [
+  ["Hey, don't I know you?", "No. Don't talk to me."],
+  ['Are you Milo, the milk activist?', 'Please leave me alone. Please go away. Your presence attracts the Baron.'],
+  ['You ARE Milo!', '...'],
+  ['Continue', 'Okay, okay. Keep your voice down.'],
+  ["You're the reason I became an activist.", 'I apologise.']
+];
+
+export function miloIntroduction(text) {
+  const outcomes = [
+    reply("Apologise? Why? You're my hero!", say("And now I'm nobody.", 'sad')),
+    reply("You goddamn better. Look at this mess I'm in.", say('I am truly sorry.', 'sad'))
+  ];
+  const replies = introduction.reduceRight((next, [label, line]) =>
+    [reply(label, say(line, 'worried', next, {mustContinue: true}))], outcomes);
+  return say(text, 'worried', replies, {mustContinue: true});
+}
+
 export function miloMenu(text, hasBeenSlapped, injuryReply, wasInjured, hasSeenGuard) {
   const angry = wasInjured ? 'angry' : 'worried';
   const topic = 'miloCampaignBanner';
@@ -45,9 +63,6 @@ export function miloMenu(text, hasBeenSlapped, injuryReply, wasInjured, hasSeenG
 
   if (injuryReply) menu.replies.push(injuryReply);
   menu.replies.push(
-    reply("Hey, don't I know you?", say("No. Don't talk to me.", 'worried', [
-      reply('Are you Milo, the milk activist?', finish('Please leave me alone. Please go away. Your presence attracts the Baron.', 'sad'))
-    ])),
     {...reply('Why are you wrapped in rags?', say("These aren't rags. They're the remains of my campaign banner.", 'sad', [
       reply('Campaign banner?', say('"Where\'s my milk?" Ring any bells?', 'worried', [
         reply('No.', wentTooFar),

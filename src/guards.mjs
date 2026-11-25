@@ -142,8 +142,10 @@ export function updateGuards(guards, player, baron, milo, elapsed, dt) {
       guard.pursuit = null;
       guard.target = null;
       guard.pauseUntil = elapsed + 1;
-      if (pursuit.milo) milo.injuryPending = true;
-      else arrivedGuard = guard;
+      if (pursuit.milo) {
+        milo.injured = true;
+        milo.injuryPending = true;
+      } else arrivedGuard = guard;
       continue;
     }
     if (pursuit && onDanceFloor(pursued.x, pursued.y, RADIUS)) continue;

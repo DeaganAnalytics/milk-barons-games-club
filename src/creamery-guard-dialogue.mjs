@@ -29,9 +29,9 @@ const offerDrink = reply('You look parched. Can I buy you a drink?', say('Oi! Wa
 ]));
 
 const normalDialogue = say('If you have something to report, find one of the roving security officers', 'formal', [
-  reply('Are you a cow?', say('I am a guard.', 'suspicious', [
+  {...reply('Are you a cow?', say('I am a guard.', 'suspicious', [
     reply('But you have horns.', say('I am a guard.', 'angry'), 'thinking')
-  ]), 'thinking'),
+  ]), 'thinking'), once: 'guardCowQuestion', consumeOnSelect: true},
   reply('Why do you have an assault rifle?', say('To guard the milk.', 'speaking'), 'thinking'),
   offerDrink
 ]);

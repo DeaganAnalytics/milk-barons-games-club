@@ -143,6 +143,22 @@ function drawMilo(ctx, sprite, milo, elapsed) {
   ctx.scale(milo.facingLeft ? -1 : 1, 1);
   ctx.rotate(motion * 0.035);
   ctx.drawImage(sprite, 375, 431, 275, 669, -14, -66, 28, 66);
+  if (milo.injured) {
+    ctx.fillStyle = '#734066ad';
+    ctx.beginPath();
+    ctx.ellipse(-5.5, -51.5, 4.3, 3.5, -0.3, 0, TURN);
+    ctx.ellipse(5.5, -47.5, 3.1, 2.1, -0.42, 0, TURN);
+    ctx.fill();
+    ctx.strokeStyle = '#853f44';
+    ctx.lineWidth = 1.2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(5, -45.7);
+    ctx.lineTo(8.4, -48.4);
+    ctx.moveTo(0.5, -43.7);
+    ctx.lineTo(2.1, -43.4);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 

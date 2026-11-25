@@ -1720,7 +1720,7 @@ test('Elias’s vampire topic progresses from its original exchange to a repeata
   assert.equal(second.label, 'So, about vampires...');
   const repeat = vampireFollowup(eliasConversation, second.next.vampireStage);
   assert.equal(repeat.next.enterAction, 'eliasVampireFine');
-  assert.equal(repeat.next.replies[0].next, eliasConversation);
+  assert.equal(repeat.next.replies, undefined);
   assert.ok(eliasFollowingConversation.replies.every(reply => reply.consumeOnSelect));
 });
 

@@ -166,7 +166,7 @@ export function vampireFollowup(menu, stage) {
   };
   if (stage === 2) return {
     label: 'Seriously, you look like a vampire.', playerMood: 'attentive',
-    next: {text: 'I shall start fining you for vasting my time.', mood: 'insulted', enterAction: 'eliasVampireFine', replies: [continueTo(menu)]}
+    next: {text: 'I shall start fining you for vasting my time.', mood: 'insulted', enterAction: 'eliasVampireFine'}
   };
   return null;
 }

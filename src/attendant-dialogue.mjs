@@ -18,7 +18,7 @@ const opening = {
   ])]
 };
 
-menu.replies.push(
+const oneTimeTopics = [
   exchange([['What do you think of the Baron?', 'A man of great wealth, a man of great taste! Not a drop of his milk shall ever go to waste!', happy]], [
     exchange([
       ["Isn't he a bit cruel?", 'Cruel, you say? Oh, perish the thought! Our beloved Baron is simply keeping order, as he ought!', laughing],
@@ -45,7 +45,11 @@ menu.replies.push(
     ["Wasn't she just doing her job?", 'Protecting the poor was her occupation! But she went too far and upset her station!', assured],
     ['Surely the poor deserve more milk?', 'A drop for the poor is a drop from the rich! Keep talking like that and your places might switch!', assured, 'worried'],
     ['How long will she be stuck here?', 'Until she repents or the Baron grows bored! Such is the mercy of our glorious lord!', laughing]
-  ]),
+  ])
+];
+
+menu.replies.push(
+  ...oneTimeTopics.map(reply => ({...reply, once: 'attendant: ' + reply.label, consumeOnSelect: true})),
   exchange([
     ['Can I play?', 'Of course, young lad! Step right this way! Grab a milk balloon and brighten your day!', exuberant],
     ['Do I have to pay?', 'Not a penny, not a dime! The Baron subsidises this delightful pastime!', happy],
