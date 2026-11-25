@@ -79,7 +79,7 @@ const cowGuardQuestions = new Set([
 ]);
 
 const cowReply = {
-  label: 'Are you a cow?', playerMood: 'thinking',
+  label: 'Are you a cow?', playerMood: 'thinking', once: 'guardCowQuestion', consumeOnSelect: true,
   next: {text: 'I am a guard.', mood: 'deadpan', replies: [
     {label: 'But you have horns.', playerMood: 'thinking', next: {text: 'I am a guard.', mood: 'deadpan'}}
   ]}
