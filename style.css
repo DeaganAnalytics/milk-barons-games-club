@@ -16,11 +16,6 @@ h1 {
   font-size: clamp(20px,5vw,30px);
   margin: 0 0 5px;
 }
-header p {
-  margin: 0 0 12px;
-  color: #b9c8b7;
-  font-size: 13px;
-}
 .viewport {
   width: 100%;
   aspect-ratio: 690/685;
@@ -127,9 +122,6 @@ canvas {
   }
   .viewport:has(#game-over) {
     width: min(96%, calc(100svh - 304px));
-  }
-  .shell header p {
-    margin-bottom: 8px;
   }
 }
 
