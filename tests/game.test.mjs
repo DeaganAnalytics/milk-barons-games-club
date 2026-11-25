@@ -1965,3 +1965,13 @@ test('only a live projectile intersecting Pip triggers a range hit', async () =>
   assert.equal(practiceRangeHit(above, below, 1.49, 1.49), true);
   assert.equal(practiceRangeHit({...pip, x: 900}, {...pip, x: 900}, 1.44, 1.54), false);
 });
+
+test('all three practice guards can be reached from either side of the safe boundary line', async () => {
+  const {PRACTICE_RANGE} = await import('../src/room.mjs');
+  const {nearbyPracticeGuard} = await import('../src/practice-range-dialogue.mjs');
+  for (const y of PRACTICE_RANGE.lanes) {
+    assert.equal(nearbyPracticeGuard({x: PRACTICE_RANGE.west - 40, y}).y, y);
+    assert.equal(nearbyPracticeGuard({x: PRACTICE_RANGE.west + 12, y}).y, y);
+    assert.equal(nearbyPracticeGuard({x: PRACTICE_RANGE.guardX + 1, y}), undefined);
+  }
+});

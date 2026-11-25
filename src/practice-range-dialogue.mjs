@@ -1,9 +1,18 @@
 import {PRACTICE_RANGE} from './room.mjs';
 
-export const practiceGuardTargets = PRACTICE_RANGE.lanes.map(y => ({
+const practiceGuardTargets = PRACTICE_RANGE.lanes.map(y => ({
   id: 'guard', title: 'Target Practice Guard', practiceGuard: true,
-  x: PRACTICE_RANGE.guardX, y, radius: 14
+  x: PRACTICE_RANGE.guardX, y
 }));
+
+export function nearbyPracticeGuard(player) {
+  // Keep the interaction on the side of the guards away from the targets.
+  const behind = PRACTICE_RANGE.guardX - player.x;
+  if (behind < 0 || behind > 80) return;
+  const closest = practiceGuardTargets.reduce((best, guard) =>
+    Math.abs(player.y - guard.y) < Math.abs(player.y - best.y) ? guard : best);
+  if (Math.abs(player.y - closest.y) <= 42) return closest;
+}
 
 const greetings = [
   ['Stay back, taxpayer!', 'angry'],

@@ -1,4 +1,4 @@
-import {practiceGuardTargets} from './practice-range-dialogue.mjs';
+import {nearbyPracticeGuard} from './practice-range-dialogue.mjs';
 import {practiceRangeHit} from './practice-range.mjs';
 import {createPokieProfit} from './pokie-dialogue.mjs';
 import {createSleepingGambler} from './sleeping-gambler.mjs';
@@ -423,8 +423,7 @@ const {readMovement, clearInput} = bindControls({
       && !(guestEnclosure.active && insideGuestEnclosure(guest))
       && !(guest === sleepingGamblerTarget && sleepingGambler.pose(elapsed).awake));
     if (!milkPool.stolenClothing) nearbyGuests.push(poolClothing);
-    if (player.x <= PRACTICE_RANGE.west) nearbyGuests.push(...practiceGuardTargets);
-    const target = nearestInteraction(player, baron, milo, guards, nearbyGuests);
+    const target = nearbyPracticeGuard(player) ?? nearestInteraction(player, baron, milo, guards, nearbyGuests);
     if (target) {
       if (target.id === pilloryAttendant.id) spokeToPilloryAttendant = true;
       if (target.id === 'milo') seenMilo = true;
