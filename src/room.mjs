@@ -23,6 +23,13 @@ const pilloryFixtures = [
   {...MILK_BAG_BASKET, halfWidth: 21, halfHeight: 10},
   {...PILLORY_ATTENDANT, halfWidth: 11, halfHeight: 10}
 ];
+export const SLOT_STATIONS = [0, 1, 2, 3].map(index => ({
+  x: WEST_EDGE + 68,
+  y: SOUTH_EDGE - ROOM_HEIGHT + (index - 1.5) * 135,
+  halfWidth: 28,
+  halfHeight: 11
+}));
+
 const columns = (EAST_EDGE - WEST_EDGE) / ROOM_WIDTH;
 const rows = MAP_HEIGHT / ROOM_HEIGHT;
 
@@ -129,6 +136,7 @@ export function isBlocked(x, y, radius, baron, from) {
       || overlaps(x, y, radius, fountainBounds)
       || overlaps(x, y, radius, professorBounds)
       || pilloryFixtures.some(fixture => overlaps(x, y, radius, fixture))
+      || SLOT_STATIONS.some(fixture => overlaps(x, y, radius, fixture))
       || poolFixtures.some(fixture => overlaps(x, y, radius, fixture))
       || guestEnclosureBlocks(x, y, radius, from)) return true;
   const baronObstacle = {x: baron.x, y: baron.y + 6, halfWidth: 29, halfHeight: 35};
@@ -178,8 +186,16 @@ export function crossesPilloryArea(from, to) {
     && Math.min(from.y, to.y) < PILLORY_ATTENDANT.y + 55 && Math.max(from.y, to.y) > PILLORY.y - 55;
 }
 
+function crossesSlotArea(from, to) {
+  return SLOT_STATIONS.some(station =>
+    Math.max(from.x, to.x) > station.x - station.halfWidth - 30
+    && Math.min(from.x, to.x) < station.x + station.halfWidth + 30
+    && Math.min(from.y, to.y) < station.y + station.halfHeight + 30
+    && Math.max(from.y, to.y) > station.y - station.halfHeight - 30);
+}
+
 export function crossesScenery(from, to) {
-  return crossesPoolArea(from, to) || crossesFountainArea(from, to) || crossesPilloryArea(from, to) || Math.max(from.y, to.y) >= DANCE_FLOOR.y - 340
+  return crossesSlotArea(from, to) || crossesPoolArea(from, to) || crossesFountainArea(from, to) || crossesPilloryArea(from, to) || Math.max(from.y, to.y) >= DANCE_FLOOR.y - 340
     && Math.min(from.x, to.x) < DANCE_FLOOR.x + 250
     && Math.max(from.x, to.x) > DANCE_FLOOR.x - 250;
 }
@@ -195,6 +211,7 @@ export function routeAroundBaron(member, target, baron) {
   if (crossesFountainArea(member, target)) obstacles.push(fountainBounds, professorBounds);
   if (crossesPilloryArea(member, target)) obstacles.push(...pilloryFixtures);
   if (crossesPoolArea(member, target)) obstacles.push(...poolFixtures);
+  if (crossesSlotArea(member, target)) obstacles.push(...SLOT_STATIONS);
   if (guestEnclosure.active) obstacles.push(enclosureBounds);
   const corners = obstacles.flatMap(obstacleCorners)
     .filter(point => !isNpcBlocked(point.x, point.y, member.radius, baron));
