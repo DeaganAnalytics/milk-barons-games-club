@@ -1126,7 +1126,9 @@ test('Pip can meet the professor once and revisit all four topics', () => {
     seen.add(node);
     moods.add(node.mood);
     if (!node.replies.length) endings.push(node.text);
-    for (const reply of node.replies) visit(reply.next);
+    for (const reply of node.replies) {
+      if (typeof reply.next !== 'function') visit(reply.next);
+    }
   }
   visit(first);
   assert.ok(seen.has(menu), 'the introduction should lead to the topic menu');
@@ -1226,6 +1228,11 @@ test('the Commissioner is reachable, greets Pip once, and has three ways to end 
   const player = {...createPlayer(), x: pilloryCommissioner.x, y: pilloryCommissioner.y + 33};
   assert.equal(isBlocked(player.x, player.y, player.radius, baron), false);
   assert.equal(nearestInteraction(player, baron, null, [], [pilloryAttendant, pilloryCommissioner]).id, pilloryCommissioner.id);
+  for (const side of [-1, 1]) {
+    const besidePillory = {...player, x: pilloryCommissioner.x + side * 60, y: pilloryCommissioner.y};
+    assert.equal(isBlocked(besidePillory.x, besidePillory.y, besidePillory.radius, baron), false);
+    assert.equal(nearestInteraction(besidePillory, baron, null, [], [pilloryAttendant, pilloryCommissioner]).id, pilloryCommissioner.id);
+  }
   const open = createCommissionerConversation();
   const first = open();
   const menu = open();
@@ -1237,9 +1244,26 @@ test('the Commissioner is reachable, greets Pip once, and has three ways to end 
   assert.equal(firstAfterThrow(true).text, openingAfterThrow);
   assert.equal(open(), menu);
   assert.equal(menu.replies.length, 3);
-  const branch = menu.replies[1].next;
+  assert.equal(menu.replies[0].once, 'thankCommissioner');
+  assert.equal(menu.replies[0].consumeOnSelect, true);
+  const branch = menu.replies[1].next();
   assert.equal(branch.replies[0].next, null);
-  assert.ok(branch.replies.slice(1).every(reply => reply.next.replies.length === 0 && !reply.next.action));
+  assert.equal(branch.replies[2].next.action, undefined);
+  for (const [choice, expectedAction] of ['commissionerGift', undefined, 'commissionerBetrayal'].entries()) {
+    const open = createCommissionerConversation();
+    open();
+    const options = open().replies;
+    const offer = options[1].next().replies[1].next;
+    assert.equal(offer.replies[choice].next().action, expectedAction);
+    assert.equal(options.length, 3, 'the current conversation does not gain a pickpocket option');
+    assert.equal(options[1].next().replies.length, 2, 'only the offer is removed');
+    const theft = open().replies.find(reply => reply.once === 'pickpocketCommissioner');
+    assert.equal(Boolean(theft), choice === 1);
+    if (theft) {
+      assert.equal(theft.consumeOnSelect, true);
+      assert.equal(theft.next.replies[0].next.replies[0].next.action, 'commissionerTheft');
+    }
+  }
   const admission = menu.replies[2].next.replies[0].next;
   assert.equal(admission.text, 'Yes.');
   const warning = admission.replies[0].next;
@@ -1251,7 +1275,9 @@ test('the Commissioner is reachable, greets Pip once, and has three ways to end 
     if (!node || visited.has(node)) return;
     visited.add(node);
     if (!node.character) moods.add(node.mood);
-    for (const reply of node.replies) visit(reply.next);
+    for (const reply of node.replies) {
+      if (typeof reply.next !== 'function') visit(reply.next);
+    }
   }
   visit(first);
   assert.ok(visited.has(menu));
@@ -1986,7 +2012,8 @@ test('milk service dialogue cycles across staff and checks funds on every repeat
   assert.equal(order.replies[1].next.replies[0].next(), first);
   const served = order.replies[0].next();
   assert.equal(served.enterAction, 'buyWaiterMilk');
-  assert.equal(served.replies[0].next(), first);
+  assert.deepEqual(served.replies, []);
+  assert.ok(served.autoCloseMs > 0);
   balance -= WAITER_MILK_PRICE;
   const refused = order.replies[0].next();
   assert.match(refused.text, /insufficient funds/);

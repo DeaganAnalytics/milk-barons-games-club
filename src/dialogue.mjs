@@ -462,7 +462,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     if (node.enterAction) finishAction(node.enterAction, activeTarget);
     if (node.fadeTo) {
       autoClose = setTimeout(() => show(node.fadeTo, character, playerMood, withoutMilk), 1200);
-    } else if (node.autoCloseMs) autoClose = setTimeout(close, node.autoCloseMs);
+    } else if (node.autoCloseMs && activeTarget) autoClose = setTimeout(close, node.autoCloseMs);
   }
 
   closeButton.addEventListener('click', requestClose);

@@ -5,7 +5,7 @@ export const pilloryAttendant = {
 };
 
 export const pilloryCommissioner = {
-  id: 'pillory-commissioner', title: 'Commissioner', ...PILLORY, radius: 23
+  id: 'pillory-commissioner', title: 'Commissioner', ...PILLORY, radius: 23, interactionHalfWidth: 22
 };
 
 export function pilloryInView(cameraX, cameraY) {

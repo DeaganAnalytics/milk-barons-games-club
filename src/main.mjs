@@ -382,6 +382,14 @@ const dialogue = createDialogue(baron, {
       milkBalloon = createMilkBalloon(player, baron);
       info.textContent = 'Pip is picking up a milk balloon.';
     }
+    if (action === 'commissionerGift' || action === 'commissionerBetrayal' || action === 'commissionerTheft') {
+      const theft = action === 'commissionerTheft';
+      clubEvent(theft ? "Pip takes the Commissioner's coins." : 'The Commissioner gives Pip ₥5.', () => {
+        if (theft) karma.change(-3);
+        if (action === 'commissionerBetrayal') karma.change(-2);
+        coinBalance.change(5);
+      });
+    }
     if (action === 'attendantMilkBalloon') {
       clearInput();
       player.walking = false;

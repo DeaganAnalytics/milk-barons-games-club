@@ -29,7 +29,7 @@ export function createWaiterConversation(getCoins) {
     const menu = say(greeting, [
       reply('Could I have a glass of milk, please?', say("Certainly, sir. That'll be ₥2.", [
         reply('Yes, please.', () => getCoins() >= WAITER_MILK_PRICE
-          ? say('Here you are, sir. Enjoy!', [back], 'buyWaiterMilk')
+          ? {...say('Here you are, sir. Enjoy!', [], 'buyWaiterMilk'), autoCloseMs: 1600}
           : say("I'm terribly sorry, sir, but you appear to have insufficient funds.", [back])),
         reply('Actually, never mind.', say('Very well, sir.', [back]))
       ])),
