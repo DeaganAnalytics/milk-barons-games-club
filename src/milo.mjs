@@ -133,3 +133,52 @@ export function updateMilo(milo, baron, elapsed, dt, guards = []) {
   }
   return spotted;
 }
+
+
+const normalGreetings = [
+  "Shh! I'm trying to stay out of the Baron's way.",
+  "Please don't draw attention to me.",
+  'Did the Baron send you?',
+  'Keep your voice down!',
+  'Oh no... What do you want?',
+  "Please don't stand so close to me. He might notice.",
+  "You haven't seen the Baron coming this way, have you?",
+  "I'm not doing anything wrong. I promise.",
+  "Whatever you've heard about me, it's not true.",
+  "I'm not an activist anymore. Please leave me alone.",
+  "I'm just trying to get through the evening.",
+  "If anyone asks, you don't know me.",
+  "Please... I don't want any more trouble.",
+  "Is he looking at me? Don't turn around!"
+];
+
+const injuredGreetings = [
+  "No, don't hurt me!",
+  'Please... not again.',
+  "I've learnt my lesson. I promise.",
+  'Did someone report me again?',
+  "I haven't said anything! I swear!",
+  "Please tell me you're not here on behalf of the Baron.",
+  "I'm sorry. Whatever it is, I'm sorry.",
+  'Everything hurts. Please leave me alone.',
+  "I don't want any more attention.",
+  'I should never have got involved in politics.',
+  'I only wanted people to have enough milk...',
+  "Please don't tell the Baron where I am.",
+  "I can't go through that again.",
+  'What more do they want from me?'
+];
+
+export function createMiloGreeting() {
+  let wasInjured = false;
+  let index = 0;
+
+  return (injured = false) => {
+    if (injured && !wasInjured) {
+      wasInjured = true;
+      index = 0;
+    }
+    const greetings = wasInjured ? injuredGreetings : normalGreetings;
+    return greetings[index++ % greetings.length];
+  };
+}

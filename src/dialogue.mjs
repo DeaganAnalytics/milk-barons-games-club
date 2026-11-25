@@ -1,3 +1,4 @@
+import {createMiloGreeting} from './milo.mjs';
 import {createDancerConversation, dancerMoods, dancerPortraitName, dancerTargets} from './dancer-dialogue.mjs';
 import {accountingReplies} from './elias-accounting.mjs';
 import {createSkimConversation, skimId} from './skim-dialogue.mjs';
@@ -304,7 +305,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
   const professorOpening = createProfessorConversation();
-  let injured = false;
+  const miloGreeting = createMiloGreeting();
+  let miloWasInjured = false;
 
   function setPortrait(element, character, mood, withoutMilk) {
     const expressions = npcExpressions.get(character);
@@ -321,7 +323,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     element.dataset.portraitPose = fixedArt && sameSpeaker && element.dataset.portraitPose !== 'shifted'
       ? 'shifted' : 'resting';
     const reportPortrait = reportPortraits.get(character + '-' + mood);
-    element.dataset.injured = String(character === 'milo' && injured && !reportPortrait);
+    element.dataset.injured = String(character === 'milo' && miloWasInjured && !reportPortrait);
     element.classList.toggle('report-portrait', Boolean(reportPortrait));
     element.dataset.portrait = character;
     if (reportPortrait || !portraits[character]) {
@@ -528,7 +530,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     activeTarget = target;
     pokieCounter.hidden = target.id !== pokieId;
     disguise = target.executiveFraud ? 'woman' : null;
-    injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
+    const newlyInjured = target.id === 'milo' && Boolean(takeMiloInjury?.());
+    miloWasInjured ||= newlyInjured;
     const opening = target.slotReaction ? {
       text: target.slotReaction.text, mood: 'speaking', mustContinue: true,
       playerMood: target.slotReaction.playerMood,
@@ -574,14 +577,14 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
           mood: 'deadpan'
         }
       : target.id === 'milo' ? {
-          text: injured ? "No, don't hurt me!" : target.message,
-          replies: injured ? [injuredMiloReply, ...miloReplies] : miloReplies, mood: 'worried'
+          text: miloGreeting(miloWasInjured),
+          replies: newlyInjured ? [injuredMiloReply, ...miloReplies] : miloReplies, mood: 'worried'
         }
         : baronConversation();
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;
-    show(opening, target.id, injured || target.summoned || target.guestGate || target.postEscort ? 'worried' : 'attentive', target.withoutMilk);
+    show(opening, target.id, (target.id === 'milo' && miloWasInjured) || target.summoned || target.guestGate || target.postEscort ? 'worried' : 'attentive', target.withoutMilk);
   }
 
   return {open, dismiss: () => close(false), isOpen: () => !panel.hidden};
