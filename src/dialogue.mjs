@@ -1,3 +1,4 @@
+import {createPracticeGuardConversation} from './practice-range-dialogue.mjs';
 import {gamblerPortraits, sleepingGamblerDialogue, sleepingGamblerId} from './sleeping-gambler.mjs';
 import {createPokieConversation, pokieId, pokiePortraits} from './pokie-dialogue.mjs';
 import {createExecutiveConversation, executiveFraudWarning, executiveId, executiveMoods} from './executive-dialogue.mjs';
@@ -250,6 +251,7 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
   let disguise;
   const executiveOpening = createExecutiveConversation(() => baronStanding?.()?.coins ?? 0);
   const pokieOpening = createPokieConversation(placePokieWager);
+  const practiceGuardOpening = createPracticeGuardConversation();
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
@@ -478,6 +480,7 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
       : target.id === politicianId ? politicianOpening()
       : target.id === executiveId ? executiveOpening()
       : target.executiveFraud ? executiveFraudWarning
+      : target.practiceGuard ? practiceGuardOpening()
       : target.id === poolClothing.id ? poolClothingDialogue
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.poolClothesThanks ? {

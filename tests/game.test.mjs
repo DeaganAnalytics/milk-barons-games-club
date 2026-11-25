@@ -92,9 +92,10 @@ test('the 3×5 rectangle has fourteen reachable rugs and perimeter walls', () =>
   const spawnRug = closestRug(baron);
   assert.deepEqual(spawnRug, {...HALL_CENTER, horizontal: false});
   for (const rug of RUGS) {
-    const column = (rug.x - WEST_EDGE) / ROOM_WIDTH - 0.5;
+    const column = Math.floor((rug.x - WEST_EDGE) / ROOM_WIDTH);
     const row = (rug.y - NORTH_EDGE) / ROOM_HEIGHT - 0.5;
-    assert.ok(Number.isInteger(column) && Number.isInteger(row));
+    assert.ok(Number.isInteger(row));
+    assert.equal(rug.x, WEST_EDGE + (column + 0.5) * ROOM_WIDTH - (column === 2 && row === 4 ? 84 : 0));
     assert.equal(rug.horizontal, (row === 0 || row === 4) && (column === 0 || column === 2));
     assert.equal(closestRug(rug), rug);
     assert.equal(isBlocked(rug.x, rug.y, 13, {x: 0, y: 0}), false);

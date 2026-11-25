@@ -59,8 +59,9 @@ const rows = MAP_HEIGHT / ROOM_HEIGHT;
 export const RUGS = Array.from({length: columns * rows}, (_, index) => {
   const row = Math.floor(index / columns);
   const column = index % columns;
+  const rangeSideRug = row === rows - 1 && column === columns - 1;
   return {
-    x: WEST_EDGE + (column + 0.5) * ROOM_WIDTH,
+    x: WEST_EDGE + (column + 0.5) * ROOM_WIDTH - (rangeSideRug ? 84 : 0),
     y: NORTH_EDGE + (row + 0.5) * ROOM_HEIGHT,
     horizontal: (row === 0 || row === rows - 1) && (column === 0 || column === columns - 1)
   };

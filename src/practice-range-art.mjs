@@ -24,7 +24,12 @@ export function drawRangeLane(ctx, art, y, elapsed, index) {
   const {guardX, targetX} = PRACTICE_RANGE;
   const age = rangeShotAge(elapsed, index);
   const pose = age < 0.11 ? art.fire : age < 0.51 ? art.recover : art.aim;
-  if (art.target.naturalWidth) ctx.drawImage(art.target, targetX - 16, y - 62, 34, 50);
+  const target = art.targets[index];
+  if (target.naturalWidth) {
+    const height = 62;
+    const width = height * target.naturalWidth / target.naturalHeight;
+    ctx.drawImage(target, targetX - 24, y - 66, width, height);
+  }
   if (pose.naturalWidth) ctx.drawImage(pose, guardX - 10, y - 66, 53, 68);
   const bullet = rangeBullet(elapsed, index);
   if (bullet) {
