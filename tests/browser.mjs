@@ -125,6 +125,8 @@ async function load(width, height, mobile, name, url = site) {
     await reply('Continue', 'Now, Master Pip, do you have any questions?');
     await reply('How do I double my money?', 'As an aspiring capitalist, I am sure you vill figure it out. Zis establishment offers many delightful games through vich you may multiply your fortune.');
     await reply('Continue', 'Now, Master Pip, do you have any questions?');
+    const remaining = await evaluate('Array.from(document.querySelectorAll("#conversation-replies button"), button => button.textContent)');
+    assert.deepEqual(remaining, ['I have no more questions.']);
   }
   await reply('I have no more questions.', 'Vonderful. I vish you a most profitable evening, Master Pip.');
   assert.equal(await evaluate('document.querySelector("#coin-counter").hidden'), true);
@@ -304,6 +306,13 @@ try {
   await closeConversation();
 
   await load(412, 915, true, 'pixel-8a-club-text');
+  assert.ok(await evaluate(`(() => {
+    const canvas = document.getElementById('game');
+    const playfield = canvas.parentElement.getBoundingClientRect();
+    const available = document.querySelector('.shell').getBoundingClientRect().width;
+    return playfield.width <= available * 0.96 + 1
+      && Math.abs(canvas.clientHeight - canvas.clientWidth * 1370 / 1380) < 1;
+  })()`));
   const wrapping = await evaluate(`(() => {
     const info = document.getElementById('info');
     const sample = info.cloneNode();
@@ -324,6 +333,27 @@ try {
   })()`);
   for (const [key, lines] of wrapping) {
     assert.ok(lines > 0 && lines <= 3, `Club notice "${key}" wraps to ${lines} lines at 412px`);
+  }
+
+  const karmaPositions = await evaluate(`(async () => {
+    const {karma} = await import('./src/main.mjs');
+    const meter = document.getElementById('karma-meter');
+    const marker = meter.querySelector('.karma-marker');
+    return [0, -10, -5, -0.5, -0.25, 0, 2.5, 5, 10].map(score => {
+      karma.change(score - karma.score);
+      const bar = meter.getBoundingClientRect();
+      const dot = marker.getBoundingClientRect();
+      return {
+        score, accessibleScore: Number(meter.getAttribute('aria-valuenow')),
+        left: (dot.left + dot.width / 2 - bar.left) / bar.width
+      };
+    });
+  })()`, true);
+  for (const {score, accessibleScore, left} of karmaPositions) {
+    assert.equal(accessibleScore, score);
+    // These are the positions of the first and last ticks in the artwork.
+    const expected = 0.237 + 0.526 * (score + 10) / 20;
+    assert.ok(Math.abs(left - expected) < 0.005, `Karma marker at ${score}: ${left}`);
   }
 
   await load(1100, 950, false, 'guard-walk');
@@ -422,6 +452,20 @@ try {
   await expressions('thinking', 'suspicious');
   await reply('But you have horns.', 'I am a guard.');
   await expressions('thinking', 'angry');
+  await closeConversation();
+  await activate('Bull Guard');
+  await reply('You look parched. Can I buy you a drink?', 'Oi! Wait, for real?');
+  await reply('Psych! Just kidding!', '(The guard strikes Pip with the butt of his rifle.) Piss off.');
+  await closeConversation();
+  await activate('Bull Guard');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Come to apologise?');
+  const beforeApology = Number(await evaluate('document.getElementById("coin-count").textContent'));
+  await reply('Yes.', "Great. That'll be ₥10 for wasting my time.");
+  assert.equal(Number(await evaluate('document.getElementById("coin-count").textContent')), beforeApology - 10);
+  await closeConversation();
+  assert.equal(Number(await evaluate('document.getElementById("coin-count").textContent')), beforeApology - 10);
+  await activate('Bull Guard');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), postedGreeting);
   await closeConversation();
   await hold('ArrowLeft', 170);
   await hold('ArrowDown', 1900);
@@ -650,15 +694,19 @@ try {
   })()`, true);
   assert.equal(await evaluate('document.getElementById("conversation-title").textContent'), 'Bull Lifeguard');
   assert.equal(await evaluate('document.querySelectorAll("#conversation-replies button").length'), 8);
+  assert.equal(await evaluate('document.getElementById("conversation-close").hidden'), true);
   await reply('Can I go in?', 'Are you a beautiful woman or a wealthy man?');
   await expressions('thinking', 'thinking');
   await reply('Well... no.', "Well, there's your answer.");
+  await reply('Continue', '');
+  await reply('Can I go in?', "We've already discussed this. No!");
   await reply('Continue', '');
   await reply('Can you swim?', 'Nope.');
   await expressions('thinking', 'deadpan');
   await reply('Then what are you doing up there?', 'Enjoying the view!');
   await expressions('thinking', 'big-excited-smile');
   await reply('Continue', '');
+  assert.ok(!(await choices()).includes('Can you swim?'));
   await reply('I see piles of clothes everywhere.', 'And?');
   await reply('Are they skinny dipping?', "No, they're skimmy dipping. It's skim milk, you see!");
   await reply('Is that allowed in here?', "Don't question the Dairy Aristocracy. Their customs may seem profligate to your peasant mind, but it's all perfectly above board... almost.");

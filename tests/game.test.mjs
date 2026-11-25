@@ -1593,7 +1593,7 @@ test('the Creamery guard offers both drinks and gates his regular replies behind
   guard.apologyRequired = true;
   const apology = creameryGuardDialogue(guard);
   assert.equal(apology.text, 'Come to apologise?');
-  assert.deepEqual(apology.replies.map(reply => reply.next.action), ['payGuardApology', undefined, undefined]);
+  assert.deepEqual(apology.replies.map(reply => reply.next.enterAction), ['payGuardApology', undefined, undefined]);
   assert.equal(creameryGuardDialogue(guard), apology);
   guard.apologyRequired = false;
   assert.equal(creameryGuardDialogue(guard), opening);
@@ -1611,4 +1611,88 @@ test('the drunk Creamery guard starts after 20 seconds and wraps through all 18 
   const lines = Array.from({length: 18}, (_, i) => drunkGuardSpeech(guard, 70 + i * 20).text);
   assert.equal(new Set(lines).size, 18);
   assert.equal(drunkGuardSpeech(guard, 430).text, lines[0]);
+});
+
+test('lifeguard entry and theft dialogue reflect what Pip has already said and stolen', async () => {
+  const {clothingReports, lifeguardDialogue, lifeguardReplies} = await import('../src/lifeguard-dialogue.mjs');
+  const entry = lifeguardReplies(lifeguardDialogue, {}).find(reply => reply.label === 'Can I go in?');
+  assert.equal(entry.next.remembersPoolEntry, true);
+  assert.equal(entry.next.replies[0].next.enterAction, 'lifeguardEntryLie');
+  const repeat = lifeguardReplies(lifeguardDialogue, {askedPoolEntry: true})[0];
+  assert.equal(repeat.next.text, "We've already discussed this. No!");
+  assert.equal(repeat.next.replies[0].next, lifeguardDialogue);
+
+  const clothes = lifeguardDialogue.replies.find(reply => reply.label === 'I see piles of clothes everywhere.');
+  const askAboutTheft = state => lifeguardReplies(clothes.next, state)
+    .find(reply => reply.label === 'What if someone steals their clothes?').next;
+  assert.match(askAboutTheft({}).text, /God, I hope someone does/);
+  assert.match(askAboutTheft({stolenClothing: 'women'}).text, /Somebody already did/);
+  assert.equal(askAboutTheft({stolenClothing: 'women', admittedClothingTheft: true}).text, 'You already did, you bloody legend!');
+  assert.match(askAboutTheft({stolenClothing: 'man'}).text, /someone stole the man's clothing/);
+  assert.equal(askAboutTheft({stolenClothing: 'man', admittedClothingTheft: true}).replies, undefined);
+  assert.ok(!lifeguardReplies(lifeguardDialogue, {stolenClothing: 'all', admittedClothingTheft: true}).includes(clothes));
+  assert.equal(clothingReports.women.next.replies[0].next.replies[1].next.admitsClothingTheft, true);
+  assert.equal(clothingReports.man.next.replies[0].next.admitsClothingTheft, true);
+  for (const label of ['Can you swim?', "I'd like to report something.", 'What happens if someone starts drowning?', 'Is the milk fresh?']) {
+    assert.equal(lifeguardDialogue.replies.find(reply => reply.label === label).consumeOnSelect, true);
+  }
+});
+
+test('the Baron’s performance review handles all nine bands and both override boundaries', async () => {
+  const {baronAssessment, additionalBaronReplies} = await import('../src/baron-dialogue.mjs');
+  const used = new Set();
+  const state = {coins: 100, karma: 0};
+  const options = {used, standing: () => state, discoveries: {}, returnToMenu: () => null};
+  assert.equal(additionalBaronReplies(options).length, 0);
+  used.add('baronFollowing');
+  assert.equal(additionalBaronReplies(options).length, 0);
+  used.add('baronWatching');
+  assert.equal(additionalBaronReplies(options)[0].label, "So, you're clearly watching me.");
+  used.add('baronReviewIntro');
+  const review = additionalBaronReplies(options)[0];
+  assert.match(review.next().text, /Modest returns/);
+  state.coins = 196;
+  assert.match(review.next().text, /tantalisingly close/);
+  assert.match(baronAssessment(24, 9).text, /dairy uniform/);
+  assert.match(baronAssessment(25, 5).text, /going backwards/);
+  assert.match(baronAssessment(195, -5).text, /Excellent financial progress/);
+  assert.equal(new Set([99, 100, 150].flatMap(coins => [-6, 0, 6].map(karma => baronAssessment(coins, karma).text))).size, 9);
+  assert.ok(!additionalBaronReplies({...options, discoveries: {pillory: true}}).some(reply => reply.once === 'baronCommissioner'));
+  assert.ok(additionalBaronReplies({...options, discoveries: {pillory: true, attendant: true}}).some(reply => reply.once === 'baronCommissioner'));
+});
+
+test('Elias’s vampire topic progresses from its original exchange to a repeatable fine', async () => {
+  const {eliasConversation, eliasFollowingConversation, vampireFollowup} = await import('../src/elias.mjs');
+  assert.equal(vampireFollowup(eliasConversation, 0), null);
+  const vampire = eliasConversation.replies.find(reply => reply.label === 'Are you a vampire?');
+  assert.ok(vampire.consumeOnSelect);
+  let node = vampire.next;
+  for (let i = 0; i < 3; i++) {
+    assert.equal(node.mustContinue, true);
+    node = node.replies[0].next;
+  }
+  const second = vampireFollowup(eliasFollowingConversation, node.vampireStage);
+  assert.equal(second.label, 'So, about vampires...');
+  const repeat = vampireFollowup(eliasConversation, second.next.vampireStage);
+  assert.equal(repeat.next.enterAction, 'eliasVampireFine');
+  assert.equal(repeat.next.replies[0].next, eliasConversation);
+  assert.ok(eliasFollowingConversation.replies.every(reply => reply.consumeOnSelect));
+});
+
+test('Milo skips the southwest corner and reroutes if the ropes go up mid-walk', () => {
+  const baron = {...createBaron(), x: HALL_CENTER.x, y: HALL_CENTER.y};
+  const milo = createMilo();
+  updateMilo(milo, baron, 12, 0);
+  assert.equal(milo.corner, 1);
+  guestEnclosure.active = true;
+  try {
+    updateMilo(milo, baron, 12.05, 0.05);
+    assert.notEqual(milo.corner, 1);
+    assert.ok(milo.route.length);
+    milo.y = HALL_CENTER.y + 200;
+    fleeMilo(milo, {x: HALL_CENTER.x + 300}, baron, []);
+    assert.equal(milo.corner, 0);
+  } finally {
+    guestEnclosure.active = false;
+  }
 });

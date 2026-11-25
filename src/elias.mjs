@@ -28,11 +28,11 @@ const continueTo = next => ({label: 'Continue', playerMood: 'attentive', next});
 const back = [continueTo(questions)];
 
 questions.replies.push(
-  {label: "I didn't do it!", playerMood: 'alarmed',
+  {label: "I didn't do it!", once: 'eliasWelcome:denial', consumeOnSelect: true, playerMood: 'alarmed',
     next: {text: 'Zat is not a question.', mood: 'insulted', replies: back}},
-  {label: 'How did I get here?', playerMood: 'thinking',
+  {label: 'How did I get here?', once: 'eliasWelcome:arrival', consumeOnSelect: true, playerMood: 'thinking',
     next: {text: 'Ah... one of ze great secrets of ze universe.', mood: 'devious', replies: back}},
-  {label: 'What is this place?', playerMood: 'thinking',
+  {label: 'What is this place?', once: 'eliasWelcome:club', consumeOnSelect: true, playerMood: 'thinking',
     next: {
       text: 'Ah! I am delighted you asked.',
       mood: 'laugh',
@@ -47,7 +47,7 @@ questions.replies.push(
         })]
       })]
     }},
-  {label: 'How do I double my money?', playerMood: 'thinking', next: {
+  {label: 'How do I double my money?', once: 'eliasWelcome:money', consumeOnSelect: true, playerMood: 'thinking', next: {
     text: 'As an aspiring capitalist, I am sure you vill figure it out. Zis establishment offers many delightful games through vich you may multiply your fortune.',
     mood: 'self-assured-smirk', replies: back
   }},
@@ -63,8 +63,8 @@ export const eliasWelcome = welcomeLines.reduceRight((next, [text, mood, playerM
 
 function exchange(lines, menu) {
   let replies = [continueTo(menu)];
-  for (const [label, text, mood, playerMood = 'thinking'] of [...lines].reverse()) {
-    replies = [{label, playerMood, next: {text, mood, replies}}];
+  for (const [label, text, mood, playerMood = 'thinking', extras] of [...lines].reverse()) {
+    replies = [{label, playerMood, next: {text, mood, replies, ...extras}}];
   }
   return replies[0];
 }
@@ -80,10 +80,10 @@ const regularExchanges = [
     ['His accountant?!', 'Vhy, da! Someone must manage all his money!', 'laugh', 'alarmed']
   ],
   [
-    ['Are you a vampire?', 'No. Vampires do not exist.', 'worried'],
-    ['But you look like a vampire.', 'I assure you, I am not.', 'insulted'],
-    ['Do you want some garlic?', 'VHO HAS GARLIC?!', 'worried'],
-    ['...', 'I mean... vho has garlic? Yes, garlic for milk. I am particularly fond of milk-flavoured garlic.', 'self-assured-smirk', 'alarmed']
+    ['Are you a vampire?', 'No. Vampires do not exist.', 'worried', 'thinking', {mustContinue: true}],
+    ['But you look like a vampire.', 'I assure you, I am not.', 'insulted', 'thinking', {mustContinue: true}],
+    ['Do you want some garlic?', 'VHO HAS GARLIC?!', 'worried', 'thinking', {mustContinue: true}],
+    ['...', 'I mean... vho has garlic? Yes, garlic for milk. I am particularly fond of milk-flavoured garlic.', 'self-assured-smirk', 'alarmed', {vampireStage: 1}]
   ]
 ];
 
@@ -92,14 +92,44 @@ const followingExchange = [
   ['Wait, what?!', 'Naturally, Master Pip. I must account for every single coin you earn or lose. I am an accountant, after all.', 'self-assured-smirk', 'alarmed']
 ];
 
+const healthExchange = [
+  ['Can I die?', 'Da, of course. Everyone can die.', 'current-smile'],
+  ['Continue', 'Ahem... almost everyone.', 'worried'],
+  ['What?!', 'Nothing.', 'insulted', 'alarmed'],
+  ['I mean, can I die in here?', 'Da. Zere are many guards. Stickman guards, not cows, zat is. Vith guns.', 'current-smile', 'worried'],
+  ['Continue', 'Perhaps someone hits you. Perhaps you get poisoned. Zere are many vays to die.', 'thinking'],
+  ["How will I know if I'm dying?", 'I am your accountant. Naturally, I shall keep track.', 'self-assured-smirk', 'worried'],
+  ['Continue', 'See? I have prepared a little chart vith hearts.', 'current-smile']
+];
+
+const karmaExchange = [
+  ['Are you tracking my... karma?', 'Karma, yes. A very peasant vord. Ve prefer to call it alignment vith ze values of ze Dairy Aristocracy.', 'self-assured-smirk'],
+  ['Why?', 'To assess your future employment prospects, of course.', 'devious', 'worried']
+];
+
 function buildConversation(exchanges) {
   const menu = {text: elias.message, mood: 'current-smile', replies: []};
-  menu.replies = exchanges.map(lines => exchange(lines, menu));
+  menu.replies = exchanges.map(lines => {
+    const option = exchange(lines, menu);
+    return {...option, once: 'Elias: ' + option.label, consumeOnSelect: true};
+  });
   return menu;
 }
 
-export const eliasConversation = buildConversation(regularExchanges);
-export const eliasFollowingConversation = buildConversation([...regularExchanges, followingExchange]);
+export const eliasConversation = buildConversation([...regularExchanges, healthExchange, karmaExchange]);
+export const eliasFollowingConversation = buildConversation([...regularExchanges, followingExchange, healthExchange, karmaExchange]);
+
+export function vampireFollowup(menu, stage) {
+  if (stage === 1) return {
+    label: 'So, about vampires...', playerMood: 'thinking',
+    next: {text: 'Ve have discussed zis already, Master Pip.', mood: 'insulted', vampireStage: 2, replies: [continueTo(menu)]}
+  };
+  if (stage === 2) return {
+    label: 'Seriously, you look like a vampire.', playerMood: 'attentive',
+    next: {text: 'I shall start fining you for vasting my time.', mood: 'insulted', enterAction: 'eliasVampireFine', replies: [continueTo(menu)]}
+  };
+  return null;
+}
 
 const danceFeeReply = {
   label: 'Dancing fee?! What dancing fee?',

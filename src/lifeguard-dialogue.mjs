@@ -55,43 +55,73 @@ const requestMoney = {
   ...reply('Can I have some money?', 'worried', say('What? Why?', thinking, [
     reply("If I don't get ₥200, the Baron will send me to the dairy.", 'worried', moneyOutcome)
   ])),
-  once: 'lifeguardMoneyRequest'
+  once: 'lifeguardMoneyRequest', consumeOnSelect: true
 };
 
-lifeguardDialogue.replies.push(
-  reply('Can I go in?', 'thinking', say('Are you a beautiful woman or a wealthy man?', thinking, [
-    reply('[Lie] Yes.', 'attentive', say("And I'm a qualified lifeguard. Get out of here!", frown)),
-    reply('Well... no.', 'sorry', say("Well, there's your answer.", deadpan, back))
+const poolEntry = reply('Can I go in?', 'thinking', {...say('Are you a beautiful woman or a wealthy man?', thinking, [
+  reply('[Lie] Yes.', 'attentive', {...say("And I'm a qualified lifeguard. Get out of here!", frown), enterAction: 'lifeguardEntryLie'}),
+  reply('Well... no.', 'sorry', say("Well, there's your answer.", deadpan, back))
+]), remembersPoolEntry: true});
+const repeatPoolEntry = reply('Can I go in?', 'thinking', say("We've already discussed this. No!", frown, back));
+const clothesQuestion = reply('I see piles of clothes everywhere.', 'attentive', say('And?', deadpan, [
+  reply('Are they skinny dipping?', 'thinking', say("No, they're skimmy dipping. It's skim milk, you see!", grin, [
+    reply('Oh... okay.', 'attentive', lifeguardDialogue),
+    reply('Is that allowed in here?', 'thinking', say(
+      "Don't question the Dairy Aristocracy. Their customs may seem profligate to your peasant mind, but it's all perfectly above board... almost.",
+      frown, [reply('Almost?', 'worried', say("As long as you don't go in.", deadpan, back))]
+    ))
   ])),
-  reply('Can you swim?', 'thinking', {
+  clothesTheft
+]));
+
+const theftReactions = {
+  women: [
+    say("Somebody already did! There used to be women's clothes here. This is the best day of my career!", grin, back),
+    say('You already did, you bloody legend!', grin, back)
+  ],
+  man: [
+    say("Unfortunately, someone stole the man's clothing. Why the man's? WHY?!", frown, back),
+    say("This conversation is over. I know you did it. Why the man's?!", frown)
+  ]
+};
+
+export function lifeguardReplies(node, {askedPoolEntry, stolenClothing, admittedClothingTheft}) {
+  if (node === lifeguardDialogue) {
+    return node.replies.filter(option => stolenClothing !== 'all' || option !== clothesQuestion)
+      .map(option => askedPoolEntry && option === poolEntry ? repeatPoolEntry : option);
+  }
+  const reaction = theftReactions[stolenClothing];
+  if (node === clothesQuestion.next && reaction) {
+    return node.replies.map(option => option === clothesTheft
+      ? {...option, next: reaction[Number(Boolean(admittedClothingTheft))]} : option);
+  }
+  return node.replies ?? [];
+}
+
+const once = option => ({...option, once: option.label, consumeOnSelect: true});
+
+lifeguardDialogue.replies.push(
+  poolEntry,
+  once(reply('Can you swim?', 'thinking', {
     ...say('Nope.', deadpan, [
       reply('Then what are you doing up there?', 'thinking', say('Enjoying the view!', grin, back))
     ]),
     revealsLifeguardCannotSwim: true
-  }),
-  reply('I see piles of clothes everywhere.', 'attentive', say('And?', deadpan, [
-    reply('Are they skinny dipping?', 'thinking', say("No, they're skimmy dipping. It's skim milk, you see!", grin, [
-      reply('Oh... okay.', 'attentive', lifeguardDialogue),
-      reply('Is that allowed in here?', 'thinking', say(
-        "Don't question the Dairy Aristocracy. Their customs may seem profligate to your peasant mind, but it's all perfectly above board... almost.",
-        frown, [reply('Almost?', 'worried', say("As long as you don't go in.", deadpan, back))]
-      ))
-    ])),
-    clothesTheft
-  ])),
-  reply("I'd like to report something.", 'attentive', say(
+  })),
+  clothesQuestion,
+  once(reply("I'd like to report something.", 'attentive', say(
     'Bother someone else. I need to keep a VERY close eye on this lot. Oh yes. Very important work.', frown
-  )),
-  reply('What happens if someone starts drowning?', 'worried', say(
+  ))),
+  once(reply('What happens if someone starts drowning?', 'worried', say(
     'In this economy? Do you have any idea how much that milk costs?', frown, [
       reply('What about the person?', 'worried', say('I suppose we could fish them out eventually.', thinking, back))
     ]
-  )),
-  reply('Is the milk fresh?', 'thinking', say('Fresh every morning. The Baron insists upon it.', deadpan, [
+  ))),
+  once(reply('Is the milk fresh?', 'thinking', say('Fresh every morning. The Baron insists upon it.', deadpan, [
     reply("What happens to yesterday's milk?", 'thinking', say(
       "I wouldn't order the complimentary milkshake if I were you.", thinking, back
     ))
-  ])),
+  ]))),
   requestMoney,
   reply("I'll leave you to it.", 'attentive', say("Excellent. You're obstructing my view.", deadpan))
 );
@@ -103,7 +133,7 @@ const reportMissingDresses = reply("Hey, the women's clothing is gone.", 'attent
       reply('Continue', 'attentive', {
         ...say("I'm gonna see some aristocratic bunnies tonight!", grin, [
           reply("I didn't do it.", 'thinking', say("Then consider it a reward for bringing me news that's made my bloody day!", grin)),
-          reply('I did it.', 'attentive', say("Don't tell me that! Of course you bloody did! Now get out of here before someone sees us talking. Take the money and keep your mouth shut!", frown))
+          reply('I did it.', 'attentive', {...say("Don't tell me that! Of course you bloody did! Now get out of here before someone sees us talking. Take the money and keep your mouth shut!", frown), admitsClothingTheft: true})
         ]),
         enterAction: 'rewardMissingDresses'
       })
@@ -115,7 +145,7 @@ const reportMissingSuit = reply("Hey, the man's clothing is gone.", 'attentive',
   ...say(
     "Oh, shit. What the fuck?! I don't wanna see him getting out of that pool! Did you take it?", frown, [
       reply('Yes.', 'sorry', {
-        ...say("Give it here! And I'm fining you ₥10 for pissing me off.", frown), action: 'fineMissingSuit'
+        ...say("Give it here! And I'm fining you ₥10 for pissing me off.", frown), action: 'fineMissingSuit', admitsClothingTheft: true
       }),
       reply('No.', 'worried', {
         ...say("God damn it. Now I've gotta deal with this. MOOOVE IT!", frown), action: 'dismissMissingSuit'
