@@ -171,6 +171,10 @@ canvas {
   background: url('./assets/dialogue/portraits.webp') var(--portrait-position, 0% 0%) / 300% 400% no-repeat;
 }
 
+.conversation-portrait[data-portrait-pose="shifted"]::before {
+  rotate: -2deg;
+}
+
 .conversation-portrait[data-portrait="baron"] {
   --portrait-width: 114%;
 }
