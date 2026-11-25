@@ -178,14 +178,14 @@ function drawPipHead(ctx, x, y, angle, mood, portrait = false) {
       ellipse(ctx, eye, -1.25, 1.3, 2, ink);
     }
   }
-  if (mood === 'worried' || mood === 'alarmed' || mood === 'sorry') {
+  if (mood === 'worried' || mood === 'alarmed' || mood === 'sorry' || mood === 'exasperated') {
     for (const eye of eyes) {
       stroke(ctx, 1.1, ink, c => {
-        c.moveTo(eye - 1.8, -4.4);
-        c.quadraticCurveTo(eye, -5.5, eye + 1.5, mood === 'sorry' ? -5.9 : -6.4);
+        c.moveTo(eye - 1.8, mood === 'exasperated' ? -6.4 : -4.4);
+        c.quadraticCurveTo(eye, -5.5, eye + 1.5, mood === 'exasperated' ? -4.4 : mood === 'sorry' ? -5.9 : -6.4);
       });
     }
-    if (mood === 'alarmed') ellipse(ctx, face + 0.7, 4.7, 2, 2.35, ink);
+    if (mood === 'alarmed' || mood === 'exasperated') ellipse(ctx, face + 0.7, 4.7, mood === 'exasperated' ? 3.1 : 2, 2.35, ink);
     else stroke(ctx, 1.16, ink, c => {
       c.moveTo(face - 2.6, 5.7);
       c.quadraticCurveTo(face, 2.1, face + 2.7, 5.2);
@@ -212,9 +212,10 @@ export function drawPipPortrait(canvas, expression, disguise) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.scale(canvas.width / 240, canvas.height / 240);
 
+  const dressedUp = disguise === 'woman';
   const jacket = ctx.createLinearGradient(78, 140, 154, 209);
-  jacket.addColorStop(0, '#292321');
-  jacket.addColorStop(1, '#100d0b');
+  jacket.addColorStop(0, dressedUp ? '#894665' : '#292321');
+  jacket.addColorStop(1, dressedUp ? '#4a233c' : '#100d0b');
   ctx.fillStyle = jacket;
   stroke(ctx, 5, '#100d0b', c => {
     c.moveTo(66, 202);
@@ -224,19 +225,50 @@ export function drawPipPortrait(canvas, expression, disguise) {
     c.fill();
   });
 
-  ctx.fillStyle = '#f0ddbf';
-  ctx.beginPath();
-  ctx.moveTo(100, 201);
-  ctx.lineTo(100, 172);
-  ctx.bezierCurveTo(100, 145, 129, 145, 129, 172);
-  ctx.lineTo(129, 201);
-  ctx.closePath();
-  ctx.fill();
-  stroke(ctx, 2.5, '#453732', c => {
+  if (dressedUp) {
+    ctx.fillStyle = '#f0ddbf';
+    stroke(ctx, 2.8, '#3d2030', c => {
+      c.moveTo(94, 143);
+      c.quadraticCurveTo(115, 135, 137, 143);
+      c.quadraticCurveTo(133, 165, 115, 173);
+      c.quadraticCurveTo(100, 167, 94, 143);
+      c.closePath();
+      c.fill();
+    });
+    stroke(ctx, 1.4, '#ae7c40', c => {
+      c.moveTo(102, 148);
+      c.quadraticCurveTo(115, 165, 129, 148);
+    });
+    ellipse(ctx, 115, 157, 2.7, 3.3, '#fff1d5');
+    ctx.fillStyle = '#5e382d';
+    stroke(ctx, 3.8, '#2a1a17', c => {
+      c.moveTo(63, 71);
+      c.bezierCurveTo(57, 41, 78, 21, 108, 21);
+      c.bezierCurveTo(143, 19, 164, 38, 166, 68);
+      c.bezierCurveTo(160, 100, 171, 119, 166, 143);
+      c.quadraticCurveTo(157, 150, 142, 145);
+      c.lineTo(83, 147);
+      c.quadraticCurveTo(63, 155, 54, 141);
+      c.quadraticCurveTo(66, 113, 63, 71);
+      c.closePath();
+      c.fill();
+    });
+  } else {
+    ctx.fillStyle = '#f0ddbf';
+    ctx.beginPath();
+    ctx.moveTo(100, 201);
+    ctx.lineTo(100, 172);
+    ctx.bezierCurveTo(100, 145, 129, 145, 129, 172);
+    ctx.lineTo(129, 201);
+    ctx.closePath();
+    ctx.fill();
+  }
+  const seam = dressedUp ? '#ad6687' : '#453732';
+  stroke(ctx, 2.5, seam, c => {
     c.moveTo(83, 195);
     c.quadraticCurveTo(84, 170, 93, 161);
   });
-  stroke(ctx, 2.5, '#403431', c => {
+  stroke(ctx, 2.5, seam, c => {
     c.moveTo(146, 195);
     c.quadraticCurveTo(144, 174, 136, 161);
   });
@@ -258,18 +290,29 @@ export function drawPipPortrait(canvas, expression, disguise) {
     });
     ellipse(ctx, 2, -1.25, 2.8, 2.6, '#1c1816');
   }
-  if (disguise === 'woman') {
-    stroke(ctx, 5, '#332522', c => {
-      c.moveTo(-10, 10);
-      c.bezierCurveTo(-17, -4, -10, -14, 0, -13);
-      c.quadraticCurveTo(8, -14, 12, -8);
+  if (dressedUp) {
+    const hair = ctx.createLinearGradient(-12, -14, 9, -1);
+    hair.addColorStop(0, '#a46b4c');
+    hair.addColorStop(1, '#4f3027');
+    ctx.fillStyle = hair;
+    stroke(ctx, 0.9, '#2a1a17', c => {
+      c.moveTo(12, -8);
+      c.bezierCurveTo(9, -14, 3, -15, -2, -14);
+      c.bezierCurveTo(-10, -16, -15, -9, -14, -2);
+      c.quadraticCurveTo(-15, 9, -11, 13);
+      c.quadraticCurveTo(-8, 12, -7, 8);
+      c.quadraticCurveTo(-10, 4, -8, 0);
+      c.bezierCurveTo(-3, -2, 1, -7, 3, -10);
+      c.quadraticCurveTo(8, -8, 12, -8);
+      c.closePath();
+      c.fill();
     });
-    stroke(ctx, 2.8, '#624438', c => {
-      c.moveTo(-10, 7);
-      c.bezierCurveTo(-15, -5, -9, -12, 0, -12);
-      c.quadraticCurveTo(7, -13, 11, -8.5);
+    stroke(ctx, 0.65, '#bb805d', c => {
+      c.moveTo(-11, -4);
+      c.quadraticCurveTo(-7, -11, 1, -12);
     });
-    ellipse(ctx, -7, 6.4, 1.05, 1.05, '#f2d89f');
+    ellipse(ctx, -7.4, 7.9, 1.35, 1.35, '#b37d43');
+    ellipse(ctx, -7.5, 7.7, 0.9, 0.9, '#fff1d5');
   }
   ctx.restore();
 }

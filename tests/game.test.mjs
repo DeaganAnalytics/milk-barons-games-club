@@ -1737,9 +1737,16 @@ test('post-seduction reactions follow arrival order and release each NPC after o
     if (arrival) arrivals.push(arrival);
   }
   assert.equal(arrivals[0]?.id, 'guard');
-  assert.deepEqual(arrivals.map(arrival => arrival?.slotReaction), [
+  assert.deepEqual(arrivals.map(arrival => arrival?.slotReaction.text), [
     'Nice!', 'You absolute legend!', 'A man of exceptional talent, I see!',
-    'Respect, brother. Respect.', 'Respect, brother. Respect.'
+    'Respect, brother. Respect.', 'Not bad for a peasant!'
+  ]);
+  assert.deepEqual(arrivals.map(arrival => arrival.slotReaction.response), [
+    'Thanks... I think.', 'Wait, how do you know?', 'It was mostly a financial transaction.',
+    'Does everyone in this place know?!', 'Can everyone please stop congratulating me?!'
+  ]);
+  assert.deepEqual(arrivals.map(arrival => arrival.slotReaction.playerMood), [
+    'thinking', 'sorry', 'worried', 'alarmed', 'exasperated'
   ]);
   assert.deepEqual(arrivals.map(arrival => arrival.id).sort(), [
     'guard', 'guard', 'handlebar-waiter', 'male-waiter', 'martini-waiter'

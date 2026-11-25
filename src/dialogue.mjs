@@ -457,7 +457,9 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
     disguise = target.executiveFraud ? 'woman' : null;
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = target.slotReaction ? {
-      text: target.slotReaction, mood: 'speaking', mustContinue: true, autoCloseMs: 2400
+      text: target.slotReaction.text, mood: 'speaking', mustContinue: true,
+      playerMood: target.slotReaction.playerMood,
+      replies: [{label: target.slotReaction.response, next: null}]
     } : partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
