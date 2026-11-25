@@ -1,6 +1,6 @@
 import {guardBlocks} from './guards.mjs';
 import {facingIndex, TURN} from './directions.mjs';
-import {BARON_DANCE_STOP, DANCE_FLOOR, HALL_CENTER, closestRug, crossesFountainArea, crossesPilloryArea, crossesPoolArea, routeAroundBaron, ROOM_HEIGHT, ROOM_WIDTH, sameSquare} from './room.mjs';
+import {BARON_DANCE_STOP, DANCE_FLOOR, HALL_CENTER, closestRug, crossesFountainArea, crossesPilloryArea, crossesPoolArea, crossesPracticeRange, insidePracticeRange, routeAroundBaron, ROOM_HEIGHT, ROOM_WIDTH, sameSquare} from './room.mjs';
 
 const OFFSCREEN_DELAY = 5;
 const WALK_SPEED = 146;
@@ -97,7 +97,7 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
           } else if (isBaronDancing(baron)) {
             baron.route = [...routeToDanceStop(destination).slice(0, -1).reverse(), destination];
           } else if (crossesPoolArea(baron, destination) || crossesFountainArea(baron, destination)
-              || crossesPilloryArea(baron, destination)) {
+              || crossesPilloryArea(baron, destination) || crossesPracticeRange(baron, destination)) {
             baron.route = routeAroundBaron({...baron, radius: 24}, destination, {x: -1000, y: 0});
           } else {
             baron.route = [destination];
@@ -121,7 +121,7 @@ export function updateBaronWalk(baron, player, cameraX, elapsed, dt, cameraY = 0
     if (step > 0) {
       const x = baron.x + dx * step / distance;
       const y = baron.y + dy * step / distance;
-      if (guardBlocks(x, y, baron, guards, 24)) break;
+      if (insidePracticeRange(x, y, 24) || guardBlocks(x, y, baron, guards, 24)) break;
       baron.facing = facingIndex(dx, dy);
       baron.walking = true;
       baron.stride = (baron.stride + step * TURN / 18) % TURN;

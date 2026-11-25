@@ -45,10 +45,21 @@ const even = [
   'Same old moo-la!'
 ];
 
+const PROFIT_LIMIT = 95;
+
 export function createPokieProfit() {
   let net = 0;
+  let taxCollected = false;
   return {
-    get banned() { return net >= 95; },
+    get banned() { return net >= PROFIT_LIMIT; },
+    maxPayout(stake) {
+      return stake + Math.max(0, PROFIT_LIMIT - net);
+    },
+    collectTax() {
+      if (!this.banned || taxCollected) return 0;
+      taxCollected = true;
+      return Math.ceil(net / 2);
+    },
     record(stake, payout) {
       net += payout - stake;
       return this.banned;

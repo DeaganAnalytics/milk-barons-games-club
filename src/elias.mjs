@@ -77,8 +77,14 @@ export const eliasPokieBan = {
     ["Isn't the whole point of gambling to win money?", 'Da! For ze establishment.', 'self-assured-smirk'],
     ['So what are you saying?', 'Following a comprehensive financial review, your pokie machine privileges have been revoked.', 'insulted'],
     ["Because I'm winning?!", 'Precisely. Your continued participation presents an unacceptable risk to shareholder value.', 'devious', 'alarmed'],
-    ["That's ridiculous!", 'Might I suggest one of our other games? Preferably one at vhich you are considerably less competent.', 'current-smile', 'alarmed',
-      {replies: [], action: 'finishPokieGame'}]
+    ["That's ridiculous!", 'Might I suggest one of our other games? Preferably one at vhich you are considerably less competent.', 'current-smile', 'alarmed'],
+    ['Continue', 'Oh, and one more thing. Ze Baron has decreed zat you must pay an extraordinary profits tax of fifty per cent.', 'devious'],
+    ['FIFTY PER CENT?!', 'Da. Extraordinary profits require extraordinary taxation.', 'self-assured-smirk', 'alarmed'],
+    ['Does the Baron pay this tax when he makes extraordinary profits?', 'Vhat a ridiculous question! Of course not.', 'insulted'],
+    ['How is that fair?!', 'Master Pip, fairness is not a recognised accounting principle.', 'thinking', 'alarmed'],
+    ["And what if I'd lost all my money?", 'Zen ve vould have appreciated your patronage.', 'devious'],
+    ['This whole place is a scam!', 'A highly profitable enterprise, Master Pip. Please use ze correct terminology.', 'self-assured-smirk', 'alarmed',
+      {replies: [], action: 'collectPokieTax'}]
   ])]
 };
 

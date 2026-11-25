@@ -1,3 +1,4 @@
+import {practiceRangeHit} from './practice-range.mjs';
 import {createPokieProfit} from './pokie-dialogue.mjs';
 import {createSleepingGambler} from './sleeping-gambler.mjs';
 import {createSlotReactions} from './slot-reactions.mjs';
@@ -26,7 +27,7 @@ import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {createPlayer, movePlayer, takeDanceExit, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
-import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, MILK_FOUNTAIN, MILK_POOL, nearGuestGate, nearestInteraction, onDanceFloor, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, PRACTICE_RANGE, MILK_FOUNTAIN, MILK_POOL, nearGuestGate, nearestInteraction, onDanceFloor, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 import {createStaff, updateStaff} from './staff.mjs';
 
 const player = createPlayer();
@@ -195,7 +196,7 @@ const dialogue = createDialogue(baron, {
     if (pokieProfit.banned) return null;
     placingPokieWager = true;
     try {
-      const result = coinBalance.wager(stake, rollMultiplier);
+      const result = coinBalance.wager(stake, rollMultiplier, pokieProfit.maxPayout(stake), true);
       if (result) result.banned = pokieProfit.record(stake, result.payout);
       return result;
     } finally {
@@ -223,6 +224,10 @@ const dialogue = createDialogue(baron, {
   },
   onAction: (action, target) => {
     if (action === 'summonEliasForPokieBan') startEliasScene({pokieBan: true});
+    if (action === 'collectPokieTax') {
+      const tax = pokieProfit.collectTax();
+      if (tax) clubEvent('Elias collects the extraordinary profits tax.', () => coinBalance.change(-tax));
+    }
     if (action === 'finishPokieGame') showCoinOutcome(coinBalance.outcome);
     if (action === 'wakeSleepingGambler' && sleepingGambler.takeTokens(true, elapsed)) {
       clubEvent('Pip wakes the gambler and points out his tokens.', () => karma.change(2));
@@ -389,6 +394,7 @@ const dialogue = createDialogue(baron, {
 });
 let lastFrame = 0;
 let elapsed = 0;
+let rangeFall = null;
 
 function warnAtGuestGate() {
   if (gateWarned) return;
@@ -399,15 +405,19 @@ function warnAtGuestGate() {
 }
 
 const {readMovement, clearInput} = bindControls({
-  isPaused: () => eliasApproaching || Boolean(eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
+  isPaused: () => eliasApproaching || Boolean(eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene || rangeFall),
   nudge: (dx, dy) => {
-    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon) return;
+    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || rangeFall) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
-    else movePlayer(player, baron, dx, dy, guards);
+    else {
+      const previous = {x: player.x, y: player.y};
+      movePlayer(player, baron, dx, dy, guards);
+      checkPracticeRange(previous, elapsed);
+    }
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
-    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon) return;
+    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || rangeFall) return;
     const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
       && !(guestEnclosure.active && insideGuestEnclosure(guest))
       && !(guest === sleepingGamblerTarget && sleepingGambler.pose(elapsed).awake));
@@ -429,6 +439,14 @@ const {readMovement, clearInput} = bindControls({
   }
 });
 
+function checkPracticeRange(previous, previousTime) {
+  if (!practiceRangeHit(previous, player, previousTime, elapsed)) return false;
+  clearInput();
+  player.walking = false;
+  rangeFall = {time: 0, guard: {x: PRACTICE_RANGE.guardX}, blood: false};
+  return true;
+}
+
 function startEliasScene(conversation) {
   clearInput();
   player.walking = false;
@@ -439,6 +457,14 @@ function frame(timestamp) {
   const dt = Math.min((timestamp - lastFrame) / 1000 || 0, 0.05);
   lastFrame = timestamp;
   if (!gameOver.hidden) return;
+  if (rangeFall) {
+    rangeFall.time += dt;
+    render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
+      staff, milkService.scene, partyChatter, guestEscort, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene, rangeFall);
+    if (rangeFall.time >= 0.7) health.change(-MAX_HEARTS, 'You walked into live fire.');
+    else requestAnimationFrame(frame);
+    return;
+  }
   if (dialogue.isOpen()) {
     requestAnimationFrame(frame);
     return;
@@ -487,6 +513,7 @@ function frame(timestamp) {
     requestAnimationFrame(frame);
     return;
   }
+  const previousTime = elapsed;
   elapsed += dt;
 
   if (ropeWarning.scene) {
@@ -525,6 +552,7 @@ function frame(timestamp) {
     return;
   }
 
+  const previousPosition = {x: player.x, y: player.y};
   if (guestEscort?.phase === 'walking') {
     if (advanceGuestEscort(guestEscort, player, baron, guards, elapsed, dt)) {
       const executiveEscort = guestEscort.executive;
@@ -547,6 +575,10 @@ function frame(timestamp) {
       return;
     }
     updatePlayer(player, baron, movement, dt, guards);
+  }
+  if (checkPracticeRange(previousPosition, previousTime)) {
+    requestAnimationFrame(frame);
+    return;
   }
   if (!guestEscort && takeDanceExit(player)) {
     startEliasScene({danceFee: true});
