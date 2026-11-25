@@ -120,20 +120,44 @@ export function additionalBaronReplies({used, standing, discoveries, discussedVa
         reply('Yes, yes. Supervising.', say("You're learning, young Pip!", 'laughing', {replies: [review]}))
       ]}), 'thinking')));
   }
-  if (discussedVampires) replies.push(once('baronVampire', reply('Is Elias a vampire?',
-    say("Vam-pire? If it isn't milk-related, I don't want to know!", 'displeased', {replies: [
-      reply('But look at him!', elias('Ze Baron is exceptionally well endowed in terms of wealth and body mass. Less so in terms of vhat ve might politely call higher education.', more(
-        elias('Or secondary education.', more(elias('Or primary education, for zat matter.', more(
-          say('Is it time for milk?', 'pleased', {replies: back})
-        ))))
-      ), 'Whispers'), 'alarmed')
-    ]}))));
-  if (discoveries.pool) replies.push(once('baronMilkPool', reply('Is that a pool... of milk?',
-    say('Yes! One of my greatest inventions! I do love a good cannonball. A very expensive splash!', 'laughing', {replies: [
-      reply('You invented the swimming pool?', say('I invented the MILK swimming pool!', 'pleased', {replies: more(
-        elias('Our lord is a genius.', back)
-      )}), 'alarmed')
-    ]}))));
+  if (discussedVampires) {
+    const education = elias('Ze Baron is exceptionally well endowed in terms of wealth and body mass. Less so in terms of vhat ve might politely call higher education.', more(
+      elias('Or secondary education.', more(elias('Or primary education, for zat matter.', more(
+        say('Is it time for milk?', 'pleased', {replies: back})
+      ))))
+    ), 'Whispers');
+    const thanks = say('Thank you, Master Pip.', 'insulted', {character: 'elias', replies: more(education)});
+    const demand = say("ELIAS! WHY AREN'T YOU DRINKING MILK?!", 'displeased', {replies: more(thanks)});
+    replies.push(once('baronVampire', reply('Is Elias a vampire?',
+      say("Vam-pire? If it isn't milk-related, I don't want to know!", 'displeased', {replies: [
+        reply('Does he drink milk?', say("Come to think of it, I've never seen him drink milk.", 'pleased', {replies: more(demand)}), 'thinking')
+      ]}))));
+  }
+  if (discoveries.pool) {
+    const afterReply = more(() => poolMenu());
+    const options = [
+      once('baronPoolInnovation', reply('So you filled an existing invention with milk?',
+        say('Precisely! You have an excellent grasp of innovation, young Pip!', 'laughing', {replies: afterReply}))),
+      once('baronPoolInventions', reply('What else have you invented?',
+        say('The milk fountain, the milk balloon, the milk swimming pool...', 'pleased', {replies: [
+          reply("Have you invented anything that didn't already exist?",
+            say('What a peculiar question.', 'flustered', {replies: afterReply}), 'thinking')
+        ]}))),
+      once('baronPoolMilkChange', reply('How often do you change the milk?',
+        say('Change it?', 'flustered', {replies: afterReply}), 'thinking'))
+    ];
+    const remaining = () => options.filter(option => !used.has(option.once));
+    const poolMenu = () => {
+      const choices = remaining();
+      return choices.length ? elias('Our lord is a genius.', choices) : returnToMenu();
+    };
+    if (remaining().length) {
+      replies.push(reply('Is that a pool... of milk?',
+        say('Yes! One of my greatest inventions! I do love a good cannonball. A very expensive splash!', 'laughing', {replies: [
+          reply('You invented the swimming pool?', say('I invented the MILK swimming pool!', 'pleased', {replies: more(poolMenu)}), 'alarmed')
+        ]})));
+    }
+  }
   if (discoveries.pillory && discoveries.attendant) replies.push(once('baronCommissioner', reply('You put the Stickman Rights Commissioner in a pillory?',
     say('Did I? I delegate so many of these things.', 'pleased', {replies: more(
       elias('Ze Baron is a very busy man. He has considerable quantities of money to count.', back)
