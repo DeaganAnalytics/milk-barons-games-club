@@ -1,3 +1,4 @@
+import {dancerTargets} from './dancer-dialogue.mjs';
 import {createTally} from './elias-accounting.mjs';
 import {WAITER_MILK_PRICE} from './waiter-dialogue.mjs';
 import {nearbyPracticeGuard} from './practice-range-dialogue.mjs';
@@ -42,7 +43,7 @@ guards.push(creameryGuard);
 const staff = createStaff(player, baron, milo, guards);
 const slotReactions = createSlotReactions(staff, guards);
 const sleepingGambler = createSleepingGambler();
-const guests = [...staff, ...slotPlayers, openSlot, sleepingGamblerTarget, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
+const guests = [...staff, ...dancerTargets, ...slotPlayers, openSlot, sleepingGamblerTarget, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
 const milkService = createMilkService();

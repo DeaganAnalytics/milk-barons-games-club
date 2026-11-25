@@ -1,3 +1,4 @@
+import {createDancerConversation, dancerMoods, dancerPortraitName, dancerTargets} from './dancer-dialogue.mjs';
 import {accountingReplies} from './elias-accounting.mjs';
 import {createSkimConversation, skimId} from './skim-dialogue.mjs';
 import {createPracticeGuardConversation} from './practice-range-dialogue.mjs';
@@ -164,7 +165,35 @@ const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-formal', '
   [name, new URL('../assets/dialogue/' + name + '.webp', import.meta.url)]));
 const portraitCache = new Map();
 
+const npcExpressions = new Map([
+  ...Object.entries(portraits).map(([id, portrait]) => [id, portrait.expressions]),
+  ...dancerTargets.map(({id}) => [id, dancerMoods]),
+  ...partyGuests.map(({id}) => [id, ['attentive', 'annoyed']]),
+  [skimId, ['attentive', 'distressed']],
+  [bartender.id, bartenderMoods],
+  [elias.id, eliasPortraits],
+  [lifeguard.id, lifeguardMoods],
+  [professor.id, professorMoods],
+  [pilloryAttendant.id, attendantMoods],
+  [pilloryCommissioner.id, commissionerMoods],
+  [executiveId, executiveMoods.filter(mood => mood !== 'tousled')],
+  [politicianId, politicianMoods]
+]);
+
+const pipReactions = {
+  angry: ['alarmed', 'worried'],
+  displeased: ['worried', 'thinking'],
+  distressed: ['worried', 'sorry'],
+  sad: ['sorry', 'worried'],
+  stressed: ['worried', 'alarmed'],
+  happy: ['happy', 'attentive'],
+  laughing: ['happy', 'thinking'],
+  excited: ['happy', 'alarmed'],
+  skeptical: ['thinking', 'attentive']
+};
+
 function standalonePortraitUrl(id, withoutMilk = false, mood) {
+  if (id.startsWith('dancer-')) return new URL('../assets/dance/portraits/' + dancerPortraitName(id, mood), import.meta.url);
   if (id === skimId && mood === 'distressed') return new URL('../assets/waiters/edmund-vale-distressed-portrait.webp', import.meta.url);
   if (id === sleepingGamblerId) return new URL('../assets/slots/gambler-' + mood + '.webp', import.meta.url);
   if (id === pokieId) return new URL('../assets/slots/pokie-' + mood + '.webp', import.meta.url);
@@ -194,6 +223,9 @@ function standalonePortraitUrl(id, withoutMilk = false, mood) {
 function warmPortraits() {
   if (portraitCache.size) return;
   const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values()];
+  for (const {id} of dancerTargets) {
+    for (const mood of dancerMoods) urls.push(standalonePortraitUrl(id, false, mood));
+  }
   for (const id of staffIds) {
     urls.push(standalonePortraitUrl(id));
     if (id !== skimId) urls.push(standalonePortraitUrl(id, true));
@@ -259,6 +291,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
   const skimOpening = createSkimConversation();
+  const dancerOpening = createDancerConversation();
   const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0);
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
   const commissionerOpening = createCommissionerConversation();
@@ -267,6 +300,19 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   let injured = false;
 
   function setPortrait(element, character, mood, withoutMilk) {
+    const expressions = npcExpressions.get(character);
+    const sameSpeaker = element.dataset.portrait === character;
+    const previous = sameSpeaker ? element.dataset.expression : null;
+    const hasSpecialArt = reportPortraits.has(character + '-' + mood) || mood === 'tousled';
+    if (expressions && !hasSpecialArt && !expressions.includes(mood)) mood = expressions[0];
+    if (expressions && !hasSpecialArt && mood === previous) {
+      const index = expressions.indexOf(mood);
+      mood = expressions[(index + 1) % expressions.length];
+    }
+    // Fixed artwork keeps its state, with a small change of posture on each line.
+    const fixedArt = !expressions || (hasSpecialArt && mood === previous);
+    element.dataset.portraitPose = fixedArt && sameSpeaker && element.dataset.portraitPose !== 'shifted'
+      ? 'shifted' : 'resting';
     const reportPortrait = reportPortraits.get(character + '-' + mood);
     element.dataset.injured = String(character === 'milo' && injured && !reportPortrait);
     element.classList.toggle('report-portrait', Boolean(reportPortrait));
@@ -341,7 +387,12 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       direction.textContent = '(' + node.direction + ') ';
       line.prepend(direction);
     }
-    const playerExpression = node.playerMood ?? playerMood;
+    const reactions = pipReactions[node.mood] ?? ['attentive', 'thinking'];
+    const preferred = node.playerMood ?? playerMood ?? reactions[0];
+    const previous = playerPortrait.dataset.expression?.split(':')[0];
+    const playerExpression = preferred === previous
+      ? [...reactions, 'thinking', 'attentive'].find(mood => mood !== previous)
+      : preferred;
     const portraitKey = playerExpression + ':' + (disguise ?? '') + ':' + pipLipstick;
     if (playerPortrait.dataset.expression !== portraitKey) {
       drawPipPortrait(playerArt, playerExpression, disguise, pipLipstick);
@@ -506,6 +557,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
           mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
         }
       : target.id === skimId ? skimOpening()
+      : target.id.startsWith('dancer-') ? dancerOpening(target.id)
       : staffIds.includes(target.id) ? waiterOpening(target.withoutMilk)
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
       : target.id === 'guard' && target.guard?.creamery ? creameryGuardDialogue(target.guard)
