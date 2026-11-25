@@ -85,21 +85,40 @@ export function baronDanceDialogue(used, canPay = () => false, hasAccess = false
   const slap = say('I SAID NO!', 'displeased', {
     playerMood: 'alarmed', enterAction: 'baronSlap', replies: more(breathing), mustContinue: true
   });
-  const offer = say('For ₥60, I can make an exception.', 'pleased', {replies: [
-    reply('Pay ₥60.', () => canPay()
-      ? say('Elias, open the rope. The boy has paid!', 'pleased', {enterAction: 'payDjAdmission'})
-      : say("You don't have ₥60, boy!", 'displeased')),
-    reply('Never mind.', null)
+  const elias = (text, mood, replies) =>
+    say(text, mood, {character: 'elias', replies, mustContinue: Boolean(replies)});
+  const success = say('Splendid! I always make time for the arts.', 'pleased', {
+    mustContinue: true,
+    replies: more(elias('Provided ze arts make money for you, my lord.', 'current-smile',
+      more(say('Precisely!', 'pleased', {action: 'payDjAdmission'}))))
+  });
+  const insufficient = elias('Good heavens, Master Pip. Ve gave you ₥100 upon arrival. Vhat have you been doing?', 'insulted',
+    more(say('Financially irresponsible, is he?', 'displeased', {
+      mustContinue: true,
+      replies: more(elias('Evidently, my lord.', 'current-smile',
+        more(elias('I suggest you return vhen you have some actual money.', 'current-smile'))))
+    })));
+  const price = say('Remarkably affordable!', 'pleased', {replies: [
+    reply("Fine. Here's your money.", () => canPay() ? success : insufficient),
+    reply("That's ridiculous.", say('Then I suggest you stop wasting valuable dancing time!', 'displeased'))
   ]});
-  const admission = reply('What if I paid to speak to him?', offer, 'thinking');
+  const admission = reply('How much would it cost to speak to DJ Dairy?',
+    say("Elias! What's the going rate for interrupting my recreational activities?", 'displeased', {
+      mustContinue: true,
+      replies: more(elias(`₥${DJ_ADMISSION_PRICE}, my lord.`, 'thinking', more(price)))
+    }), 'thinking');
+  const leave = reply('Oh, okay.', null, 'sorry');
   const fanRequest = say('The man is an artist! He has no time for the likes of you!', 'displeased', {replies: [
-    reply('Oh, okay.', null, 'sorry'),
+    leave,
     reply('Please, Baron, sir? Pretty please?', slap, 'worried'),
-    ...(!hasAccess ? [admission] : [])
+    reply('Is dancing more important than talking to your guests?',
+      say('Of course it is, boy! Now let me dance!', 'displeased')),
+    admission
   ]});
-  return say('Not now, boy! This is my favourite song!', 'pleased', {
-    replies: used ? (hasAccess || !canPay() ? [] : [admission])
-      : [reply('Can I speak to DJ Dairy?', fanRequest, 'thinking')]
+  const opening = 'Not now, boy! This is my favourite song!';
+  if (hasAccess) return say(opening, 'pleased', {replies: []});
+  return say(opening, 'pleased', {
+    replies: used ? [leave, admission] : [reply('Can I speak to DJ Dairy?', fanRequest, 'thinking')]
   });
 }
 
@@ -244,21 +263,168 @@ export function baronAssessment(coins, karma) {
   return say(...assessments[moneyTier][karmaTier]);
 }
 
-export function additionalBaronReplies({used, standing, discoveries, discussedVampires, askedEliasAboutVampires = discussedVampires, returnToMenu}) {
+function baronConversationSequence(lines, action, ending) {
+  return lines.reduceRight((replies, [text, mood, character]) => {
+    if (character === 'pip') return [reply(text, replies[0].next, mood)];
+    const node = say(text, mood, {
+      character, replies, mustContinue: Boolean(replies),
+      ...(character === 'security-camera' ? {speaker: 'Security camera'} : {})
+    });
+    if (!replies) node.action = action;
+    return more(node);
+  }, ending)[0].next;
+}
+
+function politicalConversionReply(spokeToMilo) {
+  const sequence = (lines, ending) => baronConversationSequence(lines, 'finishPoliticalConversion', ending);
+  const branch = (label, lines) => reply(label, sequence(lines));
+  const responses = [
+    branch("You haven't changed my mind about anything.", [
+      ['Give it time, my boy. Poverty is a terribly exhausting political conviction.', 'pleased'],
+      ['Some things are more important than money.', 'stern', 'pip'],
+      ['Of course! Milk, for instance.', 'laughing']
+    ]),
+    branch("I suppose being wealthy wouldn't be so bad.", [
+      ["Now you're thinking! Have you considered a milk fountain?", 'pleased'],
+      ["I think I'd buy my family some food first.", 'thinking', 'pip'],
+      ["Good heavens! You're still thinking like a peasant!", 'displeased']
+    ]),
+    branch('What if I become wealthier than you?', [
+      ['HAHAHAHAHA!', 'laughing'],
+      ['Elias, could that happen?', 'flustered'],
+      ['Not under ze current taxation arrangements.', 'current-smile', 'elias'],
+      ['Splendid!', 'pleased'],
+      ["Isn't that a bit unfair?", 'skeptical', 'pip'],
+      ["Capitalism isn't about fairness, boy! It's about winning!", 'displeased'],
+      ["And you're the only one allowed to win?", 'exasperated', 'pip'],
+      ["Now you're getting it!", 'laughing']
+    ]),
+    ...(spokeToMilo ? [branch('Is this what you tried to do with Milo?', [
+      ['Milo was a very poor investment.', 'displeased'],
+      ['He was a political opponent.', 'stern', 'pip'],
+      ['Yes, yes. Very poor returns.', 'displeased'],
+      ['Ze man remains an ongoing operational expense.', 'thinking', 'elias'],
+      ["And after everything I've done for him!", 'displeased'],
+      ['You make him wear his old campaign banner.', 'exasperated', 'pip'],
+      ['At my expense!', 'flustered'],
+      ['Actually, my lord, he already owned ze banner.', 'current-smile', 'elias'],
+      ['EVEN BETTER!', 'laughing']
+    ])] : []),
+    branch('And if I refuse to become a capitalist?', [
+      ["Then you'll work in my dairy.", 'pleased'],
+      ["So I don't really have a choice?", 'worried', 'pip'],
+      ['Nonsense! You have two choices!', 'displeased'],
+      ['Both of vhich are financially advantageous to ze Baron.', 'self-assured-smirk', 'elias'],
+      ["Isn't capitalism marvellous?", 'laughing']
+    ])
+  ];
+  return reply('Why are you so interested in turning me into a capitalist?', sequence([
+    ['Because I see potential in you, young Pip!', 'pleased'],
+    ['All that ambition, all that energy, wasted on helping OTHER PEOPLE!', 'displeased'],
+    ['A most inefficient allocation of human capital.', 'current-smile', 'elias'],
+    ['Precisely! Imagine what you could achieve if you only cared about yourself!', 'laughing']
+  ], responses), 'thinking');
+}
+
+function surveillanceReply(used, seducedExecutive) {
+  const stages = [
+    'baronReviewIntro', 'baronSurveillance2', 'baronSurveillance3',
+    'baronSurveillance4', 'baronSurveillance5', 'baronSurveillance6'
+  ];
+  const stage = stages.findIndex(key => !used.has(key));
+  if (stage < 0 || (stage === 5 && !seducedExecutive)) return null;
+  const encounter = (label, lines, choices) =>
+    reply(label, baronConversationSequence(lines, stages[stage], choices), 'thinking');
+  switch (stage) {
+    case 0:
+      return encounter("So, you're clearly watching me.", [
+        ['Supervising the premises.', 'pleased'],
+        ['Yes, yes. Supervising.', 'skeptical', 'pip'],
+        ["You're learning, young Pip!", 'laughing']
+      ]);
+    case 1:
+      return encounter('Do you watch all your guests this closely?', [
+        ['Only the suspicious ones, and the pretty ones.', 'pleased']
+      ], [
+        encounter('What makes me suspicious?', [
+          ['You keep asking questions.', 'displeased'],
+          ['Am I not allowed to ask questions?', 'skeptical', 'pip'],
+          ['There you go again!', 'displeased']
+        ]),
+        encounter('Do you find me pretty?', [
+          ['Ze Baron is attracted to three things, in zis order. Milk, money, women.', 'current-smile', 'elias'],
+          ['You are none, and possess none.', 'self-assured-smirk', 'elias'],
+          ...(seducedExecutive ? [
+            ['(Points at face) See these lipstick kisses? I seduced the Executive.', 'pleased', 'pip'],
+            ["Ze Executive! Now zat's a woman of ze Baron's taste.", 'current-smile', 'elias'],
+            ['You still have no milk or money.', 'self-assured-smirk', 'elias'],
+            ['Is anyone thirsty?', 'pleased']
+          ] : [])
+        ])
+      ]);
+    case 2:
+      return encounter("Don't you have anything better to do?", [
+        ['Of course! But I can drink milk and watch you simultaneously.', 'pleased'],
+        ['That sounds incredibly boring.', 'deadpan', 'pip'],
+        ["Not when you're losing money, young Pip!", 'laughing']
+      ]);
+    case 3:
+      return encounter('Have you ever heard of the right to privacy?', [
+        ['Of course! A fundamental right.', 'pleased'],
+        ['So you respect it?', 'thinking', 'pip'],
+        ['Absolutely! Nobody is permitted to watch me without my permission.', 'pleased'],
+        ['What about my privacy?', 'skeptical', 'pip'],
+        ['Good heavens, boy! What have you got to hide?', 'displeased'],
+        ['', 'still', 'security-camera']
+      ], [{label: 'Unbelievable.', playerMood: 'exasperated', next: {exitAction: stages[stage]}}]);
+    case 4:
+      return encounter('How much did all these security cameras cost?', [
+        ['Elias?', 'flustered'],
+        ['A considerable sum, my lord.', 'current-smile', 'elias'],
+        ['Worth every token!', 'pleased'],
+        ["Wouldn't it have been cheaper to just trust people?", 'thinking', 'pip'],
+        ['Elias, did you hear that?', 'pleased'],
+        ['Yes, my lord. Quite amusing.', 'self-assured-smirk', 'elias'],
+        ['HAHAHAHAHA!', 'laughing'],
+        ["It wasn't a joke.", 'exasperated', 'pip'],
+        ['HAHAHAHAHA!', 'laughing']
+      ]);
+    case 5:
+      return encounter('Just how much can you see through those cameras?', [
+        ['Excellent picture quality, young Pip!', 'pleased'],
+        ["That's not what I asked.", 'skeptical', 'pip'],
+        ['Quite an impressive performance, by the way.', 'laughing'],
+        ['Oh MILK!', 'alarmed', 'pip'],
+        ['Elias, remind me to congratulate the Executive.', 'pleased'],
+        ['Already noted, my lord.', 'self-assured-smirk', 'elias']
+      ]);
+  }
+}
+
+export function additionalBaronReplies({used, standing, discoveries, discussedVampires, askedEliasAboutVampires = discussedVampires, spokeToMilo, seducedExecutive, returnToMenu}) {
   const back = more(returnToMenu);
   const once = (key, option) => ({...option, once: key, consumeOnSelect: true});
   const elias = (text, replies, direction) => say(text, 'self-assured-smirk', {character: 'elias', replies, direction});
   const replies = [];
+  if (used.has('baronKarmaEncounter') && !used.has('finishPoliticalConversion')) {
+    replies.push(politicalConversionReply(spokeToMilo));
+  }
+  if (discoveries.canAskForFreeMilk && !used.has('baronFreeMilk')) {
+    const milk = say('Master Pip, I know precisely vhat you are doing.', 'thinking', {
+      character: 'elias', enterAction: 'baronFreeMilk', replies: back
+    });
+    replies.push(once('baronFreeMilk', reply('You know, Baron, I heard communists are opposed to giving their guests free milk.',
+      say('ELIAS! GET THIS BOY SOME MILK!', 'displeased', {replies: more(milk), mustContinue: true}))));
+  }
   if (used.has('baronFollowing') && used.has('baronWatching')) {
     const assess = () => {
       const {coins = 100, karma = 0} = standing?.() ?? {};
       return {...baronAssessment(coins, karma), replies: back};
     };
     const review = reply("How do you think I'm doing?", assess, 'thinking');
-    replies.push(used.has('baronReviewIntro') ? review : once('baronReviewIntro', reply("So, you're clearly watching me.",
-      say('Supervising the premises.', 'pleased', {replies: [
-        reply('Yes, yes. Supervising.', say("You're learning, young Pip!", 'laughing', {replies: [review]}))
-      ]}), 'thinking')));
+    if (used.has('baronReviewIntro')) replies.push(review);
+    const surveillance = surveillanceReply(used, seducedExecutive);
+    if (surveillance) replies.push(surveillance);
   }
   if (discussedVampires) {
     const education = elias('Ze Baron is exceptionally well endowed in terms of wealth and body mass. Less so in terms of vhat ve might politely call higher education.', more(

@@ -1563,7 +1563,7 @@ test('the dancing Baron offers one DJ request and the karma encounters switch to
   const {baronDanceDialogue, baronKarmaDialogue} = await import('../src/baron-dialogue.mjs');
   const baron = {...createBaron(), ...BARON_DANCE_STOP};
   assert.equal(nearestInteraction({x: baron.x + 42, y: baron.y}, baron, null).id, 'baron');
-  assert.equal(baronDanceDialogue(true).replies.length, 0);
+  assert.equal(baronDanceDialogue(true).replies.length, 2);
   const fan = baronDanceDialogue(false).replies[0].next;
   assert.equal(fan.replies[0].next, null);
   const slap = fan.replies[1].next;
@@ -2219,11 +2219,18 @@ test('DJ Dairy admission can be retried until paid, then disappears', async () =
   const {baronDanceDialogue} = await import('../src/baron-dialogue.mjs');
   let canPay = false;
   const opening = baronDanceDialogue(false, () => canPay);
-  const offer = opening.replies[0].next.replies[2].next;
-  assert.equal(offer.replies[0].next().enterAction, undefined);
+  assert.equal(opening.replies[0].next.replies.length, 4);
+  const quote = baronDanceDialogue(true, () => canPay).replies[1].next;
+  const fee = quote.replies[0].next;
+  assert.equal(fee.character, 'elias');
+  assert.equal(fee.text, '₥60, my lord.');
+  const offer = fee.replies[0].next;
+  assert.equal(offer.replies[0].next().character, 'elias');
+  assert.match(offer.replies[1].next.text, /stop wasting/);
   canPay = true;
-  const retry = baronDanceDialogue(true, () => canPay);
-  assert.equal(retry.replies[0].next.replies[0].next().enterAction, 'payDjAdmission');
+  const success = offer.replies[0].next();
+  assert.equal(success.action, undefined);
+  assert.equal(success.replies[0].next.replies[0].next.action, 'payDjAdmission');
   assert.equal(baronDanceDialogue(true, () => canPay, true).replies.length, 0);
 });
 
@@ -2248,4 +2255,71 @@ test('DJ Dairy remembers finished topics and selects the romantic advice branch'
     assert.equal(open().replies.length, 5);
     assert.equal(open().replies.at(-1).label, 'Enjoy your music.');
   }
+});
+
+test('the Baron’s free milk topic requires eligibility and can only be selected once', async () => {
+  const {additionalBaronReplies} = await import('../src/baron-dialogue.mjs');
+  const used = new Set();
+  const replies = canAskForFreeMilk => additionalBaronReplies({used, discoveries: {canAskForFreeMilk}});
+  assert.equal(replies(false).length, 0);
+  const [offer] = replies(true);
+  assert.equal(offer.consumeOnSelect, true);
+  assert.equal(offer.next.text, 'ELIAS! GET THIS BOY SOME MILK!');
+  const handoff = offer.next.replies[0].next;
+  assert.equal(handoff.character, 'elias');
+  assert.equal(handoff.enterAction, 'baronFreeMilk');
+  used.add(offer.once);
+  assert.equal(replies(true).length, 0);
+});
+
+test('the Baron’s Political Conversion topic unlocks after a karma encounter and offers exclusive branches', async () => {
+  const {additionalBaronReplies} = await import('../src/baron-dialogue.mjs');
+  const used = new Set();
+  const menu = spokeToMilo => additionalBaronReplies({used, discoveries: {}, spokeToMilo});
+  assert.equal(menu(true).length, 0);
+  used.add('baronKarmaEncounter');
+  for (const spokeToMilo of [false, true]) {
+    let node = menu(spokeToMilo)[0].next;
+    while (node.replies[0].label === 'Continue') node = node.replies[0].next;
+    assert.equal(node.replies.length, spokeToMilo ? 5 : 4);
+    assert.equal(node.replies.some(option => option.label.includes('Milo')), spokeToMilo);
+    for (const option of node.replies) {
+      let response = option.next;
+      while (response.replies?.length) {
+        assert.equal(response.replies.length, 1);
+        response = response.replies[0].next;
+      }
+      assert.equal(response.action, 'finishPoliticalConversion');
+    }
+  }
+  used.add('finishPoliticalConversion');
+  assert.equal(menu(true).length, 0);
+});
+
+test('the Baron’s surveillance scenes advance in order and wait for the Executive condition', async () => {
+  const {additionalBaronReplies} = await import('../src/baron-dialogue.mjs');
+  const used = new Set(['baronFollowing', 'baronWatching']);
+  const next = seducedExecutive => additionalBaronReplies({used, discoveries: {}, seducedExecutive})
+    .find(option => option.label !== "How do you think I'm doing?");
+  const finish = node => {
+    while (node.replies?.length) node = node.replies[0].next;
+    used.add(node.action ?? node.exitAction);
+  };
+  finish(next(false).next);
+  const second = next(false).next;
+  assert.equal(second.replies.length, 2);
+  assert.equal(second.replies[1].next.replies[0].next.replies, undefined);
+  assert.match(next(true).next.replies[1].next.replies[0].next.replies[0].label, /lipstick/);
+  finish(second);
+  finish(next(false).next);
+  let privacy = next(false).next;
+  while (privacy.character !== 'security-camera') privacy = privacy.replies[0].next;
+  assert.equal(privacy.text, '');
+  assert.equal(privacy.replies[0].label, 'Unbelievable.');
+  finish(privacy);
+  finish(next(false).next);
+  assert.equal(next(false), undefined);
+  assert.equal(next(true).label, 'Just how much can you see through those cameras?');
+  finish(next(true).next);
+  assert.equal(next(true), undefined);
 });
