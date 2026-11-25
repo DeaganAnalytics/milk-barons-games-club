@@ -331,8 +331,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       return;
     }
     element.classList.remove('standalone-portrait');
-    const {row, expressions} = portraits[character];
-    element.style.setProperty('--portrait-position', `${expressions.indexOf(mood) * 50}% ${row * 100 / 3}%`);
+    const {row, expressions: atlasExpressions} = portraits[character];
+    element.style.setProperty('--portrait-position', `${atlasExpressions.indexOf(mood) * 50}% ${row * 100 / 3}%`);
     element.dataset.expression = mood;
   }
 

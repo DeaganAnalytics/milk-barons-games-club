@@ -2080,3 +2080,8 @@ test('Elias accounts for cumulative actual changes and unlocks each tally indepe
   const health = replies()[2].next();
   assert.equal(health.replies[0].label, 'My what?');
 });
+
+test('the browser dialogue module loads', async () => {
+  const {createDialogue} = await import('../src/dialogue.mjs');
+  assert.equal(typeof createDialogue, 'function');
+});
