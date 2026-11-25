@@ -2271,3 +2271,55 @@ test('the Baron’s free milk topic requires eligibility and can only be selecte
   used.add(offer.once);
   assert.equal(replies(true).length, 0);
 });
+
+test('the Baron’s Political Conversion topic unlocks after a karma encounter and offers exclusive branches', async () => {
+  const {additionalBaronReplies} = await import('../src/baron-dialogue.mjs');
+  const used = new Set();
+  const menu = spokeToMilo => additionalBaronReplies({used, discoveries: {}, spokeToMilo});
+  assert.equal(menu(true).length, 0);
+  used.add('baronKarmaEncounter');
+  for (const spokeToMilo of [false, true]) {
+    let node = menu(spokeToMilo)[0].next;
+    while (node.replies[0].label === 'Continue') node = node.replies[0].next;
+    assert.equal(node.replies.length, spokeToMilo ? 5 : 4);
+    assert.equal(node.replies.some(option => option.label.includes('Milo')), spokeToMilo);
+    for (const option of node.replies) {
+      let response = option.next;
+      while (response.replies?.length) {
+        assert.equal(response.replies.length, 1);
+        response = response.replies[0].next;
+      }
+      assert.equal(response.action, 'finishPoliticalConversion');
+    }
+  }
+  used.add('finishPoliticalConversion');
+  assert.equal(menu(true).length, 0);
+});
+
+test('the Baron’s surveillance scenes advance in order and wait for the Executive condition', async () => {
+  const {additionalBaronReplies} = await import('../src/baron-dialogue.mjs');
+  const used = new Set(['baronFollowing', 'baronWatching']);
+  const next = seducedExecutive => additionalBaronReplies({used, discoveries: {}, seducedExecutive})
+    .find(option => option.label !== "How do you think I'm doing?");
+  const finish = node => {
+    while (node.replies?.length) node = node.replies[0].next;
+    used.add(node.action ?? node.exitAction);
+  };
+  finish(next(false).next);
+  const second = next(false).next;
+  assert.equal(second.replies.length, 2);
+  assert.equal(second.replies[1].next.replies[0].next.replies, undefined);
+  assert.match(next(true).next.replies[1].next.replies[0].next.replies[0].label, /lipstick/);
+  finish(second);
+  finish(next(false).next);
+  let privacy = next(false).next;
+  while (privacy.character !== 'security-camera') privacy = privacy.replies[0].next;
+  assert.equal(privacy.text, '');
+  assert.equal(privacy.replies[0].label, 'Unbelievable.');
+  finish(privacy);
+  finish(next(false).next);
+  assert.equal(next(false), undefined);
+  assert.equal(next(true).label, 'Just how much can you see through those cameras?');
+  finish(next(true).next);
+  assert.equal(next(true), undefined);
+});

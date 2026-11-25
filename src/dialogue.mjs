@@ -419,6 +419,14 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       if (usedReplies.has(finishedAction)) return;
       usedReplies.add(finishedAction);
     }
+    if (finishedAction === 'finishPoliticalConversion' || finishedAction === 'baronReviewIntro'
+        || finishedAction.startsWith('baronSurveillance')) {
+      usedReplies.add(finishedAction);
+      return;
+    }
+    if (['finishBaronPenalty', 'finishBaronReward', 'finishBaronRewardWithGuard'].includes(finishedAction)) {
+      usedReplies.add('baronKarmaEncounter');
+    }
     onAction?.(finishedAction, target);
   }
 
@@ -577,6 +585,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
         discoveries: baronDiscoveries?.() ?? {},
         discussedVampires: vampireStage > 0,
         askedEliasAboutVampires,
+        spokeToMilo: metMilo,
+        seducedExecutive: hasSeducedExecutive?.(),
         returnToMenu: menu
       })]
     });
