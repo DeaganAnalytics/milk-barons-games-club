@@ -313,7 +313,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
   let bartenderGreetingIndex = 0;
-  let askedDancingBaron = false;
+  let metDancingBaron = false;
   let completedBaronCowEncounters = 0;
   let slappedByBaron = false;
   let askedEliasAboutVampires = false;
@@ -506,7 +506,6 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       button.textContent = isContinue ? 'Continue →' : reply.label;
       button.addEventListener('click', () => {
         if (character === elias.id && reply.label === 'Are you a vampire?') askedEliasAboutVampires = true;
-        if (character === 'baron' && reply.label === 'Can I speak to DJ Dairy?') askedDancingBaron = true;
         if (reply.consumeOnSelect || reply.once === 'bartenderMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;
         if (next?.exitAction) {
@@ -558,7 +557,12 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   });
 
   function baronConversation() {
-    if (isBaronDancing(baron)) return baronDanceDialogue(askedDancingBaron, () => (baronStanding?.()?.coins ?? 0) >= DJ_ADMISSION_PRICE, hasDjAccess?.());
+    if (isBaronDancing(baron)) {
+      const opening = baronDanceDialogue(metDancingBaron,
+        () => (baronStanding?.()?.coins ?? 0) >= DJ_ADMISSION_PRICE, hasDjAccess?.());
+      metDancingBaron = true;
+      return opening;
+    }
     const {karma = 0, coins = 100} = baronStanding?.() ?? {};
     const greetings = baronGreetings(karma, coins);
     const replies = availableBaronReplies(baron);

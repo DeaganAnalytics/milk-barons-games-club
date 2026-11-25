@@ -61,6 +61,7 @@ let reportedMilo = false;
 let seenPoolAndClothes = false;
 let poolClothesReport = null;
 let seenPillory = false;
+let boughtCreameryMilk = false;
 let seenMilkPool = false;
 let seenMilkFountain = false;
 let spokeToPilloryAttendant = false;
@@ -222,7 +223,8 @@ const dialogue = createDialogue(baron, {
   hasSeenCowGuard: () => seenCowGuard,
   hasKarmaChanged: () => hasChangedKarma,
   baronDiscoveries: () => ({
-    pillory: seenPillory, attendant: spokeToPilloryAttendant, pool: seenMilkPool, fountain: seenMilkFountain
+    pillory: seenPillory, attendant: spokeToPilloryAttendant, pool: seenMilkPool, fountain: seenMilkFountain,
+    canAskForFreeMilk: boughtCreameryMilk && MAX_HEARTS - health.hearts >= 1
   }),
   hasDjAccess: () => player.djAccess,
   hasSeducedExecutive: () => player.lipstick,
@@ -298,6 +300,7 @@ const dialogue = createDialogue(baron, {
     if (action === 'bartenderDrink') {
       const [text, cost, hearts] = bartenderOrders[target.order];
       clubEvent(text, () => {
+        if ((target.order === 'whole' || target.order === 'ocean') && coinBalance.count >= -cost) boughtCreameryMilk = true;
         coinBalance.change(cost);
         health.change(hearts, 'The Backroom Creamery has served you your last drink.');
       });
@@ -330,6 +333,7 @@ const dialogue = createDialogue(baron, {
       player.djAccess = true;
       clubEvent('The Baron charges you ₥60 to speak to DJ Dairy.', () => coinBalance.change(-DJ_ADMISSION_PRICE));
     }
+    if (action === 'baronFreeMilk') clubEvent('The Baron gives Pip a glass of milk. One heart restored.', () => health.change(1));
     if (action === 'baronSlap') health.change(-0.5, 'You have displeased the Baron!');
     if (action === 'finishBaronPenalty') returnBaronToRug(baron);
     if (action === 'baronKarmaReward' && !baronRewardPaid) {

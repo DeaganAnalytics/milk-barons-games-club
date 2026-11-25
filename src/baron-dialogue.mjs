@@ -85,21 +85,40 @@ export function baronDanceDialogue(used, canPay = () => false, hasAccess = false
   const slap = say('I SAID NO!', 'displeased', {
     playerMood: 'alarmed', enterAction: 'baronSlap', replies: more(breathing), mustContinue: true
   });
-  const offer = say('For ₥60, I can make an exception.', 'pleased', {replies: [
-    reply('Pay ₥60.', () => canPay()
-      ? say('Elias, open the rope. The boy has paid!', 'pleased', {enterAction: 'payDjAdmission'})
-      : say("You don't have ₥60, boy!", 'displeased')),
-    reply('Never mind.', null)
+  const elias = (text, mood, replies) =>
+    say(text, mood, {character: 'elias', replies, mustContinue: Boolean(replies)});
+  const success = say('Splendid! I always make time for the arts.', 'pleased', {
+    mustContinue: true,
+    replies: more(elias('Provided ze arts make money for you, my lord.', 'current-smile',
+      more(say('Precisely!', 'pleased', {action: 'payDjAdmission'}))))
+  });
+  const insufficient = elias('Good heavens, Master Pip. Ve gave you ₥100 upon arrival. Vhat have you been doing?', 'insulted',
+    more(say('Financially irresponsible, is he?', 'displeased', {
+      mustContinue: true,
+      replies: more(elias('Evidently, my lord.', 'current-smile',
+        more(elias('I suggest you return vhen you have some actual money.', 'current-smile'))))
+    })));
+  const price = say('Remarkably affordable!', 'pleased', {replies: [
+    reply("Fine. Here's your money.", () => canPay() ? success : insufficient),
+    reply("That's ridiculous.", say('Then I suggest you stop wasting valuable dancing time!', 'displeased'))
   ]});
-  const admission = reply('What if I paid to speak to him?', offer, 'thinking');
+  const admission = reply('How much would it cost to speak to DJ Dairy?',
+    say("Elias! What's the going rate for interrupting my recreational activities?", 'displeased', {
+      mustContinue: true,
+      replies: more(elias(`₥${DJ_ADMISSION_PRICE}, my lord.`, 'thinking', more(price)))
+    }), 'thinking');
+  const leave = reply('Oh, okay.', null, 'sorry');
   const fanRequest = say('The man is an artist! He has no time for the likes of you!', 'displeased', {replies: [
-    reply('Oh, okay.', null, 'sorry'),
+    leave,
     reply('Please, Baron, sir? Pretty please?', slap, 'worried'),
-    ...(!hasAccess ? [admission] : [])
+    reply('Is dancing more important than talking to your guests?',
+      say('Of course it is, boy! Now let me dance!', 'displeased')),
+    admission
   ]});
-  return say('Not now, boy! This is my favourite song!', 'pleased', {
-    replies: used ? (hasAccess || !canPay() ? [] : [admission])
-      : [reply('Can I speak to DJ Dairy?', fanRequest, 'thinking')]
+  const opening = 'Not now, boy! This is my favourite song!';
+  if (hasAccess) return say(opening, 'pleased', {replies: []});
+  return say(opening, 'pleased', {
+    replies: used ? [leave, admission] : [reply('Can I speak to DJ Dairy?', fanRequest, 'thinking')]
   });
 }
 
@@ -249,6 +268,13 @@ export function additionalBaronReplies({used, standing, discoveries, discussedVa
   const once = (key, option) => ({...option, once: key, consumeOnSelect: true});
   const elias = (text, replies, direction) => say(text, 'self-assured-smirk', {character: 'elias', replies, direction});
   const replies = [];
+  if (discoveries.canAskForFreeMilk && !used.has('baronFreeMilk')) {
+    const milk = say('Master Pip, I know precisely vhat you are doing.', 'thinking', {
+      character: 'elias', enterAction: 'baronFreeMilk', replies: back
+    });
+    replies.push(once('baronFreeMilk', reply('You know, Baron, I heard communists are opposed to giving their guests free milk.',
+      say('ELIAS! GET THIS BOY SOME MILK!', 'displeased', {replies: more(milk), mustContinue: true}))));
+  }
   if (used.has('baronFollowing') && used.has('baronWatching')) {
     const assess = () => {
       const {coins = 100, karma = 0} = standing?.() ?? {};
