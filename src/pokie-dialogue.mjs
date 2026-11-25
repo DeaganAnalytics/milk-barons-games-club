@@ -45,6 +45,17 @@ const even = [
   'Same old moo-la!'
 ];
 
+export function createPokieProfit() {
+  let net = 0;
+  return {
+    get banned() { return net >= 95; },
+    record(stake, payout) {
+      net += payout - stake;
+      return this.banned;
+    }
+  };
+}
+
 export function createPokieConversation(placeWager, random = Math.random) {
   let greeting = 0;
   const leave = {label: 'Walk away', next: null};
@@ -66,9 +77,10 @@ export function createPokieConversation(placeWager, random = Math.random) {
         return {
           text: multiplier > 0 ? text + ' Payout: ₥' + result.payout + '.' : text,
           mood: portrait,
-          replies: result.outcome ? [leave] : replies,
+          replies: result.banned ? [] : result.outcome ? [leave] : replies,
           mustContinue: true,
-          action: result.outcome ? 'finishPokieGame' : null
+          autoCloseMs: result.banned ? 1400 : null,
+          action: result.banned ? 'summonEliasForPokieBan' : result.outcome ? 'finishPokieGame' : null
         };
       }
     })), leave];

@@ -3,7 +3,13 @@ import {guardBlocks} from './guards.mjs';
 import {isNpcBlocked, routeAroundBaron} from './room.mjs';
 import {faceStaffMovement} from './staff.mjs';
 
-const lines = ['Nice!', 'You absolute legend!', 'A man of exceptional talent, I see!', 'Respect, brother. Respect.'];
+const exchanges = [
+  ['Nice!', 'Thanks... I think.', 'thinking'],
+  ['You absolute legend!', 'Wait, how do you know?', 'sorry'],
+  ['A man of exceptional talent, I see!', 'It was mostly a financial transaction.', 'worried'],
+  ['Respect, brother. Respect.', 'Does everyone in this place know?!', 'alarmed'],
+  ['Not bad for a peasant!', 'Can everyone please stop congratulating me?!', 'exasperated']
+];
 const waiters = new Set(['male-waiter', 'handlebar-waiter', 'martini-waiter']);
 const stepLength = 14; // Half of Pip's 28-unit walk cycle.
 const speakingDistance = 60;
@@ -88,16 +94,16 @@ export function createSlotReactions(staff, guards) {
         return;
       }
       const [actor, participant] = arrival;
-      // The fifth staff member repeats the closing line so everyone takes a turn.
-      const text = lines[Math.min(event.delivered++, lines.length - 1)];
+      const [text, response, playerMood] = exchanges[event.delivered++];
+      const slotReaction = {text, response, playerMood};
       event.participants.delete(actor);
       if (!event.participants.size) event = null;
       actor.walking = false;
       if (participant.waiter) actor.serviceDuty = false;
       else actor.slotReaction = false;
       return participant.waiter
-        ? {id: actor.id, title: actor.title, withoutMilk: actor.withoutMilk, slotReaction: text}
-        : {id: 'guard', title: 'Bull Guard', slotReaction: text};
+        ? {id: actor.id, title: actor.title, withoutMilk: actor.withoutMilk, slotReaction}
+        : {id: 'guard', title: 'Bull Guard', slotReaction};
     }
   };
 }

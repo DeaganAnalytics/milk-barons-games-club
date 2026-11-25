@@ -1,5 +1,5 @@
 export const executiveId = 'slot-executive';
-export const executiveMoods = ['stern', 'impressed', 'angry', 'tousled'];
+export const executiveMoods = ['stern', 'impressed', 'angry', 'tousled', 'skeptical', 'smug', 'exasperated'];
 
 const greetings = [
   'Time is money, and you’re wasting mine.',
@@ -13,6 +13,9 @@ const greetings = [
   'Good heavens. Do I look like customer service?',
   'You have thirty seconds. Consider yourself fortunate.'
 ];
+
+const greetingMoods = ['stern', 'skeptical', 'stern', 'skeptical', 'exasperated',
+  'smug', 'smug', 'skeptical', 'exasperated', 'stern'];
 
 const reply = (label, next, playerMood = 'attentive') => ({label, next, playerMood});
 const say = (text, mood = 'stern', replies = [], extras = {}) => ({
@@ -38,25 +41,25 @@ export function createExecutiveConversation(getCoins) {
         })
       })), {direction});
     }
-    if (coins >= 100) return say("Come back when you're a real man.", 'stern', [], {direction});
+    if (coins >= 100) return say("Come back when you're a real man.", 'smug', [], {direction});
     return say('Get away from me! GUARDS!', 'angry', [], {direction, action: 'executiveSummonEscort'});
   }
 
   const redundancy = [
-    ['<Lie>', null, say('Another one?! Here, take it and leave.', 'stern', [], {action: 'executiveRedundancy1'})],
+    ['<Lie>', null, say('Another one?! Here, take it and leave.', 'exasperated', [], {action: 'executiveRedundancy1'})],
     ['<Takes out fake moustache> <Lie>', 'moustache', say('How many of you have they let in?! Here, take it and leave.', 'angry', [], {
       action: 'executiveRedundancy2'
     })],
     ['<Puts on fake moustache and eye patch> <Lie>', 'eyePatch', say('For real?! How many of you are there?!', 'impressed', more(
-      say('Good heavens. Here, take ₥20.', 'stern', [
-        reply('Thank you!', say("Congratulations. I've just hired you as my personal security officer.", 'stern', [
+      say('Good heavens. Here, take ₥20.', 'exasperated', [
+        reply('Thank you!', say("Congratulations. I've just hired you as my personal security officer.", 'smug', [
           reply('What?!', say('Your first responsibility is to keep all these redundant employees away from me.', 'stern', [], {
             action: 'executiveRedundancy3'
           }), 'alarmed')
         ]))
       ])
     ))],
-    ['<Dresses as a woman> <Lie>', 'woman', say('Oh, for goodness’ sake! Wait a minute...', 'stern', more(
+    ['<Dresses as a woman> <Lie>', 'woman', say('Oh, for goodness’ sake! Wait a minute...', 'skeptical', more(
       say("It's YOU! You've been swindling me!", 'angry', more(
         say('GUARDS!', 'angry', [], {action: 'executiveSummonFraud'})
       ))
@@ -64,7 +67,7 @@ export function createExecutiveConversation(getCoins) {
   ];
 
   return function open() {
-    const greeting = greetings[greetingIndex++ % greetings.length];
+    const index = greetingIndex++ % greetings.length;
     const stage = redundancyStage;
 
     function returnToMenu(complete) {
@@ -78,26 +81,26 @@ export function createExecutiveConversation(getCoins) {
       const choices = [];
       if (!careerComplete) {
         choices.push(reply('Are you an executive?', say('I am the Chief Strategic Dairy Optimisation and Shareholder Prosperity Officer. Stop bothering me.', 'stern', [
-          reply("This doesn't seem very appropriate for an executive.", say('This is entirely appropriate. I came here to network, and now I am making strategic investments.', 'stern', more(
-            say('Did you have an actual question?', 'stern', more(returnToMenu(() => { careerComplete = true; })))
+          reply("This doesn't seem very appropriate for an executive.", say('This is entirely appropriate. I came here to network, and now I am making strategic investments.', 'smug', more(
+            say('Did you have an actual question?', 'exasperated', more(returnToMenu(() => { careerComplete = true; })))
           )))
         ])));
       }
       choices.push(seductionComplete
-        ? reply('<Seduce> Interested in a little private networking?', say("Let's see your liquidity position.", 'stern', more(wealthOutcome)))
-        : reply('<Seduce> I thought a girl like you seemed lonely.', say("Are you hitting on me? I'm married, and you're not wealthy enough to cheat with.", 'stern', [
+        ? reply('<Seduce> Interested in a little private networking?', say("Let's see your liquidity position.", 'skeptical', more(wealthOutcome)))
+        : reply('<Seduce> I thought a girl like you seemed lonely.', say("Are you hitting on me? I'm married, and you're not wealthy enough to cheat with.", 'skeptical', [
           reply('Perhaps I should show you my coins.', wealthOutcome)
         ])));
       choices.push(reply("I'll leave you to it.", null));
-      return say('I am Lady Penelope Victoria Kensington-Frothingham, MBA, FAICD. Why are you talking to me?', 'stern', choices);
+      return say('I am Lady Penelope Victoria Kensington-Frothingham, MBA, FAICD. Why are you talking to me?', 'skeptical', choices);
     }
 
     function menu() {
       const choices = [reply('Who are you?', identity)];
       if (!fundsComplete) {
         choices.push(reply('Are you gambling with your own money?', say("Technically, these funds are drawn from the company's discretionary capital allocation reserve.", 'stern', [
-          reply("So, you're gambling with the company's money?", say("No, I'm undertaking a high-risk liquidity optimisation exercise. Any losses are classified as operational expenditure, while any gains are attributable to executive performance.", 'stern', [
-            reply('So if you win, you keep the money, and if you lose, the company pays?', say("Precisely. It's a perfectly sound remuneration framework.", 'stern', more(returnToMenu(() => { fundsComplete = true; }))))
+          reply("So, you're gambling with the company's money?", say("No, I'm undertaking a high-risk liquidity optimisation exercise. Any losses are classified as operational expenditure, while any gains are attributable to executive performance.", 'smug', [
+            reply('So if you win, you keep the money, and if you lose, the company pays?', say("Precisely. It's a perfectly sound remuneration framework.", 'smug', more(returnToMenu(() => { fundsComplete = true; }))))
           ]))
         ])));
       }
@@ -109,7 +112,7 @@ export function createExecutiveConversation(getCoins) {
         }));
       }
       choices.push(reply("I'll leave you to it.", null));
-      return say(greeting, 'stern', choices);
+      return say(greetings[index], greetingMoods[index], choices);
     }
 
     return menu();

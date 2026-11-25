@@ -43,7 +43,12 @@
         <figure><div id="conversation-npc" class="conversation-portrait"></div><figcaption id="conversation-speaker"></figcaption></figure>
       </div>
       <div class="panel">
-        <h2 id="conversation-title"></h2>
+        <div class="conversation-heading">
+          <h2 id="conversation-title"></h2>
+          <div id="pokie-coin-counter" class="coin-counter" role="status" aria-label="Milk token balance" hidden>
+            <span>×<span id="pokie-coin-count">100</span></span>
+          </div>
+        </div>
         <p id="conversation-line" aria-live="polite"></p>
         <div id="conversation-replies" class="conversation-replies"></div>
         <button id="conversation-close" type="button">End conversation</button>

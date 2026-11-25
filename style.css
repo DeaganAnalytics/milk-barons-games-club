@@ -441,3 +441,14 @@ canvas {
 @media (prefers-reduced-motion: reduce) {
   .executive-fade::after { animation: none; }
 }
+
+.conversation-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.conversation-heading .coin-counter {
+  flex: 0 0 clamp(82px, 25%, 145px);
+}

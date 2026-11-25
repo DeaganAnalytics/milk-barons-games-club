@@ -7,7 +7,7 @@ import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
 import {bartenderExit, bartenderMoods, bartenderOpening} from './bartender-dialogue.mjs';
 import {additionalBaronReplies, baronDanceDialogue, baronGreetings, baronKarmaDialogue} from './baron-dialogue.mjs';
 import {isBaronDancing} from './baron.mjs';
-import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
+import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasPokieBan, eliasPokieRefusal, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
@@ -225,6 +225,7 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
   const controls = document.querySelector('.controls');
   const interact = document.getElementById('interact');
   const title = document.getElementById('conversation-title');
+  const pokieCounter = document.getElementById('pokie-coin-counter');
   const speaker = document.getElementById('conversation-speaker');
   const line = document.getElementById('conversation-line');
   const replyList = document.getElementById('conversation-replies');
@@ -316,7 +317,7 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
     if (node.revealsLifeguardCannotSwim) heardLifeguardCannotSwim = true;
     closeButton.hidden = Boolean((activeTarget.bartenderExitPending && node.replies?.length && !action)
       || node === lifeguardDialogue || node.mustContinue
-      || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.baronKarma) && !action));
+      || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.pokieBan || activeTarget.baronKarma) && !action));
     panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || node.action === 'politicianHit');
     panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
@@ -454,13 +455,18 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
 
   function open(target) {
     activeTarget = target;
+    pokieCounter.hidden = target.id !== pokieId;
     disguise = target.executiveFraud ? 'woman' : null;
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = target.slotReaction ? {
-      text: target.slotReaction, mood: 'speaking', mustContinue: true, autoCloseMs: 2400
+      text: target.slotReaction.text, mood: 'speaking', mustContinue: true,
+      playerMood: target.slotReaction.playerMood,
+      replies: [{label: target.slotReaction.response, next: null}]
     } : partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
+      : target.id === elias.id && target.pokieBan ? eliasPokieBan
+      : target.id === elias.id && target.pokieRefusal ? eliasPokieRefusal
       : target.id === elias.id && target.tax ? eliasTaxConversation(target.tax)
       : target.id === elias.id && target.danceFee ? eliasDanceConversation
       : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)

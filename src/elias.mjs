@@ -69,6 +69,24 @@ function exchange(lines, menu) {
   return replies[0];
 }
 
+export const eliasPokieBan = {
+  text: 'Ahem. Master Pip, ve have a little problem.',
+  mood: 'thinking',
+  replies: [exchange([
+    ["What's wrong?", 'According to my calculations, you have become an unprofitable customer.', 'thinking'],
+    ["Isn't the whole point of gambling to win money?", 'Da! For ze establishment.', 'self-assured-smirk'],
+    ['So what are you saying?', 'Following a comprehensive financial review, your pokie machine privileges have been revoked.', 'insulted'],
+    ["Because I'm winning?!", 'Precisely. Your continued participation presents an unacceptable risk to shareholder value.', 'devious', 'alarmed'],
+    ["That's ridiculous!", 'Might I suggest one of our other games? Preferably one at vhich you are considerably less competent.', 'current-smile', 'alarmed',
+      {replies: [], action: 'finishPokieGame'}]
+  ])]
+};
+
+export const eliasPokieRefusal = {
+  text: 'No, no, Master Pip. Ve have discussed zis. Your business is no longer appreciated.',
+  mood: 'insulted'
+};
+
 const regularExchanges = [
   [
     ['Why are the guards cows?', 'Zey are not. I am unsure of ze purpose of zis question. Is zis another one of your little activist games?', 'insulted'],

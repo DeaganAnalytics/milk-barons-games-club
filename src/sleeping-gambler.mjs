@@ -29,7 +29,7 @@ export function sleepingGamblerDialogue(gambler) {
   const reply = (label, next) => ({label, next, playerMood: 'attentive'});
   if (!gambler.hasTokens) return {
     text: 'The man is fast asleep.', speaker: 'Narrator', mood: 'asleep',
-    mustContinue: true, autoCloseMs: 2600
+    mustContinue: true, replies: [reply('Leave him alone', null)]
   };
   const awake = (text, replies, action) => ({
     text, mood: 'awake', replies, action, mustContinue: replies.length > 0
