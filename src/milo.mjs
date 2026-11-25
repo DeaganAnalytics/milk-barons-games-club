@@ -1,4 +1,4 @@
-import {crossesScenery, HALL_CENTER, onDanceFloor, routeAroundBaron, EAST_EDGE, NORTH_EDGE, isNpcBlocked, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {crossesScenery, guestEnclosure, HALL_CENTER, onDanceFloor, routeAroundBaron, EAST_EDGE, NORTH_EDGE, isNpcBlocked, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 import {guardBlocks} from './guards.mjs';
 import {TURN} from './directions.mjs';
 
@@ -8,6 +8,7 @@ const CORNERS = [
   {x: EAST_EDGE - 116, y: SOUTH_TRIM_Y - 83},
   {x: EAST_EDGE - 116, y: NORTH_EDGE + 224}
 ];
+const SOUTHWEST_CORNER = 1;
 const HIDE_INTERVAL = 12;
 const THREAT_DISTANCE = 200;
 const WALK_SPEED = 102;
@@ -34,9 +35,14 @@ function routeToCorner(milo, corner, baron) {
     ? routeAroundBaron({...milo, radius: 12}, corner, baron) : [corner];
 }
 
+function canUseCorner(index) {
+  return index !== SOUTHWEST_CORNER || !guestEnclosure.active;
+}
+
 function selectRoute(milo, baron, distance) {
   for (let offset = 1; offset < CORNERS.length; offset++) {
     const index = (milo.corner + offset) % CORNERS.length;
+    if (!canUseCorner(index)) continue;
     const corner = CORNERS[index];
     if (Math.hypot(corner.x - baron.x, corner.y - baron.y) < THREAT_DISTANCE) continue;
     if (distanceToSegment(baron, milo, corner) >= Math.min(125, distance) - 0.01) {
@@ -53,7 +59,8 @@ export function fleeMilo(milo, threat, baron, guards) {
   const preferred = goEast ? (goNorth ? 3 : 2) : (goNorth ? 0 : 1);
   const alternate = preferred ^ 1;
   const preferredOccupied = [baron, ...guards].some(actor => !actor.posted && sameSquare(actor, CORNERS[preferred]));
-  milo.corner = preferredOccupied ? alternate : preferred;
+  milo.corner = canUseCorner(preferred) && (!preferredOccupied || !canUseCorner(alternate))
+    ? preferred : alternate;
   milo.route = routeToCorner(milo, CORNERS[milo.corner], baron);
   milo.fleeing = true;
 }
@@ -71,7 +78,7 @@ function startEscape(milo, baron, guards, elapsed) {
 export function updateMilo(milo, baron, elapsed, dt, guards = []) {
   const spotted = startEscape(milo, baron, guards, elapsed);
   const distance = Math.hypot(milo.x - baron.x, milo.y - baron.y);
-  if (!milo.route.length && (elapsed >= milo.nextMove || distance < THREAT_DISTANCE)) {
+  if (!canUseCorner(milo.corner) || (!milo.route.length && (elapsed >= milo.nextMove || distance < THREAT_DISTANCE))) {
     milo.route = selectRoute(milo, baron, distance);
     milo.nextMove = elapsed + HIDE_INTERVAL;
   }

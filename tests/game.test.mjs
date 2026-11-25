@@ -1678,3 +1678,21 @@ test('Elias’s vampire topic progresses from its original exchange to a repeata
   assert.equal(repeat.next.replies[0].next, eliasConversation);
   assert.ok(eliasFollowingConversation.replies.every(reply => reply.consumeOnSelect));
 });
+
+test('Milo skips the southwest corner and reroutes if the ropes go up mid-walk', () => {
+  const baron = {...createBaron(), x: HALL_CENTER.x, y: HALL_CENTER.y};
+  const milo = createMilo();
+  updateMilo(milo, baron, 12, 0);
+  assert.equal(milo.corner, 1);
+  guestEnclosure.active = true;
+  try {
+    updateMilo(milo, baron, 12.05, 0.05);
+    assert.notEqual(milo.corner, 1);
+    assert.ok(milo.route.length);
+    milo.y = HALL_CENTER.y + 200;
+    fleeMilo(milo, {x: HALL_CENTER.x + 300}, baron, []);
+    assert.equal(milo.corner, 0);
+  } finally {
+    guestEnclosure.active = false;
+  }
+});

@@ -158,10 +158,14 @@ canvas {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 128%;
+  width: var(--portrait-width, 128%);
   aspect-ratio: 1;
-  transform: translate(-50%, -50%);
+  transform: translate(var(--portrait-shift-x, -50%), var(--portrait-shift-y, -50%));
   background: url('./assets/dialogue/portraits.webp') var(--portrait-position, 0% 0%) / 300% 400% no-repeat;
+}
+
+.conversation-portrait[data-portrait="baron"] {
+  --portrait-width: 114%;
 }
 
 #conversation-player::before {
@@ -178,13 +182,29 @@ canvas {
 }
 
 .conversation-portrait.standalone-portrait::before {
-  width: 91%;
+  width: var(--portrait-width, 91%);
   height: 91%;
   background: var(--portrait-image) center / contain no-repeat;
 }
 
-.conversation-portrait.standalone-portrait[data-portrait="creamery-bartender"]::before {
-  width: 79%;
+/* Match the visible bust to the deadpan portrait despite extra transparent padding. */
+.conversation-portrait[data-portrait="creamery-bartender"] {
+  --portrait-width: 79%;
+}
+
+.conversation-portrait[data-portrait="creamery-bartender"][data-expression="polite"] {
+  --portrait-width: 109%;
+  --portrait-shift-x: -51.1%;
+}
+
+.conversation-portrait[data-portrait="creamery-bartender"][data-expression="skeptical"] {
+  --portrait-width: 109.4%;
+  --portrait-shift-x: -48.5%;
+}
+
+.conversation-portrait[data-portrait="creamery-bartender"][data-expression="thinking"] {
+  --portrait-width: 105.4%;
+  --portrait-shift-x: -47.6%;
 }
 
 .conversation-portrait.standalone-portrait[data-portrait="professor"]::before {
@@ -239,9 +259,15 @@ canvas {
     radial-gradient(ellipse 2.2% 1.4% at 43% 55%, #a8645c80, transparent 95%);
 }
 
-.conversation-portrait.report-portrait::before {
-  width: 110%;
-  height: 110%;
+/* The separate reaction portraits use more transparent padding than the atlas. */
+.conversation-portrait.report-portrait[data-portrait="guard"] {
+  --portrait-width: 130.3%;
+  --portrait-shift-y: -48.8%;
+}
+
+.conversation-portrait.report-portrait[data-portrait="milo"] {
+  --portrait-width: 123.6%;
+  --portrait-shift-y: -49%;
 }
 
 .viewport:has(#game-over) {
