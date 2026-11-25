@@ -318,6 +318,8 @@ const dialogue = createDialogue(baron, {
       if (action === 'rewardMissingDresses') clubEvent('The lifeguard pays you for the good news.', () => coinBalance.change(15));
       if (action === 'fineMissingSuit') clubEvent('The lifeguard takes a dim view of the missing suit.', () => coinBalance.change(-10));
     }
+    if (action === 'threatenMilo') clubEvent('Pip threatens Milo.', () => karma.change(-1));
+    if (action === 'comfortMilo') clubEvent('Pip apologises to Milo.', () => karma.change(0.5));
     if (action === 'baronSlap') health.change(-0.5, 'You have displeased the Baron!');
     if (action === 'baronKarmaReward' || action === 'baronKarmaFine') returnBaronToRug(baron);
     if (action === 'baronKarmaReward') clubEvent('The Baron awards a performance incentive.', () => coinBalance.change(15));

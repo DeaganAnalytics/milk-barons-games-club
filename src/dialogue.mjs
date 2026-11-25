@@ -1,3 +1,5 @@
+import {miloMenu} from './milo-dialogue.mjs';
+import {createMiloGreeting} from './milo.mjs';
 import {createDancerConversation, dancerMoods, dancerPortraitName, dancerTargets} from './dancer-dialogue.mjs';
 import {accountingReplies} from './elias-accounting.mjs';
 import {createSkimConversation, skimId} from './skim-dialogue.mjs';
@@ -106,15 +108,6 @@ const guardReplies = [
   }
 ];
 
-const miloReplies = [
-  {
-    label: "Hey, don't I know you?", playerMood: 'thinking',
-    next: {text: "No. Don't talk to me.", mood: 'worried', replies: [
-      {label: 'Are you Milo, the milk activist.', playerMood: 'thinking', next: {text: 'Please leave me alone. Please go away, your presence attracts the Baron.', mood: 'sad'}}
-    ]}
-  }
-];
-
 const baronReplies = [
   {
     label: 'Do you own this place?', once: 'baronOwnership', consumeOnSelect: true, playerMood: 'thinking',
@@ -192,7 +185,10 @@ const pipReactions = {
   skeptical: ['thinking', 'attentive']
 };
 
+const cameraPortrait = new URL('../assets/dialogue/security-camera.webp', import.meta.url);
+
 function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false, tousled = false) {
+  if (id === 'security-camera') return cameraPortrait;
   if (id.startsWith('dancer-')) return new URL('../assets/dance/portraits/' + dancerPortraitName(id, mood), import.meta.url);
   if (id === skimId && mood === 'distressed') return new URL('../assets/waiters/edmund-vale-distressed-portrait.webp', import.meta.url);
   if (id === sleepingGamblerId) return new URL('../assets/slots/gambler-' + mood + '.webp', import.meta.url);
@@ -223,7 +219,7 @@ function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false
 
 function warmPortraits() {
   if (portraitCache.size) return;
-  const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values()];
+  const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values(), cameraPortrait];
   for (const {id} of dancerTargets) {
     for (const mood of dancerMoods) urls.push(standalonePortraitUrl(id, false, mood));
   }
@@ -280,6 +276,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   let greetingIndex = 0;
   let bartenderGreetingIndex = 0;
   let askedDancingBaron = false;
+  let slappedByBaron = false;
   let askedEliasAboutVampires = false;
   let vampireStage = 0;
   let askedBaronForMoney = false;
@@ -304,7 +301,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
   const professorOpening = createProfessorConversation();
-  let injured = false;
+  const miloGreeting = createMiloGreeting();
+  let miloWasInjured = false;
 
   function setPortrait(element, character, mood, withoutMilk) {
     const expressions = npcExpressions.get(character);
@@ -321,7 +319,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     element.dataset.portraitPose = fixedArt && sameSpeaker && element.dataset.portraitPose !== 'shifted'
       ? 'shifted' : 'resting';
     const reportPortrait = reportPortraits.get(character + '-' + mood);
-    element.dataset.injured = String(character === 'milo' && injured && !reportPortrait);
+    element.dataset.injured = String(character === 'milo' && miloWasInjured && !reportPortrait);
     element.classList.toggle('report-portrait', Boolean(reportPortrait));
     element.dataset.portrait = character;
     if (reportPortrait || !portraits[character]) {
@@ -382,6 +380,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     closeButton.hidden = Boolean((activeTarget.bartenderExitPending && node.replies?.length && !action)
       || node === lifeguardDialogue || node.mustContinue
       || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.pokieBan || activeTarget.baronKarma) && !action));
+    slappedByBaron ||= node.enterAction === 'baronSlap';
     panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || node.action === 'politicianHit');
     panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
@@ -460,7 +459,13 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       closeButton.hidden = false;
     }
     if (node.enterAction) finishAction(node.enterAction, activeTarget);
-    if (node.fadeTo) {
+    if (node.advanceTo) {
+      if (node.mood === 'toward') {
+        const buzz = new Audio(new URL('../assets/dialogue/security-camera-buzz.wav', import.meta.url));
+        buzz.play().catch(() => {});
+      }
+      autoClose = setTimeout(() => show(node.advanceTo, character, playerMood, withoutMilk), 900);
+    } else if (node.fadeTo) {
       autoClose = setTimeout(() => show(node.fadeTo, character, playerMood, withoutMilk), 1200);
     } else if (node.autoCloseMs && activeTarget) autoClose = setTimeout(close, node.autoCloseMs);
   }
@@ -528,7 +533,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     activeTarget = target;
     pokieCounter.hidden = target.id !== pokieId;
     disguise = target.executiveFraud ? 'woman' : null;
-    injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
+    const newlyInjured = target.id === 'milo' && Boolean(takeMiloInjury?.());
+    miloWasInjured ||= newlyInjured;
     const opening = target.slotReaction ? {
       text: target.slotReaction.text, mood: 'speaking', mustContinue: true,
       playerMood: target.slotReaction.playerMood,
@@ -573,15 +579,12 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
           replies: target.posted ? postedGuardReplies : reportingReplies(target),
           mood: 'deadpan'
         }
-      : target.id === 'milo' ? {
-          text: injured ? "No, don't hurt me!" : target.message,
-          replies: injured ? [injuredMiloReply, ...miloReplies] : miloReplies, mood: 'worried'
-        }
+      : target.id === 'milo' ? miloMenu(miloGreeting(miloWasInjured), slappedByBaron, newlyInjured ? injuredMiloReply : null, miloWasInjured, hasSeenCowGuard?.())
         : baronConversation();
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;
-    show(opening, target.id, injured || target.summoned || target.guestGate || target.postEscort ? 'worried' : 'attentive', target.withoutMilk);
+    show(opening, target.id, (target.id === 'milo' && miloWasInjured) || target.summoned || target.guestGate || target.postEscort ? 'worried' : 'attentive', target.withoutMilk);
   }
 
   return {open, dismiss: () => close(false), isOpen: () => !panel.hidden};

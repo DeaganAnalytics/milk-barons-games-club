@@ -549,3 +549,22 @@ canvas {
     overflow-y: auto;
   }
 }
+
+.conversation-portrait[data-portrait="security-camera"]::before {
+  animation: camera-turn 750ms ease-in-out both;
+}
+
+.conversation-portrait[data-portrait="security-camera"][data-expression="away"]::before {
+  animation-direction: reverse;
+}
+
+@keyframes camera-turn {
+  from { rotate: y 55deg; }
+  to { rotate: y 0deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .conversation-portrait[data-portrait="security-camera"]::before {
+    animation: none;
+  }
+}

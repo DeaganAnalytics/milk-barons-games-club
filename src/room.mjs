@@ -180,8 +180,7 @@ export function nearestInteraction(player, baron, milo, guards = [], guests = []
   }))];
   if (milo) {
     targets.push({
-      id: 'milo', x: milo.x, y: milo.y, radius: 24, title: 'Milo Milksworth',
-      message: 'Shh! I’m trying to stay out of the Baron’s way.'
+      id: 'milo', x: milo.x, y: milo.y, radius: 24, title: 'Milo Milksworth'
     });
   }
   return targets
