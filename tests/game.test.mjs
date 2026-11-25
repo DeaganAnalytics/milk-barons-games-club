@@ -1975,3 +1975,81 @@ test('all three practice guards can be reached from either side of the safe boun
     assert.equal(nearbyPracticeGuard({x: PRACTICE_RANGE.guardX + 1, y}), undefined);
   }
 });
+
+test('milk service dialogue cycles across staff and checks funds on every repeat order', async () => {
+  const {createWaiterConversation, WAITER_MILK_PRICE} = await import('../src/waiter-dialogue.mjs');
+  let balance = WAITER_MILK_PRICE;
+  const open = createWaiterConversation(() => balance);
+  const first = open(false);
+  const order = first.replies[0].next;
+  assert.equal(order.replies[1].next.text, 'Very well, sir.');
+  assert.equal(order.replies[1].next.replies[0].next(), first);
+  const served = order.replies[0].next();
+  assert.equal(served.enterAction, 'buyWaiterMilk');
+  assert.equal(served.replies[0].next(), first);
+  balance -= WAITER_MILK_PRICE;
+  const refused = order.replies[0].next();
+  assert.match(refused.text, /insufficient funds/);
+  assert.equal(refused.enterAction, undefined);
+  const empty = open(true);
+  assert.equal(empty.text, 'Not now! Busy, busy, busy!');
+  assert.deepEqual(empty.replies, []);
+  const second = open(false);
+  assert.equal(second.text, 'Would you care for a glass of milk?');
+  assert.equal(second.replies[1].next.text, 'Enjoy your evening, sir.');
+  const later = Array.from({length: 9}, () => open(false).text);
+  assert.equal(later.at(-1), first.text);
+});
+
+test('Skim remembers whether Pip confirmed his identity on the first meeting', async () => {
+  const {createSkimConversation} = await import('../src/skim-dialogue.mjs');
+  const unknown = createSkimConversation();
+  assert.equal(unknown().replies[0].next.replies[0].next.text, 'That you are, my lord.');
+  assert.equal(unknown().text, 'Just a humble janitor, my lord.');
+  const recognised = createSkimConversation();
+  const uncertain = recognised().replies[0].next.replies[1].next;
+  assert.equal(uncertain.mood, 'distressed');
+  const lookalike = uncertain.replies[0].next;
+  assert.equal(lookalike.replies[1].next.replies[0].next.text, 'Nothing, my lord. A pleasure serving you.');
+  let line = lookalike.replies[0].next;
+  while (typeof line.replies[0].next !== 'function') line = line.replies[0].next;
+  assert.match(line.text, /apparently the problem/);
+  assert.equal(line.replies[0].next().replies.length, 6);
+  assert.equal(recognised().text, "Oh, bloody hell. It's you again.");
+});
+
+test('Elias accounts for cumulative actual changes and unlocks each tally independently', async () => {
+  const {accountingReplies, createTally} = await import('../src/elias-accounting.mjs');
+  const tallies = {coins: createTally(100), karma: createTally(0), health: createTally(3)};
+  const menu = {text: 'Elias'};
+  const replies = () => accountingReplies(tallies, menu);
+  assert.deepEqual(replies(), []);
+
+  const coins = createCoinBalance((count, _outcome, movement) => tallies.coins.record(count, movement));
+  coins.wager(5, () => 1);
+  assert.equal(coins.count, 100);
+  assert.deepEqual(replies().map(reply => reply.label), ['How am I doing financially?']);
+  const begin = replies()[0].next;
+  const heard = [];
+  let line = begin();
+  while (line !== menu) {
+    heard.push(line.text);
+    const next = line.replies[0].next;
+    line = typeof next === 'function' ? next() : next;
+  }
+  assert.ok(heard.includes('Your total earnings amount to ₥5.'));
+  assert.ok(heard.includes('Your total expenditure and losses amount to ₥5.'));
+  assert.ok(heard.includes('You have achieved absolutely nothing, financially speaking.'));
+  assert.deepEqual(replies(), []);
+
+  coins.change(-1);
+  tallies.karma.record(-5);
+  tallies.karma.record(0);
+  tallies.health.record(3);
+  assert.deepEqual(replies().map(reply => reply.label), ['How am I doing financially?', "How's my karma looking?"]);
+  assert.deepEqual(tallies.coins.snapshot(), {value: 99, gained: 5, lost: 6, revision: 2});
+  assert.deepEqual(tallies.karma.snapshot(), {value: 0, gained: 5, lost: 5, revision: 2});
+  tallies.health.record(2);
+  const health = replies()[2].next();
+  assert.equal(health.replies[0].label, 'My what?');
+});

@@ -7,10 +7,10 @@ export function createCoinBalance(onChange) {
   let earningStreak = 0;
   let streakEarnings = 0;
   let pendingTax = null;
-  function publish(deferWin = false) {
+  function publish(deferWin, movement) {
     if (count === 0) outcome = 'loss';
     if (!deferWin && count === WINNING_COINS) outcome = 'win';
-    onChange?.(count, outcome);
+    onChange?.(count, outcome, movement);
   }
   return {
     get count() { return count; },
@@ -29,11 +29,12 @@ export function createCoinBalance(onChange) {
       const payout = Math.min(stake * rollMultiplier(), maxPayout);
       // A banned player settles the extraordinary tax before the victory check.
       const deferWin = deferWinAtCap && payout === maxPayout;
+      const afterStake = count;
       count += payout;
       if (!deferWin) count = Math.min(WINNING_COINS, count);
       earningStreak = 0;
       streakEarnings = 0;
-      publish(deferWin);
+      publish(deferWin, {credit: count - afterStake, debit: stake});
       return {payout, outcome};
     },
     change(delta) {
@@ -49,7 +50,7 @@ export function createCoinBalance(onChange) {
           pendingTax = {earnings: streakEarnings, due: Math.ceil(streakEarnings * 3 / 10)};
         }
       }
-      publish();
+      publish(false);
       return count;
     }
   };

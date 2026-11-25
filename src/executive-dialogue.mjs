@@ -37,7 +37,7 @@ export function createExecutiveConversation(getCoins) {
     if (coins > 175) {
       return say('Oh... wow.', 'impressed', more(say('', 'impressed', [], {
         mustContinue: true, fadeTo: say("Well, that was fun. I didn't realise you were slumming it.", 'tousled', [], {
-          action: 'executivePrivateNetworking'
+          pipLipstick: true, action: 'executivePrivateNetworking'
         })
       })), {direction});
     }

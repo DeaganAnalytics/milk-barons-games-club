@@ -1,3 +1,5 @@
+import {accountingReplies} from './elias-accounting.mjs';
+import {createSkimConversation, skimId} from './skim-dialogue.mjs';
 import {createPracticeGuardConversation} from './practice-range-dialogue.mjs';
 import {gamblerPortraits, sleepingGamblerDialogue, sleepingGamblerId} from './sleeping-gambler.mjs';
 import {createPokieConversation, pokieId, pokiePortraits} from './pokie-dialogue.mjs';
@@ -20,6 +22,7 @@ import {availableReports, injuredMiloReply, lifeguardQualificationReport, poolRe
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
+import {createWaiterConversation} from './waiter-dialogue.mjs';
 import {drawPipPortrait} from './pip-art.mjs';
 
 const partyGuestCallsGuard = {
@@ -64,6 +67,7 @@ const guestGateWarning = {
 const guardOpening = 'Do you have a problem to report? Otherwise, get out of my way.';
 const cowGuardQuestions = new Set([
   'Are you a cow?',
+  'Why are all the guards cows?',
   'Why is the guard a cow?',
   'Why do you have cows for guards?',
   'Why are the guards cows?',
@@ -161,6 +165,7 @@ const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-formal', '
 const portraitCache = new Map();
 
 function standalonePortraitUrl(id, withoutMilk = false, mood) {
+  if (id === skimId && mood === 'distressed') return new URL('../assets/waiters/edmund-vale-distressed-portrait.webp', import.meta.url);
   if (id === sleepingGamblerId) return new URL('../assets/slots/gambler-' + mood + '.webp', import.meta.url);
   if (id === pokieId) return new URL('../assets/slots/pokie-' + mood + '.webp', import.meta.url);
   if (id === pilloryCommissioner.id) return new URL('../assets/dialogue/commissioner/' + mood + '.webp', import.meta.url);
@@ -191,9 +196,9 @@ function warmPortraits() {
   const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values()];
   for (const id of staffIds) {
     urls.push(standalonePortraitUrl(id));
-    if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
+    if (id !== skimId) urls.push(standalonePortraitUrl(id, true));
   }
-  urls.push(standalonePortraitUrl(poolClothing.id));
+  urls.push(standalonePortraitUrl(poolClothing.id), standalonePortraitUrl(skimId, false, 'distressed'));
   for (const mood of bartenderMoods) urls.push(standalonePortraitUrl(bartender.id, false, mood));
   for (const mood of commissionerMoods) urls.push(standalonePortraitUrl(pilloryCommissioner.id, false, mood));
   for (const mood of attendantMoods) urls.push(standalonePortraitUrl(pilloryAttendant.id, false, mood));
@@ -218,7 +223,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -249,9 +254,12 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
   let activeTarget;
   let autoClose;
   let disguise;
+  let pipLipstick = false;
   const executiveOpening = createExecutiveConversation(() => baronStanding?.()?.coins ?? 0);
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
+  const skimOpening = createSkimConversation();
+  const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0);
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
@@ -312,6 +320,7 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
     clearTimeout(autoClose);
     panel.classList.toggle('executive-fade', Boolean(node.fadeTo));
     if (node.disguise !== undefined) disguise = node.disguise;
+    pipLipstick ||= Boolean(node.pipLipstick);
     action = node.action ?? null;
     if (node.vampireStage) vampireStage = Math.max(vampireStage, node.vampireStage);
     if (node.remembersPoolEntry) askedPoolEntry = true;
@@ -333,9 +342,9 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
       line.prepend(direction);
     }
     const playerExpression = node.playerMood ?? playerMood;
-    const portraitKey = playerExpression + ':' + (disguise ?? '');
+    const portraitKey = playerExpression + ':' + (disguise ?? '') + ':' + pipLipstick;
     if (playerPortrait.dataset.expression !== portraitKey) {
-      drawPipPortrait(playerArt, playerExpression, disguise);
+      drawPipPortrait(playerArt, playerExpression, disguise, pipLipstick);
       playerPortrait.dataset.expression = portraitKey;
     }
     const currentSpeaker = node.character ?? character;
@@ -348,8 +357,10 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
     const options = character === lifeguard.id
       ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
       : node.replies ?? [];
-    const vampire = node === eliasConversation || node === eliasFollowingConversation ? vampireFollowup(node, vampireStage) : null;
-    const replies = report ? [report, ...options] : vampire ? [...options, vampire] : options;
+    const eliasMenu = node === eliasConversation || node === eliasFollowingConversation;
+    const vampire = eliasMenu ? vampireFollowup(node, vampireStage) : null;
+    const replies = eliasMenu ? [...options, ...(vampire ? [vampire] : []), ...accountingReplies(tallies, node)]
+      : report ? [report, ...options] : options;
     const seenCowGuard = hasSeenCowGuard?.();
     const availableReplies = replies.filter(reply => !usedReplies.has(reply.once)
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
@@ -494,6 +505,8 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
           text: target.repeat ? 'Sir, please stop bothering the ladies.' : 'Sir I have to ask you to leave.',
           mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
         }
+      : target.id === skimId ? skimOpening()
+      : staffIds.includes(target.id) ? waiterOpening(target.withoutMilk)
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
       : target.id === 'guard' && target.guard?.creamery ? creameryGuardDialogue(target.guard)
       : target.id === 'guard' ? {
