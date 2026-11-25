@@ -92,14 +92,73 @@ export function baronDanceDialogue(used) {
   });
 }
 
-export const baronKarmaDialogue = {
-  reward: say("Pip, my boy! You're beginning to impress me. Here I thought you were just another tiresome little activist.", 'pleased', {replies: more(
+function baronRewardDialogue(spokeToMilo, askedAboutCowGuards = false) {
+  const elias = (text, mood = 'current-smile') => say(text, mood, {character: 'elias'});
+  const guard = text => say(text, 'formal', {character: 'guard'});
+  const scene = (lines, ending) => lines.reduceRight((next, line) => ({
+    ...line, replies: next ? more(next) : ending
+  }), null);
+  const end = (line, sendGuard = false) => ({...line, action: sendGuard ? 'finishBaronRewardWithGuard' : 'finishBaronReward'});
+
+  const replies = [
+    reply('Thank you, Baron!', scene([
+      say("You're most welcome, young Pip. Generosity is one of my many admirable qualities."),
+      say('Elias, make a note of that.'),
+      elias('Verbatim or ad sensum, my lord?'),
+      say('Add some sense in, obviously!', 'flustered', {direction: 'Confused'}),
+      end(elias('Very good, my lord.'))
+    ])),
+    reply('How do I qualify for another one?', scene([
+      say('Already thinking about your next payment? Excellent!', 'laughing'),
+      say('Elias! The boy has ambition!', 'laughing'),
+      elias('Yes... unfortunately. An ambitious little meal.', 'devious')
+    ], [
+      reply('WHAT?!', {...elias('I mean, an ambitious little male.'), replies: [
+        reply('...', end(elias('A most admirable quality.')), 'alarmed')
+      ]}, 'alarmed')
+    ])),
+    reply('So this is how corruption works.', end(elias('Ve prefer ze term "professional development".')), 'thinking')
+  ];
+
+  if (spokeToMilo) {
+    const challenge = reply("You've got to be kidding me. THAT IS A COW!", say(
+      'Pip, please. The guard is trying to conduct himself professionally.', 'suspicious', {replies: [
+        reply('HE JUST SAID MOO!', {...elias('A perfectly acceptable military expression.'), replies: [
+          reply('Since when?!', end(say('Since I started paying their wages. Now, enough of this nonsense!', 'displeased'), true), 'exasperated')
+        ]}, 'exasperated')
+      ]}
+    ), 'alarmed');
+    replies.push(reply('I feel like Milo would be disappointed in me.', scene([
+      say("You've seen Milo? Elias, get me a guard!", 'flustered'),
+      elias('At once, my lord.'),
+      guard('Reporting for duty. Ready to MOOVE.'),
+      say('Find Milo! The boy is wandering around my establishment spreading economically damaging ideas!', 'displeased'),
+      guard('Understood. Mooving out.')
+    ], [
+      ...(askedAboutCowGuards ? [challenge] : []),
+      reply("I didn't mean to get him into trouble...", scene([
+        say("Nonsense, young Pip! You've done me a great service."),
+        end(elias('Ze Baron appreciates your cooperation.'), true)
+      ]), 'sorry')
+    ]), 'worried'));
+  }
+
+  replies.push(reply('Is that all?', scene([
+    say("Good heavens! You're developing a sense of entitlement already! Splendid!", 'laughing'),
+    say('You remind me of myself at your age.', 'pleased'),
+    end(say('Though I was much fatter!', 'laughing'))
+  ])));
+
+  return say("Pip, my boy! You're beginning to impress me. Here I thought you were just another tiresome little activist.", 'pleased', {replies: more(
     say("In recognition of your demonstrated alignment with our corporate values, I'm awarding you a discretionary short-term performance incentive!", 'laughing', {replies: [
-      reply('A what?', say('He is giving you money. Honestly, ze financial literacy of ze peasants... Tsk, tsk.', 'insulted', {character: 'elias', replies: [
-        reply('Thanks, I guess.', say('Thanks, I guess.', 'pleased', {speaker: 'Pip', action: 'baronKarmaReward'}), 'sorry')
-      ]}), 'thinking')
+      reply('A what?', {...elias('He is giving you money. Honestly, ze financial literacy of ze peasants... Tsk, tsk.', 'insulted'),
+        enterAction: 'baronKarmaReward', replies}, 'thinking')
     ]})
-  )}),
+  )});
+}
+
+export const baronKarmaDialogue = {
+  reward: baronRewardDialogue,
   fine: say("Pip, Pip, Pip. I've been exceedingly generous, and you repay me by subjecting my guests to all this COMMUNISM?!", 'displeased', {replies: more(
     say("I'm afraid your conduct necessitates a punitive fiscal adjustment in the form of an extraordinary behavioural compliance levy!", 'displeased', {replies: [
       reply('Sorry, what?', say('Ve are taking your money. Consider it a tax on your unfortunate moral convictions.', 'self-assured-smirk', {

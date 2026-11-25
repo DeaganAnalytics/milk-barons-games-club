@@ -624,7 +624,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       : target.id === elias.id && target.tax ? eliasTaxConversation(target.tax)
       : target.id === elias.id && target.danceFee ? eliasDanceConversation
       : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)
-      : target.id === 'baron' && target.baronKarma ? baronKarmaDialogue[target.baronKarma]
+      : target.id === 'baron' && target.baronKarma ? (target.baronKarma === 'reward' ? baronKarmaDialogue.reward(metMilo, completedBaronCowEncounters > 0) : baronKarmaDialogue.fine)
       : target.id === bartender.id ? bartenderOpening(bartenderGreetingIndex++)
       : target.id === professor.id ? professorOpening()
       : target.id === sleepingGamblerId ? sleepingGamblerDialogue(sleepingGambler)

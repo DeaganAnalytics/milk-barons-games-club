@@ -1570,10 +1570,22 @@ test('the dancing Baron offers one DJ request and the karma encounters switch to
   assert.equal(slap.enterAction, 'baronSlap');
   assert.equal(slap.playerMood, 'alarmed');
   assert.equal(slap.replies[0].next.direction, 'Heavy breathing');
-  for (const [event, action] of [['reward', 'baronKarmaReward'], ['fine', 'baronKarmaFine']]) {
-    const eliasReply = baronKarmaDialogue[event].replies[0].next.replies[0].next;
-    assert.equal(eliasReply.character, 'elias');
-    assert.equal(eliasReply.replies[0].next.action, action);
+  const fine = baronKarmaDialogue.fine.replies[0].next.replies[0].next;
+  assert.equal(fine.character, 'elias');
+  assert.equal(fine.replies[0].next.action, 'baronKarmaFine');
+  for (const [spokeToMilo, askedAboutCowGuards] of [[false, false], [false, true], [true, false], [true, true]]) {
+    const reward = baronKarmaDialogue.reward(spokeToMilo, askedAboutCowGuards).replies[0].next.replies[0].next;
+    assert.equal(reward.character, 'elias');
+    assert.equal(reward.enterAction, 'baronKarmaReward');
+    assert.equal(reward.replies.length, spokeToMilo ? 5 : 4);
+    const endings = [];
+    function verify(node) {
+      if (node.action) endings.push(node.action);
+      for (const reply of node.replies ?? []) verify(reply.next);
+    }
+    verify(reward);
+    assert.equal(endings.filter(action => action === 'finishBaronReward').length, 4);
+    assert.equal(endings.filter(action => action === 'finishBaronRewardWithGuard').length, spokeToMilo ? 1 + Number(askedAboutCowGuards) : 0);
   }
 });
 

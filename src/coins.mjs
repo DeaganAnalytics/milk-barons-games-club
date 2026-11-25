@@ -37,7 +37,10 @@ export function createCoinBalance(onChange) {
       publish(deferWin, {credit: count - afterStake, debit: stake});
       return {payout, outcome};
     },
-    change(delta) {
+    finishDeferredWin() {
+      if (!outcome && count === WINNING_COINS) publish(false);
+    },
+    change(delta, deferWin = false) {
       if (!Number.isSafeInteger(delta)) throw new TypeError('Coin changes must be whole numbers.');
       if (outcome || delta === 0) return count;
       count = Math.max(0, Math.min(WINNING_COINS, count + delta));
@@ -50,7 +53,7 @@ export function createCoinBalance(onChange) {
           pendingTax = {earnings: streakEarnings, due: Math.ceil(streakEarnings * 3 / 10)};
         }
       }
-      publish(false);
+      publish(deferWin);
       return count;
     }
   };

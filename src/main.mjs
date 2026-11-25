@@ -24,7 +24,7 @@ import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
 import {advanceBaronApproach, returnBaronToRug, callOutMilo, createBaron, isBaronDancing, isOnscreen, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
-import {createGuards, dispatchGuardToMilo, dispatchRovingGuardsToPool, summonGuard, summonGuardFromOffscreen, updateGuards} from './guards.mjs';
+import {createGuards, dispatchGuardToMilo, dispatchRovingGuardsToPool, summonBaronGuard, summonGuard, summonGuardFromOffscreen, updateGuards} from './guards.mjs';
 import {createMilo, fleeMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
 import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
@@ -129,6 +129,7 @@ export const karma = createKarma((score, position) => {
 });
 
 let placingPokieWager = false;
+let baronRewardPaid = false;
 function showCoinOutcome(outcome) {
   if (outcome === 'loss') endGame('Game Over', 'You ran out of coins.');
   if (outcome === 'win') endGame('You Win!', 'You reached 200 coins.');
@@ -321,8 +322,16 @@ const dialogue = createDialogue(baron, {
     if (action === 'threatenMilo') clubEvent('Pip threatens Milo.', () => karma.change(-1));
     if (action === 'comfortMilo') clubEvent('Pip apologises to Milo.', () => karma.change(0.5));
     if (action === 'baronSlap') health.change(-0.5, 'You have displeased the Baron!');
-    if (action === 'baronKarmaReward' || action === 'baronKarmaFine') returnBaronToRug(baron);
-    if (action === 'baronKarmaReward') clubEvent('The Baron awards a performance incentive.', () => coinBalance.change(15));
+    if (action === 'baronKarmaFine') returnBaronToRug(baron);
+    if (action === 'baronKarmaReward' && !baronRewardPaid) {
+      baronRewardPaid = true;
+      clubEvent('The Baron awards a performance incentive.', () => coinBalance.change(15, true));
+    }
+    if (action === 'finishBaronReward' || action === 'finishBaronRewardWithGuard') {
+      if (action === 'finishBaronRewardWithGuard') summonBaronGuard(guards, player, baron, milo);
+      returnBaronToRug(baron);
+      coinBalance.finishDeferredWin();
+    }
     if (action === 'baronCowFine') {
       if (coinBalance.count < 20) endGame('Game Over', 'Pip asked too many questions for his level of wealth.');
       else clubEvent('Elias fines Pip ₥20 for asking about the guards.', () => coinBalance.change(-20));

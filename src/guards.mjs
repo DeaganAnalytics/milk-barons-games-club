@@ -84,6 +84,24 @@ export function summonGuardFromOffscreen(guards, player, baron) {
   return guard;
 }
 
+export function summonBaronGuard(guards, player, baron, milo) {
+  const spots = [60, 82, 105].flatMap(distance => Array.from({length: 8}, (_, index) => ({
+    x: baron.x + Math.cos(index * TURN / 8) * distance,
+    y: baron.y + Math.sin(index * TURN / 8) * distance
+  })));
+  const actors = [player, milo, ...guards];
+  const isClear = ({x, y}) => !isNpcBlocked(x, y, RADIUS, baron)
+    && actors.every(actor => Math.hypot(x - actor.x, y - actor.y) >= RADIUS + (actor.radius ?? RADIUS));
+  const spawn = [...spots, ...RUGS].find(isClear);
+  if (!spawn) return;
+  const guard = {
+    x: spawn.x, y: spawn.y, radius: RADIUS, facing: 0, stride: 0, walking: true,
+    target: null, pauseUntil: 0, blockedTime: 0, side: 1
+  };
+  guards.push(guard);
+  dispatchGuardToMilo(guard);
+}
+
 export function dispatchGuardToMilo(guard) {
   if (guard && !guard.posted) guard.pursuit = {milo: true, destination: null, route: []};
 }
