@@ -1,3 +1,5 @@
+import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
+import {bartenderExit, bartenderMoods, bartenderOpening} from './bartender-dialogue.mjs';
 import {baronDanceDialogue, baronGreetings, baronKarmaDialogue} from './baron-dialogue.mjs';
 import {isBaronDancing} from './baron.mjs';
 import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasTaxConversation, eliasWelcome} from './elias.mjs';
@@ -54,6 +56,15 @@ const guestGateWarning = {
 };
 
 const guardOpening = 'Do you have a problem to report? Otherwise, get out of my way.';
+const cowGuardQuestions = new Set([
+  'Are you a cow?',
+  'Why is the guard a cow?',
+  'Why do you have cows for guards?',
+  'Why are the guards cows?',
+  'You seem like a smart man. Why are the guards cows?',
+  'Am I crazy, or are the guards cows?'
+]);
+
 const cowReply = {
   label: 'Are you a cow?', playerMood: 'thinking',
   next: {text: 'I am a guard.', mood: 'deadpan', replies: [
@@ -150,7 +161,8 @@ function standalonePortraitUrl(id, withoutMilk = false, mood) {
   if (id === professor.id) return new URL('../assets/dialogue/professor/' + mood + '.webp', import.meta.url);
   if (id === poolClothing.id) return new URL('../assets/pool/clothes.webp', import.meta.url);
   if (id === lifeguard.id) return new URL('../assets/dialogue/lifeguard-' + mood + '.webp', import.meta.url);
-  if (id === bartender.id) return new URL('../assets/dialogue/creamery-bartender.webp', import.meta.url);
+  if (id === bartender.id) return new URL(mood === 'deadpan' ? '../assets/dialogue/creamery-bartender.webp'
+    : '../assets/dialogue/bartender/' + mood + '.webp', import.meta.url);
   if (partyGuests.some(guest => guest.id === id)) {
     const suffix = mood === 'annoyed' ? '-annoyed-portrait.webp' : '-portrait.webp';
     return new URL('../assets/guests/' + id + suffix, import.meta.url);
@@ -166,7 +178,8 @@ function warmPortraits() {
     urls.push(standalonePortraitUrl(id));
     if (id !== 'edmund-vale') urls.push(standalonePortraitUrl(id, true));
   }
-  urls.push(standalonePortraitUrl(bartender.id), standalonePortraitUrl(poolClothing.id));
+  urls.push(standalonePortraitUrl(poolClothing.id));
+  for (const mood of bartenderMoods) urls.push(standalonePortraitUrl(bartender.id, false, mood));
   for (const mood of commissionerMoods) urls.push(standalonePortraitUrl(pilloryCommissioner.id, false, mood));
   for (const mood of attendantMoods) urls.push(standalonePortraitUrl(pilloryAttendant.id, false, mood));
   for (const mood of eliasPortraits) urls.push(standalonePortraitUrl(elias.id, false, mood));
@@ -185,7 +198,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, baronStanding, hasPlayedMilkBalloon, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard, hasPlayedMilkBalloon, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -200,7 +213,9 @@ export function createDialogue(baron, {onAction, baronStanding, hasPlayedMilkBal
   const playerArt = playerPortrait.querySelector('canvas');
   const npcPortrait = document.getElementById('conversation-npc');
   let greetingIndex = 0;
+  let bartenderGreetingIndex = 0;
   let askedDancingBaron = false;
+  let askedEliasAboutVampires = false;
   let askedBaronForMoney = false;
   const usedReplies = new Set();
   let reportedBaronFollowing = false;
@@ -253,12 +268,21 @@ export function createDialogue(baron, {onAction, baronStanding, hasPlayedMilkBal
     if (runAction && finishedAction) finishAction(finishedAction, finishedTarget);
   }
 
+  function requestClose() {
+    if (activeTarget?.id === bartender.id && !activeTarget.boughtDrink && !action) {
+      activeTarget.bartenderExitPending = true;
+      show(bartenderExit, bartender.id, 'thinking');
+    } else close();
+  }
+
   function show(node, character, playerMood, withoutMilk) {
     action = node.action ?? null;
     if (node.revealsLifeguardCannotSwim) heardLifeguardCannotSwim = true;
-    closeButton.hidden = Boolean(node.mustContinue
+    closeButton.hidden = Boolean((activeTarget.bartenderExitPending && node.replies?.length && !action)
+      || node.mustContinue
       || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.baronKarma) && !action));
     panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap');
+    panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
@@ -276,19 +300,29 @@ export function createDialogue(baron, {onAction, baronStanding, hasPlayedMilkBal
     }
     const currentSpeaker = node.character ?? character;
     speaker.textContent = node.speaker ?? (currentSpeaker === elias.id ? elias.title
+      : currentSpeaker === bartender.id ? bartender.title
+      : currentSpeaker === 'guard' ? 'Bull Guard'
       : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
     setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk);
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
     const replies = report ? [report, ...node.replies] : node.replies ?? [];
-    replyList.replaceChildren(...replies.filter(reply => !usedReplies.has(reply.once)).map(reply => {
+    const seenCowGuard = hasSeenCowGuard?.();
+    const availableReplies = replies.filter(reply => !usedReplies.has(reply.once)
+      && (seenCowGuard || !cowGuardQuestions.has(reply.label))
+      && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
+    replyList.replaceChildren(...availableReplies.map(reply => {
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = reply.label;
       button.addEventListener('click', () => {
+        if (character === elias.id && reply.label === 'Are you a vampire?') askedEliasAboutVampires = true;
         if (character === 'baron' && reply.label === 'Can I speak to DJ Dairy?') askedDancingBaron = true;
-        if (reply.once === 'lifeguardMoneyRequest') usedReplies.add(reply.once);
+        if (reply.once === 'lifeguardMoneyRequest' || reply.once === 'bartenderMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;
-        if (next?.action === 'stealPoolClothing') {
+        if (next?.exitAction) {
+          action = next.exitAction;
+          close();
+        } else if (next?.action === 'stealPoolClothing') {
           activeTarget.selection = next.selection;
           action = next.action;
           close();
@@ -305,14 +339,20 @@ export function createDialogue(baron, {onAction, baronStanding, hasPlayedMilkBal
       return button;
     }));
     (replyList.firstElementChild ?? closeButton).focus();
+    if (node.order) {
+      activeTarget.order = node.order;
+      activeTarget.boughtDrink = true;
+      activeTarget.bartenderExitPending = false;
+      closeButton.hidden = false;
+    }
     if (node.enterAction) finishAction(node.enterAction, activeTarget);
   }
 
-  closeButton.addEventListener('click', close);
+  closeButton.addEventListener('click', requestClose);
   document.addEventListener('keydown', event => {
     if (event.code === 'Escape' && !panel.hidden) {
       event.preventDefault();
-      if (!closeButton.hidden) close();
+      if (!closeButton.hidden) requestClose();
     }
   });
 
@@ -365,6 +405,7 @@ export function createDialogue(baron, {onAction, baronStanding, hasPlayedMilkBal
       : target.id === elias.id && target.danceFee ? eliasDanceConversation
       : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)
       : target.id === 'baron' && target.baronKarma ? baronKarmaDialogue[target.baronKarma]
+      : target.id === bartender.id ? bartenderOpening(bartenderGreetingIndex++)
       : target.id === professor.id ? professorOpening()
       : target.id === poolClothing.id ? poolClothingDialogue
       : target.id === lifeguard.id ? lifeguardDialogue
@@ -380,6 +421,7 @@ export function createDialogue(baron, {onAction, baronStanding, hasPlayedMilkBal
           mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
         }
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
+      : target.id === 'guard' && target.guard?.creamery ? creameryGuardDialogue(target.guard)
       : target.id === 'guard' ? {
           text: target.posted ? postedGuardOpening : guardOpening,
           replies: target.posted ? postedGuardReplies : reportingReplies(target),

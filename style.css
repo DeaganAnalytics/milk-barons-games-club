@@ -372,3 +372,33 @@ canvas {
 @keyframes pip-recoil {
   35% { transform: translateX(-7%) rotate(-5deg); }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  .guard-strike .conversation-portraits {
+    position: relative;
+  }
+
+  .guard-strike .conversation-portraits::after {
+    content: '';
+    position: absolute;
+    top: 45%;
+    left: 49%;
+    width: 20%;
+    height: 9%;
+    border: 3px solid #241a13;
+    border-radius: 12% 20% 20% 10%;
+    background: linear-gradient(#8b5d37, #4a3021);
+    pointer-events: none;
+    animation: guard-rifle-strike 330ms ease-out both;
+  }
+
+  .guard-strike #conversation-player {
+    animation: pip-recoil 320ms 70ms ease-out both;
+  }
+}
+
+@keyframes guard-rifle-strike {
+  0%, 100% { opacity: 0; transform: translateX(95%) rotate(-20deg); }
+  20% { opacity: 1; }
+  42% { opacity: 1; transform: translateX(-110%) rotate(-8deg); }
+}

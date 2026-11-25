@@ -1531,3 +1531,84 @@ test('the dancing Baron offers one DJ request and the karma encounters switch to
     assert.equal(eliasReply.replies[0].next.action, action);
   }
 });
+
+test('bartender cycles ten greetings and offers drinks, tips, and the refusal scene', async () => {
+  const {bartenderExit, bartenderMoods, bartenderOpening} = await import('../src/bartender-dialogue.mjs');
+  const greetings = Array.from({length: 10}, (_, i) => bartenderOpening(i));
+  assert.equal(new Set(greetings.map(greeting => greeting.text)).size, 10);
+  assert.equal(bartenderOpening(10).text, greetings[0].text);
+  assert.ok(greetings.every(greeting => bartenderMoods.includes(greeting.mood)));
+  const order = greetings[0].replies.find(reply => reply.label === "I'll have a milk, please.").next;
+  assert.deepEqual(order.replies.slice(0, 2).map(reply => reply.next.order), ['whole', 'cocktail']);
+  assert.equal(order.replies[2].next.replies[0].next.replies[0].next.order, 'ocean');
+  const tipOptions = bartenderExit.replies[0].next.replies[0].next.replies[0].next.replies;
+  assert.equal(tipOptions[0].next.action, 'bartenderTip');
+  assert.equal(tipOptions[1].next.replies[0].next, order);
+  assert.equal(tipOptions[2].next.replies[0].next.exitAction, 'bartenderRefusal');
+  assert.equal(tipOptions[2].next.replies[1].next.replies[0].next.action, 'bartenderDoubleTip');
+});
+
+test('the Creamery refusal uses the same animated guard phases without the ladies celebrating', async () => {
+  const {createCreameryGuard} = await import('../src/creamery.mjs');
+  const guard = createCreameryGuard();
+  const player = {...createPlayer(), x: guard.x - 90, y: guard.y + 32};
+  const state = createRopeWarning();
+  beginRopeScene(state, guard, player, createBaron(), {deathMessage: 'Creamery refusal', celebrate: false});
+  const {scene} = state;
+  const phases = new Set([scene.phase]);
+  const oldX = guard.x;
+  const oldY = guard.y;
+  advanceRopeScene(scene, player, 0.05);
+  const firstStep = Math.hypot(guard.x - oldX, guard.y - oldY);
+  assert.ok(firstStep > 0 && firstStep < 12);
+  for (let i = 0; i < 180 && scene.phase !== 'over'; i++) {
+    advanceRopeScene(scene, player, 0.05);
+    phases.add(scene.phase);
+  }
+  assert.deepEqual([...phases], ['approach', 'aim', 'fall', 'over']);
+  assert.equal(guard.walking, false);
+  assert.equal(scene.celebrate, false);
+  assert.equal(scene.deathMessage, 'Creamery refusal');
+});
+
+test('the Creamery guard offers both drinks and gates his regular replies behind the apology fine', async () => {
+  const {creameryGuardDialogue} = await import('../src/creamery-guard-dialogue.mjs');
+  const {bartender, createCreameryGuard} = await import('../src/creamery.mjs');
+  const guard = createCreameryGuard();
+  const opening = creameryGuardDialogue(guard);
+  assert.equal(guard.creamery, true);
+  const [cow, weapon, drink] = opening.replies;
+  assert.notEqual(opening.mood, weapon.next.mood);
+  assert.notEqual(cow.next.mood, cow.next.replies[0].next.mood);
+  const [buy, joke] = drink.next.replies;
+  assert.equal(joke.next.enterAction, 'guardRifleStrike');
+  const order = buy.next.replies[0].next;
+  assert.equal(order.character, bartender.id);
+  const [milk, cocktail] = order.replies;
+  assert.equal(milk.next.enterAction, 'buyGuardMilk');
+  assert.equal(milk.next.replies[0].next.enterAction, 'rewardGuardMilk');
+  assert.equal(cocktail.next.enterAction, 'buyGuardCocktail');
+  assert.deepEqual(cocktail.next.replies[0].next.replies.map(reply => reply.next.exitAction),
+    ['leaveDrunkGuard', 'pickpocketDrunkGuard']);
+  guard.apologyRequired = true;
+  const apology = creameryGuardDialogue(guard);
+  assert.equal(apology.text, 'Come to apologise?');
+  assert.deepEqual(apology.replies.map(reply => reply.next.action), ['payGuardApology', undefined, undefined]);
+  assert.equal(creameryGuardDialogue(guard), apology);
+  guard.apologyRequired = false;
+  assert.equal(creameryGuardDialogue(guard), opening);
+});
+
+test('the drunk Creamery guard starts after 20 seconds and wraps through all 18 remarks', async () => {
+  const {createCreameryGuard, drunkGuardSpeech} = await import('../src/creamery.mjs');
+  const guard = createCreameryGuard();
+  assert.equal(drunkGuardSpeech(guard, 200), null);
+  Object.assign(guard, {drunk: true, drunkSince: 50});
+  assert.equal(drunkGuardSpeech(guard, 69.9), null);
+  assert.equal(drunkGuardSpeech(guard, 70).text, 'Moooooo... I mean, move.');
+  assert.equal(drunkGuardSpeech(guard, 74), null);
+  assert.equal(drunkGuardSpeech(guard, 90).text, "Who's guarding the milk? Oh. That's me.");
+  const lines = Array.from({length: 18}, (_, i) => drunkGuardSpeech(guard, 70 + i * 20).text);
+  assert.equal(new Set(lines).size, 18);
+  assert.equal(drunkGuardSpeech(guard, 430).text, lines[0]);
+});
