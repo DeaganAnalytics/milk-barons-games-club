@@ -1,4 +1,4 @@
-import {miloMenu} from './milo-dialogue.mjs';
+import {miloIntroduction, miloMenu} from './milo-dialogue.mjs';
 import {createMiloGreeting} from './milo.mjs';
 import {createDancerConversation, dancerMoods, dancerPortraitName, dancerTargets} from './dancer-dialogue.mjs';
 import {accountingReplies} from './elias-accounting.mjs';
@@ -302,7 +302,23 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const attendantOpening = createAttendantConversation();
   const professorOpening = createProfessorConversation();
   const miloGreeting = createMiloGreeting();
+  let metMilo = false;
   let miloWasInjured = false;
+  let miloInjuryReplyPending = false;
+
+  function openMilo() {
+    const newlyInjured = Boolean(takeMiloInjury?.());
+    miloWasInjured ||= newlyInjured;
+    miloInjuryReplyPending ||= newlyInjured;
+    if (!metMilo) {
+      metMilo = true;
+      const greeting = miloWasInjured ? "Shh! I'm trying to stay out of the Baron's way." : miloGreeting();
+      return miloIntroduction(greeting);
+    }
+    const injuryReply = miloInjuryReplyPending ? injuredMiloReply : null;
+    miloInjuryReplyPending = false;
+    return miloMenu(miloGreeting(miloWasInjured), slappedByBaron, injuryReply, miloWasInjured, hasSeenCowGuard?.());
+  }
 
   function setPortrait(element, character, mood, withoutMilk) {
     const expressions = npcExpressions.get(character);
@@ -533,8 +549,6 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     activeTarget = target;
     pokieCounter.hidden = target.id !== pokieId;
     disguise = target.executiveFraud ? 'woman' : null;
-    const newlyInjured = target.id === 'milo' && Boolean(takeMiloInjury?.());
-    miloWasInjured ||= newlyInjured;
     const opening = target.slotReaction ? {
       text: target.slotReaction.text, mood: 'speaking', mustContinue: true,
       playerMood: target.slotReaction.playerMood,
@@ -579,7 +593,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
           replies: target.posted ? postedGuardReplies : reportingReplies(target),
           mood: 'deadpan'
         }
-      : target.id === 'milo' ? miloMenu(miloGreeting(miloWasInjured), slappedByBaron, newlyInjured ? injuredMiloReply : null, miloWasInjured, hasSeenCowGuard?.())
+      : target.id === 'milo' ? openMilo()
         : baronConversation();
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
