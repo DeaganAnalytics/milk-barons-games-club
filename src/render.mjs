@@ -1,3 +1,4 @@
+import {createSlotSpeech} from './slot-speech.mjs';
 import {drawSlotStation, slotPlayers} from './slot-machines.mjs';
 import {drawElias, elias} from './elias.mjs';
 import {drawMilkBalloon, guardBalloonPose, milkBalloonHand} from './milk-balloon.mjs';
@@ -280,6 +281,7 @@ export function createRenderer(canvas, onCowGuardSeen) {
   const professorArt = loadSprite('hall/professor', 'webp');
   const professorSipping = loadSprite('hall/professor-sipping', 'webp');
   const pillorySpeech = createPillorySpeech();
+  const slotSpeech = createSlotSpeech();
   const pilloryProps = [
     {id: 'commissioner', position: PILLORY, width: 92, height: 78, depth: 13,
       art: loadSprite('hall/pillory-commissioner', 'webp'), fallback: loadSprite('hall/pillory', 'webp')},
@@ -553,6 +555,14 @@ export function createRenderer(canvas, onCowGuardSeen) {
     if (stallRemark) {
       const {x, head, front} = pillorySpeakers[stallRemark.id];
       drawSpeech(ctx, stallRemark.text, stallRemark.opacity, x, head, front, cameraX, cameraY);
+    }
+    const visibleSlotPlayers = slotPlayers.filter(person => person.x >= cameraX
+      && person.x <= cameraX + ROOM_WIDTH && person.y - 80 >= cameraY
+      && person.y <= cameraY + ROOM_HEIGHT);
+    const slotRemark = slotSpeech(elapsed, visibleSlotPlayers);
+    if (slotRemark) {
+      const {player: person, text, opacity} = slotRemark;
+      drawSpeech(ctx, text, opacity, person.x - 10, person.y - 80, person.y, cameraX, cameraY);
     }
     const professorRemark = professorSpeech(elapsed, professorVisible && !ropeScene);
     if (professorRemark) {
