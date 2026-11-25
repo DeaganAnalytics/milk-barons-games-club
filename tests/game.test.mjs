@@ -1563,7 +1563,7 @@ test('the dancing Baron offers one DJ request and the karma encounters switch to
   const {baronDanceDialogue, baronKarmaDialogue} = await import('../src/baron-dialogue.mjs');
   const baron = {...createBaron(), ...BARON_DANCE_STOP};
   assert.equal(nearestInteraction({x: baron.x + 42, y: baron.y}, baron, null).id, 'baron');
-  assert.equal(baronDanceDialogue(true).replies.length, 0);
+  assert.equal(baronDanceDialogue(true).replies.length, 2);
   const fan = baronDanceDialogue(false).replies[0].next;
   assert.equal(fan.replies[0].next, null);
   const slap = fan.replies[1].next;
@@ -2219,11 +2219,18 @@ test('DJ Dairy admission can be retried until paid, then disappears', async () =
   const {baronDanceDialogue} = await import('../src/baron-dialogue.mjs');
   let canPay = false;
   const opening = baronDanceDialogue(false, () => canPay);
-  const offer = opening.replies[0].next.replies[2].next;
-  assert.equal(offer.replies[0].next().enterAction, undefined);
+  assert.equal(opening.replies[0].next.replies.length, 4);
+  const quote = baronDanceDialogue(true, () => canPay).replies[1].next;
+  const fee = quote.replies[0].next;
+  assert.equal(fee.character, 'elias');
+  assert.equal(fee.text, '₥60, my lord.');
+  const offer = fee.replies[0].next;
+  assert.equal(offer.replies[0].next().character, 'elias');
+  assert.match(offer.replies[1].next.text, /stop wasting/);
   canPay = true;
-  const retry = baronDanceDialogue(true, () => canPay);
-  assert.equal(retry.replies[0].next.replies[0].next().enterAction, 'payDjAdmission');
+  const success = offer.replies[0].next();
+  assert.equal(success.action, undefined);
+  assert.equal(success.replies[0].next.replies[0].next.action, 'payDjAdmission');
   assert.equal(baronDanceDialogue(true, () => canPay, true).replies.length, 0);
 });
 
@@ -2248,4 +2255,19 @@ test('DJ Dairy remembers finished topics and selects the romantic advice branch'
     assert.equal(open().replies.length, 5);
     assert.equal(open().replies.at(-1).label, 'Enjoy your music.');
   }
+});
+
+test('the Baron’s free milk topic requires eligibility and can only be selected once', async () => {
+  const {additionalBaronReplies} = await import('../src/baron-dialogue.mjs');
+  const used = new Set();
+  const replies = canAskForFreeMilk => additionalBaronReplies({used, discoveries: {canAskForFreeMilk}});
+  assert.equal(replies(false).length, 0);
+  const [offer] = replies(true);
+  assert.equal(offer.consumeOnSelect, true);
+  assert.equal(offer.next.text, 'ELIAS! GET THIS BOY SOME MILK!');
+  const handoff = offer.next.replies[0].next;
+  assert.equal(handoff.character, 'elias');
+  assert.equal(handoff.enterAction, 'baronFreeMilk');
+  used.add(offer.once);
+  assert.equal(replies(true).length, 0);
 });
