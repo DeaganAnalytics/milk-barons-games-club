@@ -1239,9 +1239,26 @@ test('the Commissioner is reachable, greets Pip once, and has three ways to end 
   assert.equal(first.text, 'Please... help me.');
   const openingAfterThrow = "Oh... it's you. You're just like all the rest.";
   assert.equal(open(true).text, openingAfterThrow);
-  const firstAfterThrow = createCommissionerConversation();
-  assert.equal(firstAfterThrow(true).text, first.text);
-  assert.equal(firstAfterThrow(true).text, openingAfterThrow);
+  for (const [played, splattered, opening, closing] of [
+    [false, false, 'Please... help me.', "I don't know anymore. You're the first person who's stopped to speak to me without throwing something."],
+    [false, true, 'Please... not another one.', "Just... please don't be like the others."],
+    [true, false, "Oh... it's you. Come to throw another balloon?", "Haven't you done enough?"],
+    [true, true, "Oh... it's you. Come to throw another balloon?", "Haven't you done enough?"]
+  ]) {
+    const open = createCommissionerConversation();
+    let node = open(played, splattered);
+    assert.equal(node.text, opening);
+    const lines = [];
+    while (node.replies[0].label !== 'Continue') {
+      node = node.replies[0].next;
+      assert.equal(node.action, undefined);
+      lines.push(node.text);
+    }
+    assert.equal(lines.includes('Some even come back for another turn.'), splattered && !played);
+    assert.equal(lines.includes("Yes. You've already participated."), played);
+    assert.equal(lines.at(-1), closing);
+    assert.equal(open(played, splattered).text, played ? openingAfterThrow : '');
+  }
   assert.equal(open(), menu);
   assert.equal(menu.replies.length, 3);
   assert.equal(menu.replies[0].once, 'thankCommissioner');
@@ -2084,4 +2101,32 @@ test('Elias accounts for cumulative actual changes and unlocks each tally indepe
 test('the browser dialogue module loads', async () => {
   const {createDialogue} = await import('../src/dialogue.mjs');
   assert.equal(typeof createDialogue, 'function');
+});
+
+test('the Commissioner only discusses the milk on her face while splattered and only once', async () => {
+  const {createCommissionerConversation} = await import('../src/commissioner-dialogue.mjs');
+  const question = node => node.replies.find(reply => reply.label === "What's that on your face?");
+  for (const [played, answer] of [[false, 'Milk. It drips off eventually.'], [true, 'Milk. You put it there...']]) {
+    const open = createCommissionerConversation();
+    open();
+    assert.equal(question(open(played)), undefined);
+    assert.equal(question(open(played, true)).next.text, answer);
+    assert.equal(question(open(played, false)), undefined);
+    const response = question(open(played, true)).next;
+    assert.equal(response.text, answer);
+    assert.equal(response.action, undefined);
+    assert.equal(question(response.replies[0].next()), undefined);
+    assert.equal(question(open(played, true)), undefined);
+  }
+});
+
+test('balloons from Pip, the attendant, and the guard all mark the Commissioner on impact', async () => {
+  const {updateMilkBalloon} = await import('../src/milk-balloon.mjs');
+  for (const actor of [{}, {attendant: {}}, {guard: {}}]) {
+    const scene = {phase: 'throw', time: 0, ...actor};
+    updateMilkBalloon(scene, {}, 0.89);
+    assert.equal(scene.hitCommissioner, undefined);
+    updateMilkBalloon(scene, {}, 0.02);
+    assert.equal(scene.hitCommissioner, true);
+  }
 });
