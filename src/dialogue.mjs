@@ -20,6 +20,7 @@ import {availableReports, injuredMiloReply, lifeguardQualificationReport, poolRe
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
+import {createWaiterConversation} from './waiter-dialogue.mjs';
 import {drawPipPortrait} from './pip-art.mjs';
 
 const partyGuestCallsGuard = {
@@ -252,6 +253,7 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
   const executiveOpening = createExecutiveConversation(() => baronStanding?.()?.coins ?? 0);
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
+  const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0);
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
@@ -494,6 +496,7 @@ export function createDialogue(baron, {onAction, placePokieWager, sleepingGamble
           text: target.repeat ? 'Sir, please stop bothering the ladies.' : 'Sir I have to ask you to leave.',
           mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
         }
+      : target.id !== 'edmund-vale' && staffIds.includes(target.id) ? waiterOpening(target.withoutMilk)
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
       : target.id === 'guard' && target.guard?.creamery ? creameryGuardDialogue(target.guard)
       : target.id === 'guard' ? {

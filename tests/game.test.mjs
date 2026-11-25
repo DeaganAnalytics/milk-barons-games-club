@@ -1975,3 +1975,28 @@ test('all three practice guards can be reached from either side of the safe boun
     assert.equal(nearbyPracticeGuard({x: PRACTICE_RANGE.guardX + 1, y}), undefined);
   }
 });
+
+test('milk service dialogue cycles across staff and checks funds on every repeat order', async () => {
+  const {createWaiterConversation, WAITER_MILK_PRICE} = await import('../src/waiter-dialogue.mjs');
+  let balance = WAITER_MILK_PRICE;
+  const open = createWaiterConversation(() => balance);
+  const first = open(false);
+  const order = first.replies[0].next;
+  assert.equal(order.replies[1].next.text, 'Very well, sir.');
+  assert.equal(order.replies[1].next.replies[0].next(), first);
+  const served = order.replies[0].next();
+  assert.equal(served.enterAction, 'buyWaiterMilk');
+  assert.equal(served.replies[0].next(), first);
+  balance -= WAITER_MILK_PRICE;
+  const refused = order.replies[0].next();
+  assert.match(refused.text, /insufficient funds/);
+  assert.equal(refused.enterAction, undefined);
+  const empty = open(true);
+  assert.equal(empty.text, 'Not now! Busy, busy, busy!');
+  assert.deepEqual(empty.replies, []);
+  const second = open(false);
+  assert.equal(second.text, 'Would you care for a glass of milk?');
+  assert.equal(second.replies[1].next.text, 'Enjoy your evening, sir.');
+  const later = Array.from({length: 9}, () => open(false).text);
+  assert.equal(later.at(-1), first.text);
+});

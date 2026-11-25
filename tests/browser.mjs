@@ -630,7 +630,7 @@ try {
   await load(1100, 950, false, 'waiter-interaction', waiterUrl.href);
   await hold('ArrowUp', 20);
   await activate('Waiter');
-  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Not now, busy busy busy');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Good evening. How may I assist you?');
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
     .backgroundImage.includes('/waiters/male-waiter-portrait.webp')`));
   await closeConversation();

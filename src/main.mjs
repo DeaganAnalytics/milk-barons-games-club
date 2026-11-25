@@ -1,3 +1,4 @@
+import {WAITER_MILK_PRICE} from './waiter-dialogue.mjs';
 import {nearbyPracticeGuard} from './practice-range-dialogue.mjs';
 import {practiceRangeHit} from './practice-range.mjs';
 import {createPokieProfit} from './pokie-dialogue.mjs';
@@ -224,6 +225,13 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    if (action === 'buyWaiterMilk') {
+      const healed = health.hearts < MAX_HEARTS;
+      clubEvent(healed ? 'Pip drinks a glass of milk and regains half a heart.' : 'Pip drinks a glass of milk.', () => {
+        health.change(0.5);
+        coinBalance.change(-WAITER_MILK_PRICE);
+      });
+    }
     if (action === 'summonEliasForPokieBan') startEliasScene({pokieBan: true});
     if (action === 'collectPokieTax') {
       const tax = pokieProfit.collectTax();

@@ -194,6 +194,33 @@ canvas {
   background: var(--portrait-image) center / contain no-repeat;
 }
 
+/* Keep the whole expression set at the same scale, including drink variants. */
+.conversation-portrait:is([data-portrait="emerald"], [data-portrait="plum"]) {
+  --portrait-width: 121%;
+}
+
+.conversation-portrait[data-portrait="edmund-vale"] {
+  --portrait-width: 75%;
+}
+
+.conversation-portrait:is([data-portrait="male-waiter"], [data-portrait="handlebar-waiter"]) {
+  --portrait-width: 82%;
+}
+
+.conversation-portrait[data-portrait="pillory-attendant"] {
+  --portrait-width: 104%;
+}
+
+.conversation-portrait[data-portrait="pillory-commissioner"] {
+  --portrait-width: 98%;
+}
+
+.conversation-portrait[data-portrait="slot-executive"]:is(
+  [data-expression="skeptical"], [data-expression="smug"], [data-expression="exasperated"], [data-expression="tousled"]
+) {
+  --portrait-width: 87%;
+}
+
 /* Match the visible bust to the deadpan portrait despite extra transparent padding. */
 .conversation-portrait[data-portrait="creamery-bartender"] {
   --portrait-width: 79%;
