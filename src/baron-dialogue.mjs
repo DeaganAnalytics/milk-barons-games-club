@@ -75,3 +75,72 @@ export const baronKarmaDialogue = {
     ]})
   )})
 };
+
+const assessments = [
+  [
+    ["All the moral qualities of an aristocrat, yet the finances of a peasant. How disappointing.", 'displeased'],
+    ["You're going backwards, boy! The dairy awaits those who cannot generate a return on capital.", 'displeased'],
+    ['Poor AND compassionate?! Good heavens, the university really did ruin you!', 'displeased']
+  ],
+  [
+    ['Your moral development is most encouraging. Your financial development, somewhat less so.', 'pleased'],
+    ['Modest returns, young Pip. I expect considerably more from my investments.', 'displeased'],
+    ['Less charity, more prosperity, boy! This is a business establishment, not a communist commune!', 'displeased']
+  ],
+  [
+    ["Ruthless and increasingly wealthy! Pip, my boy, you're practically aristocracy already!", 'laughing'],
+    ['Excellent financial progress! Keep this up and I might have to introduce a new tax bracket.', 'pleased'],
+    ["Financially impressive, morally concerning. Imagine how much richer you'd be without that dreadful conscience!", 'displeased']
+  ]
+];
+
+export function baronAssessment(coins, karma) {
+  if (coins < 25) return say('Good heavens, Pip! At this rate, I ought to start measuring you for a dairy uniform.', 'displeased');
+  if (coins > 195) return say("You're tantalisingly close to meeting your financial obligations, young Pip! Just a few more coins and you'll be a free man!", 'pleased');
+  const moneyTier = coins >= 150 ? 2 : coins >= 100 ? 1 : 0;
+  const karmaTier = karma < -5 ? 0 : karma > 5 ? 2 : 1;
+  return say(...assessments[moneyTier][karmaTier]);
+}
+
+export function additionalBaronReplies({used, standing, discoveries, discussedVampires, returnToMenu}) {
+  const back = more(returnToMenu);
+  const once = (key, option) => ({...option, once: key, consumeOnSelect: true});
+  const elias = (text, replies, direction) => say(text, 'self-assured-smirk', {character: 'elias', replies, direction});
+  const replies = [];
+  if (used.has('baronCowFirst')) replies.push(once('baronCowSecond', reply('Why are the guards cows?',
+    say("Pip, we've discussed this already. They are not cows. End of story!", 'displeased', {replies: back}))));
+  if (used.has('baronFollowing') && used.has('baronWatching')) {
+    const assess = () => {
+      const {coins = 100, karma = 0} = standing?.() ?? {};
+      return {...baronAssessment(coins, karma), replies: back};
+    };
+    const review = reply("How do you think I'm doing?", assess, 'thinking');
+    replies.push(used.has('baronReviewIntro') ? review : once('baronReviewIntro', reply("So, you're clearly watching me.",
+      say('Supervising the premises.', 'pleased', {replies: [
+        reply('Yes, yes. Supervising.', say("You're learning, young Pip!", 'laughing', {replies: [review]}))
+      ]}), 'thinking')));
+  }
+  if (discussedVampires) replies.push(once('baronVampire', reply('Is Elias a vampire?',
+    say("Vam-pire? If it isn't milk-related, I don't want to know!", 'displeased', {replies: [
+      reply('But look at him!', elias('Ze Baron is exceptionally well endowed in terms of wealth and body mass. Less so in terms of vhat ve might politely call higher education.', more(
+        elias('Or secondary education.', more(elias('Or primary education, for zat matter.', more(
+          say('Is it time for milk?', 'pleased', {replies: back})
+        ))))
+      ), 'Whispers'), 'alarmed')
+    ]}))));
+  if (discoveries.pool) replies.push(once('baronMilkPool', reply('Is that a pool... of milk?',
+    say('Yes! One of my greatest inventions! I do love a good cannonball. A very expensive splash!', 'laughing', {replies: [
+      reply('You invented the swimming pool?', say('I invented the MILK swimming pool!', 'pleased', {replies: more(
+        elias('Our lord is a genius.', back)
+      )}), 'alarmed')
+    ]}))));
+  if (discoveries.pillory && discoveries.attendant) replies.push(once('baronCommissioner', reply('You put the Stickman Rights Commissioner in a pillory?',
+    say('Did I? I delegate so many of these things.', 'pleased', {replies: more(
+      elias('Ze Baron is a very busy man. He has considerable quantities of money to count.', back)
+    )}), 'worried')));
+  if (discoveries.fountain) replies.push(once('baronFountain', reply('You have a fountain of milk?',
+    say('Do you not?', 'pleased', {replies: [
+      reply('People are starving! My family is starving!', say('Then you must simply buy a milk fountain. What seems to be the problem?', 'displeased', {replies: back}), 'alarmed')
+    ]}))));
+  return replies;
+}

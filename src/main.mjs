@@ -22,7 +22,7 @@ import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {createPlayer, movePlayer, takeDanceExit, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
-import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, MILK_POOL, nearGuestGate, nearestInteraction, onDanceFloor, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, MILK_FOUNTAIN, MILK_POOL, nearGuestGate, nearestInteraction, onDanceFloor, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 import {createStaff, updateStaff} from './staff.mjs';
 
 const player = createPlayer();
@@ -48,6 +48,9 @@ let reportedMilo = false;
 let seenPoolAndClothes = false;
 let poolClothesReport = null;
 let seenPillory = false;
+let seenMilkPool = false;
+let seenMilkFountain = false;
+let spokeToPilloryAttendant = false;
 let reportedPillory = false;
 let guestEscort = null;
 let seenGuestRopes = false;
@@ -174,7 +177,11 @@ const clothingEvents = {
 
 const dialogue = createDialogue(baron, {
   hasSeenCowGuard: () => seenCowGuard,
+  baronDiscoveries: () => ({
+    pillory: seenPillory, attendant: spokeToPilloryAttendant, pool: seenMilkPool, fountain: seenMilkFountain
+  }),
   baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
+  getStolenClothing: () => milkPool.stolenClothing,
   hasPlayedMilkBalloon: () => playedMilkBalloon,
   canReportPillory: guard => seenPillory && !reportedPillory && guard && !guard.pursuit
     && !guard.poolWatch && !pilloryInView(cameraLeft(player.x), cameraTop(player.y)),
@@ -230,6 +237,7 @@ const dialogue = createDialogue(baron, {
         if (target.selection === 'man') coinBalance.change(10);
       });
     }
+    if (action === 'lifeguardEntryLie') clubEvent('The lifeguard sees through your story.', () => karma.change(-0.5));
     if (action === 'tellLifeguardAboutClothing') milkPool.clothingAmbientAt = Math.min(milkPool.clothingAmbientAt, elapsed);
     if (!milkPool.clothingReported && ['rewardMissingDresses', 'fineMissingSuit', 'dismissMissingSuit'].includes(action)) {
       milkPool.clothingReported = true;
@@ -240,6 +248,7 @@ const dialogue = createDialogue(baron, {
     if (action === 'baronSlap') health.change(-0.5);
     if (action === 'baronKarmaReward') clubEvent('The Baron awards a performance incentive.', () => coinBalance.change(15));
     if (action === 'baronKarmaFine') clubEvent('The Baron charges a behavioural compliance levy.', () => coinBalance.change(-15));
+    if (action === 'eliasVampireFine') clubEvent('Elias charges you for bringing up vampires again.', () => coinBalance.change(-1));
     if (action === 'collectTax') clubEvent('Elias takes the Baron’s cut.', () => coinBalance.collectTax());
     if (action === 'finishEliasWelcome') {
       document.getElementById('coin-counter').hidden = false;
@@ -326,6 +335,7 @@ const {readMovement, clearInput} = bindControls({
     if (!milkPool.stolenClothing) nearbyGuests.push(poolClothing);
     const target = nearestInteraction(player, baron, milo, guards, nearbyGuests);
     if (target) {
+      if (target.id === pilloryAttendant.id) spokeToPilloryAttendant = true;
       if (target.id === 'milo') seenMilo = true;
       if (target.id === lifeguard.id && !milkPool.clothingReported) target.missingClothing = milkPool.stolenClothing;
       if (target.guestGate) ropeWarning.talks++;
@@ -478,7 +488,9 @@ function frame(timestamp) {
   seenPillory ||= pilloryVisible;
   seenPoolAndClothes ||= inView(MILK_POOL) && inView(poolClothing);
   noteSight('ladies', partyGuests.every(guest => inView({x: guest.x, y: guest.y - 33})));
-  noteSight('pool', inView(MILK_POOL));
+  seenMilkPool ||= inView(MILK_POOL);
+  seenMilkFountain ||= inView(MILK_FOUNTAIN);
+  noteSight('pool', seenMilkPool);
   noteSight('pillory', pilloryVisible);
   noteSight('danceFloor', inView(DANCE_FLOOR));
   const wasTraveling = baron.route.length > 0;

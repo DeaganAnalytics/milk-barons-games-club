@@ -1,14 +1,14 @@
 import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
 import {bartenderExit, bartenderMoods, bartenderOpening} from './bartender-dialogue.mjs';
-import {baronDanceDialogue, baronGreetings, baronKarmaDialogue} from './baron-dialogue.mjs';
+import {additionalBaronReplies, baronDanceDialogue, baronGreetings, baronKarmaDialogue} from './baron-dialogue.mjs';
 import {isBaronDancing} from './baron.mjs';
-import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasTaxConversation, eliasWelcome} from './elias.mjs';
+import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
 import {createProfessorConversation, professorMoods} from './professor-dialogue.mjs';
 import {professor} from './professor.mjs';
-import {clothingReports, lifeguardDialogue, lifeguardMoods, poolClothingDialogue} from './lifeguard-dialogue.mjs';
+import {clothingReports, lifeguardDialogue, lifeguardMoods, lifeguardReplies, poolClothingDialogue} from './lifeguard-dialogue.mjs';
 import {lifeguard, poolClothing} from './milk-pool.mjs';
 import {availableReports, injuredMiloReply, lifeguardQualificationReport, poolReports, unattendedClothes} from './report-dialogue.mjs';
 import {bartender} from './creamery.mjs';
@@ -106,11 +106,11 @@ const miloReplies = [
 
 const baronReplies = [
   {
-    label: 'Do you own this place?', playerMood: 'thinking',
+    label: 'Do you own this place?', once: 'baronOwnership', consumeOnSelect: true, playerMood: 'thinking',
     next: {text: 'Of course, I own nearly every place.', mood: 'laughing'}
   },
   {
-    label: 'Why do you have cows for guards?', playerMood: 'thinking',
+    label: 'Why do you have cows for guards?', once: 'baronCowFirst', consumeOnSelect: true, playerMood: 'thinking',
     next: {text: 'What do you mean?', mood: 'pleased', replies: [
       {
         label: 'The guards are cows.', playerMood: 'attentive',
@@ -123,12 +123,12 @@ const baronReplies = [
 ];
 
 const followingReply = {
-  label: 'Are you following me?', playerMood: 'thinking',
+  label: 'Are you following me?', once: 'baronFollowing', consumeOnSelect: true, playerMood: 'thinking',
   next: {text: 'Following you? Never! I am merely managing my institution.', mood: 'displeased'}
 };
 
 const watchingReply = {
-  label: 'Why do you keep watching me?', playerMood: 'thinking',
+  label: 'Why do you keep watching me?', once: 'baronWatching', consumeOnSelect: true, playerMood: 'thinking',
   next: {text: 'What are you talking about young Pip?', mood: 'pleased', replies: [
     {
       label: 'Your eyes never leave me.', playerMood: 'attentive',
@@ -198,7 +198,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard, hasPlayedMilkBalloon, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries, hasSeenCowGuard, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -216,10 +216,13 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
   let bartenderGreetingIndex = 0;
   let askedDancingBaron = false;
   let askedEliasAboutVampires = false;
+  let vampireStage = 0;
   let askedBaronForMoney = false;
   const usedReplies = new Set();
   let reportedBaronFollowing = false;
   let heardLifeguardCannotSwim = false;
+  let askedPoolEntry = false;
+  let admittedClothingTheft = false;
   const closeButton = document.getElementById('conversation-close');
   let action = null;
   let activeTarget;
@@ -277,9 +280,12 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
 
   function show(node, character, playerMood, withoutMilk) {
     action = node.action ?? null;
+    if (node.vampireStage) vampireStage = Math.max(vampireStage, node.vampireStage);
+    if (node.remembersPoolEntry) askedPoolEntry = true;
+    if (node.admitsClothingTheft) admittedClothingTheft = true;
     if (node.revealsLifeguardCannotSwim) heardLifeguardCannotSwim = true;
     closeButton.hidden = Boolean((activeTarget.bartenderExitPending && node.replies?.length && !action)
-      || node.mustContinue
+      || node === lifeguardDialogue || node.mustContinue
       || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.baronKarma) && !action));
     panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap');
     panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
@@ -305,7 +311,11 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
       : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
     setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk);
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
-    const replies = report ? [report, ...node.replies] : node.replies ?? [];
+    const options = character === lifeguard.id
+      ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
+      : node.replies ?? [];
+    const vampire = node === eliasConversation || node === eliasFollowingConversation ? vampireFollowup(node, vampireStage) : null;
+    const replies = report ? [report, ...options] : vampire ? [...options, vampire] : options;
     const seenCowGuard = hasSeenCowGuard?.();
     const availableReplies = replies.filter(reply => !usedReplies.has(reply.once)
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
@@ -317,7 +327,7 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
       button.addEventListener('click', () => {
         if (character === elias.id && reply.label === 'Are you a vampire?') askedEliasAboutVampires = true;
         if (character === 'baron' && reply.label === 'Can I speak to DJ Dairy?') askedDancingBaron = true;
-        if (reply.once === 'lifeguardMoneyRequest' || reply.once === 'bartenderMoneyRequest') usedReplies.add(reply.once);
+        if (reply.consumeOnSelect || reply.once === 'bartenderMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;
         if (next?.exitAction) {
           action = next.exitAction;
@@ -361,6 +371,17 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
     const {karma = 0, coins = 100} = baronStanding?.() ?? {};
     const greetings = baronGreetings(karma, coins);
     const replies = availableBaronReplies(baron);
+    const opening = greetings[greetingIndex++ % greetings.length];
+    const menu = () => ({
+      ...opening,
+      replies: [...replies, ...additionalBaronReplies({
+        used: usedReplies,
+        standing: baronStanding,
+        discoveries: baronDiscoveries?.() ?? {},
+        discussedVampires: vampireStage > 0,
+        returnToMenu: menu
+      })]
+    });
     if (!askedBaronForMoney) replies.push({
       label: 'Can I have some money?',
       playerMood: 'attentive',
@@ -375,7 +396,7 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
         };
       }
     });
-    return {...greetings[greetingIndex++ % greetings.length], replies};
+    return menu();
   }
 
   function reportingReplies(target) {
