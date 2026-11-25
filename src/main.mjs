@@ -16,7 +16,7 @@ import {bartender, createCreameryGuard} from './creamery.mjs';
 import {createMilkService, updateMilkService} from './milk-service.mjs';
 import {advanceBaronApproach, callOutMilo, createBaron, isBaronDancing, isOnscreen, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
-import {createGuards, dispatchGuardToMilo, dispatchRovingGuardsToPool, summonGuard, updateGuards} from './guards.mjs';
+import {createGuards, dispatchGuardToMilo, dispatchRovingGuardsToPool, summonGuard, summonGuardFromOffscreen, updateGuards} from './guards.mjs';
 import {createMilo, fleeMilo, updateMilo} from './milo.mjs';
 import {bindControls} from './input.mjs';
 import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
@@ -97,8 +97,10 @@ export const health = createHealth((hearts, deathMessage) => {
 const clothingTheftKarma = {all: -2, man: -0.5, women: -1.5};
 const pendingBaronKarma = [];
 const triggeredBaronKarma = new Set();
+let hasChangedKarma = false;
 const karmaMeter = document.getElementById('karma-meter');
 export const karma = createKarma((score, position) => {
+  hasChangedKarma = true;
   karmaMeter.style.setProperty('--karma-position', `${position * 100}%`);
   karmaMeter.setAttribute('aria-valuenow', score);
   karmaMeter.setAttribute('aria-valuetext', score === 0 ? 'Neutral' : String(score));
@@ -178,6 +180,7 @@ const clothingEvents = {
 
 const dialogue = createDialogue(baron, {
   hasSeenCowGuard: () => seenCowGuard,
+  hasKarmaChanged: () => hasChangedKarma,
   baronDiscoveries: () => ({
     pillory: seenPillory, attendant: spokeToPilloryAttendant, pool: seenMilkPool, fountain: seenMilkFountain
   }),
@@ -195,6 +198,16 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    if (action === 'blackmailPolitician') {
+      clubEvent('Pip threatens to expose the politician.', () => karma.change(-1));
+    }
+    if (action === 'politicianHit') {
+      health.change(-0.5, 'The politician knocked you out.');
+      clubEvent('The politician hits Pip. Health lost.');
+    }
+    if (action === 'politicianBribe') {
+      clubEvent('The politician pays Pip to keep quiet.', () => coinBalance.change(10));
+    }
     const coinEvent = coinEvents[action];
     if (coinEvent) {
       const [text, amount] = coinEvent;
@@ -256,6 +269,30 @@ const dialogue = createDialogue(baron, {
       elias.findingEdge = true;
       clubEvent('Elias opens your account. The Baron expects you to double it.');
     }
+    if (action === 'executivePrivateNetworking') {
+      clubEvent('Private networking costs Pip ₥100. Health restored.', () => {
+        health.change(MAX_HEARTS);
+        coinBalance.change(-100);
+      });
+    }
+    if (action === 'executiveRedundancy1' || action === 'executiveRedundancy2' || action === 'executiveRedundancy3') {
+      const stage = Number(action.at(-1));
+      clubEvent('The executive pays Pip redundancy compensation.', () => {
+        coinBalance.change(stage === 3 ? 20 : 5);
+        karma.change(-stage);
+      });
+    }
+    if (action === 'executiveFraudFine') {
+      clubEvent('The guard takes back ₥30 in compensation and charges a ₥20 fine.', () => coinBalance.change(-50));
+    }
+    if (action === 'executiveSummonEscort' || action === 'executiveSummonFraud') {
+      clearInput();
+      guestEscort = {
+        guard: summonGuardFromOffscreen(guards, player, baron),
+        phase: 'waiting', executive: action === 'executiveSummonFraud' ? 'fraud' : 'escort'
+      };
+      clubEvent('The executive has called for a guard.');
+    }
     if (action === 'callGuard') {
       const guard = summonGuard(guards, player);
       const guest = partyGuests.find(guest => guest.id === target.id);
@@ -265,7 +302,10 @@ const dialogue = createDialogue(baron, {
         clubEvent('A guard is on his way. The ladies are expecting a prompt response.');
       }
     }
-    if (action === 'escortGuest' && guestEscort) beginGuestEscort(guestEscort, player, baron, completedGuestEscorts > 0);
+    if (action === 'escortGuest' && guestEscort) {
+      const destination = guestEscort.executive ? {x: player.x + ROOM_WIDTH / 2 + 34, y: player.y} : null;
+      beginGuestEscort(guestEscort, player, baron, completedGuestEscorts > 0, destination);
+    }
     if ((action === 'secureGuests' || action === 'fineAndSecureGuests') && !guestEnclosure.active) {
       guestEnclosure.active = true;
       gateGuard = {
@@ -461,10 +501,11 @@ function frame(timestamp) {
 
   if (guestEscort?.phase === 'walking') {
     if (advanceGuestEscort(guestEscort, player, baron, guards, elapsed, dt)) {
+      const executiveEscort = guestEscort.executive;
       guestEscort = null;
-      completedGuestEscorts++;
+      if (!executiveEscort) completedGuestEscorts++;
       clearInput();
-      if (completedGuestEscorts === 2) {
+      if (!executiveEscort && completedGuestEscorts === 2) {
         dialogue.open({id: 'guard', title: 'Bull Guard', postEscort: true});
         requestAnimationFrame(frame);
         return;
@@ -520,6 +561,9 @@ function frame(timestamp) {
   if (!baronLocked) updateBaronAttention(baron, player, elapsed, dt);
   if (updateMilo(milo, baron, elapsed, dt, guards) && !baronLocked) callOutMilo(baron, milo, elapsed);
   if (!baronLocked) updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed);
+  if (guestEscort?.executive && !guestEscort.guard) {
+    guestEscort.guard = summonGuardFromOffscreen(guards, player, baron);
+  }
   const arrivedGuard = updateGuards(guards, player, baron, milo, elapsed, dt);
   const miloVisible = milo.x >= cameraX && milo.x <= cameraX + ROOM_WIDTH
     && milo.y + 20 >= cameraY && milo.y - 46 <= cameraY + ROOM_HEIGHT;
@@ -530,8 +574,13 @@ function frame(timestamp) {
   if (sightNotices.length && elapsed >= nextSightNoticeAt) clubEvent(sightNotices.shift());
   if (arrivedGuard) {
     if (guestEscort?.guard === arrivedGuard) guestEscort.phase = 'warning';
+    const executive = guestEscort?.executive;
+    if (executive === 'fraud') guestEscort = null;
     clearInput();
-    dialogue.open({id: 'guard', title: 'Bull Guard', summoned: true, repeat: completedGuestEscorts > 0});
+    dialogue.open({
+      id: 'guard', title: 'Bull Guard', summoned: true,
+      executiveFraud: executive === 'fraud', repeat: !executive && completedGuestEscorts > 0
+    });
     requestAnimationFrame(frame);
     return;
   }
