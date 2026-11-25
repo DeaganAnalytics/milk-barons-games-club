@@ -206,7 +206,25 @@ function drawPipHead(ctx, x, y, angle, mood, portrait = false) {
   ctx.restore();
 }
 
-export function drawPipPortrait(canvas, expression, disguise) {
+function drawLipstickMark(ctx, x, y, angle, scale) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = 'rgba(166, 37, 70, 0.82)';
+  ctx.beginPath();
+  ctx.moveTo(-2.6, 0);
+  ctx.quadraticCurveTo(-1.3, -1.9, 0, -1);
+  ctx.quadraticCurveTo(1.1, -1.9, 2.6, 0);
+  ctx.quadraticCurveTo(0.1, -0.45, -2.6, 0);
+  ctx.moveTo(-2.5, 0.35);
+  ctx.quadraticCurveTo(0, 2.45, 2.5, 0.35);
+  ctx.quadraticCurveTo(0, 0.8, -2.5, 0.35);
+  ctx.fill();
+  ctx.restore();
+}
+
+export function drawPipPortrait(canvas, expression, disguise, lipstick = false) {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -276,6 +294,10 @@ export function drawPipPortrait(canvas, expression, disguise) {
   ctx.translate(114, 83);
   ctx.scale(4.25, 4.25);
   drawPipHead(ctx, 0, 0, 0, expression, true);
+  if (lipstick) {
+    drawLipstickMark(ctx, -5, 3, -0.48, 1);
+    drawLipstickMark(ctx, -2, -6.4, 0.29, 0.8);
+  }
   if (disguise === 'moustache' || disguise === 'eyePatch') {
     stroke(ctx, 2.2, '#2d211e', c => {
       c.moveTo(-1, 3);

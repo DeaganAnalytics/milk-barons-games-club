@@ -2000,3 +2000,20 @@ test('milk service dialogue cycles across staff and checks funds on every repeat
   const later = Array.from({length: 9}, () => open(false).text);
   assert.equal(later.at(-1), first.text);
 });
+
+test('Skim remembers whether Pip confirmed his identity on the first meeting', async () => {
+  const {createSkimConversation} = await import('../src/skim-dialogue.mjs');
+  const unknown = createSkimConversation();
+  assert.equal(unknown().replies[0].next.replies[0].next.text, 'That you are, my lord.');
+  assert.equal(unknown().text, 'Just a humble janitor, my lord.');
+  const recognised = createSkimConversation();
+  const uncertain = recognised().replies[0].next.replies[1].next;
+  assert.equal(uncertain.mood, 'distressed');
+  const lookalike = uncertain.replies[0].next;
+  assert.equal(lookalike.replies[1].next.replies[0].next.text, 'Nothing, my lord. A pleasure serving you.');
+  let line = lookalike.replies[0].next;
+  while (typeof line.replies[0].next !== 'function') line = line.replies[0].next;
+  assert.match(line.text, /apparently the problem/);
+  assert.equal(line.replies[0].next().replies.length, 6);
+  assert.equal(recognised().text, "Oh, bloody hell. It's you again.");
+});
