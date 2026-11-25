@@ -330,6 +330,7 @@ const dialogue = createDialogue(baron, {
       clubEvent('Elias opens your account. The Baron expects you to double it.');
     }
     if (action === 'executivePrivateNetworking') {
+      player.lipstick = true;
       clubEvent('Private networking costs Pip ₥100. Health restored.', () => {
         health.change(MAX_HEARTS);
         coinBalance.change(-100);
