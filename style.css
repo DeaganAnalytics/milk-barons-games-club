@@ -16,6 +16,10 @@ h1 {
   font-size: clamp(20px,5vw,30px);
   margin: 0 0 5px;
 }
+
+.game-version {
+  font-size: 0.65em;
+}
 .viewport {
   width: 100%;
   aspect-ratio: 690/685;
