@@ -2155,3 +2155,41 @@ test('the Commissioner’s milk pool topic unlocks on sight and each branch exha
     assert.equal(node.action, undefined);
   }
 });
+
+test('the Baron’s pillory branches are single-use with two ways out of the figures', async () => {
+  const {commissionerDiscussion} = await import('../src/baron-commissioner-dialogue.mjs');
+  const choose = (node, label) => {
+    const choice = node.replies.find(reply => reply.label === label);
+    assert.ok(choice, label);
+    return typeof choice.next === 'function' ? choice.next() : choice.next;
+  };
+  const skip = (node) => {
+    while (node.replies?.length === 1 && node.replies[0].label === 'Continue') node = choose(node, 'Continue');
+    return node;
+  };
+
+  for (const vampire of [false, true]) {
+    let node = skip(commissionerDiscussion(vampire));
+    assert.equal(node.replies.length, 4);
+    node = skip(choose(node, 'How much money do you make from the pillory?'));
+    assert.equal(node.replies.some(reply => reply.label === 'Garlic.'), vampire);
+    if (vampire) node = skip(choose(node, 'Garlic.'));
+    else {
+      node = skip(choose(node, 'Check watch'));
+      for (let i = 0; i < 3; i++) node = choose(node, 'Wait');
+      assert.equal(node.replies.length, 1);
+      node = skip(choose(node, 'Elias, have you heard of a calculator?'));
+      assert.equal(node.mood, 'milk-drool');
+      node = choose(node, "Never mind. I'm no longer interested.");
+    }
+    assert.equal(node.replies.length, 3);
+    assert.ok(!node.replies.some(reply => reply.label === 'How much money do you make from the pillory?'));
+    node = skip(choose(node, "Surely you can't imprison someone for criticising you?"));
+    node = skip(choose(node, 'Who gave you the authority to do that?'));
+    node = choose(node, 'Could you let her go?');
+    node = skip(choose(node, 'When do business hours end?'));
+    assert.equal(node.text, 'One could say you are ze real victim, my lord.');
+    assert.ok(node.autoCloseMs > 0);
+    assert.equal(node.replies, undefined);
+  }
+});

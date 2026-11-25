@@ -176,7 +176,7 @@ const npcExpressions = new Map([
 ]);
 
 const extraPortraitMoods = new Map([
-  ['baron', ['suspicious', 'flustered', 'winded']],
+  ['baron', ['suspicious', 'flustered', 'winded', 'milk-drool', 'sipping']],
   ['milo', ['defiant']],
   [bartender.id, ['offended']],
   [lifeguard.id, ['sheepish']],
@@ -564,6 +564,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
         standing: baronStanding,
         discoveries: baronDiscoveries?.() ?? {},
         discussedVampires: vampireStage > 0,
+        askedEliasAboutVampires,
         returnToMenu: menu
       })]
     });

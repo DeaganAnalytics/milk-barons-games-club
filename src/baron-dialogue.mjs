@@ -1,3 +1,5 @@
+import {commissionerDiscussion} from './baron-commissioner-dialogue.mjs';
+
 const say = (text, mood = 'pleased', extras = {}) => ({text, mood, ...extras});
 const reply = (label, next, playerMood = 'attentive') => ({label, next, playerMood});
 const more = next => [reply('Continue', next)];
@@ -102,7 +104,7 @@ export function baronAssessment(coins, karma) {
   return say(...assessments[moneyTier][karmaTier]);
 }
 
-export function additionalBaronReplies({used, standing, discoveries, discussedVampires, returnToMenu}) {
+export function additionalBaronReplies({used, standing, discoveries, discussedVampires, askedEliasAboutVampires = discussedVampires, returnToMenu}) {
   const back = more(returnToMenu);
   const once = (key, option) => ({...option, once: key, consumeOnSelect: true});
   const elias = (text, replies, direction) => say(text, 'self-assured-smirk', {character: 'elias', replies, direction});
@@ -158,10 +160,10 @@ export function additionalBaronReplies({used, standing, discoveries, discussedVa
         ]})));
     }
   }
-  if (discoveries.pillory && discoveries.attendant) replies.push(once('baronCommissioner', reply('You put the Stickman Rights Commissioner in a pillory?',
-    say('Did I? I delegate so many of these things.', 'pleased', {replies: more(
-      elias('Ze Baron is a very busy man. He has considerable quantities of money to count.', back)
-    )}), 'worried')));
+  if (discoveries.pillory && discoveries.attendant && !used.has('baronCommissioner')) {
+    replies.push(once('baronCommissioner', reply('You put the Stickman Rights Commissioner in a pillory?',
+      () => commissionerDiscussion(askedEliasAboutVampires), 'worried')));
+  }
   if (discoveries.fountain) {
     const options = [
       ['baronFountainPoverty', "We can't afford milk, let alone a fountain!", 'Good heavens! Not even a small fountain?', 'flustered', 'alarmed'],
