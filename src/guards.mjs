@@ -1,5 +1,5 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {crossesScenery, EAST_EDGE, onDanceFloor, isNpcBlocked, MILK_POOL, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {cameraLeft, cameraTop, ROOM_WIDTH, ROOM_HEIGHT, crossesScenery, EAST_EDGE, onDanceFloor, isNpcBlocked, MILK_POOL, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const RADIUS = 14;
 const SPEED = 71;
@@ -61,6 +61,26 @@ export function summonGuard(guards, player) {
     !closest || Math.hypot(candidate.x - player.x, candidate.y - player.y)
       < Math.hypot(closest.x - player.x, closest.y - player.y) ? candidate : closest, null);
   if (guard) guard.pursuit = {destination: null, route: []};
+  return guard;
+}
+
+export function summonGuardFromOffscreen(guards, player, baron) {
+  const guard = summonGuard(guards, player);
+  if (!guard) return null;
+  const left = cameraLeft(player.x);
+  const top = cameraTop(player.y);
+  const right = left + ROOM_WIDTH;
+  const bottom = top + ROOM_HEIGHT;
+  // Leave enough room for the entire guard sprite to start outside the viewport.
+  const spawn = [
+    {x: left - 38, y: player.y},
+    {x: right + 38, y: player.y},
+    {x: player.x + 52, y: top - 38},
+    {x: player.x + 52, y: bottom + 86}
+  ].filter(point => !isNpcBlocked(point.x, point.y, guard.radius, baron)
+    && !guardBlocks(point.x, point.y, guard, guards))
+    .sort((a, b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y))[0];
+  if (spawn) Object.assign(guard, spawn, {walking: false, target: null, blockedTime: 0});
   return guard;
 }
 

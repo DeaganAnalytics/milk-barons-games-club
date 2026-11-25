@@ -5,12 +5,12 @@ import {ROOM_HEIGHT, ROOM_WIDTH, SOUTH_TRIM_Y, routeAroundBaron} from './room.mj
 const speed = 125;
 const escortX = Math.max(...partyGuests.map(guest => guest.x)) + ROOM_WIDTH / 2 + 34;
 
-export function beginGuestEscort(escort, player, baron, repeat = false) {
+export function beginGuestEscort(escort, player, baron, repeat = false, destination = null) {
   escort.phase = 'walking';
   escort.guard.escorting = true;
-  escort.destination = repeat
+  escort.destination = destination ?? (repeat
     ? {x: player.x + 2 * ROOM_WIDTH, y: Math.max(player.y, SOUTH_TRIM_Y - 34)}
-    : {x: escortX, y: player.y};
+    : {x: escortX, y: player.y});
   escort.route = routeAroundBaron(player, escort.destination, baron);
 }
 

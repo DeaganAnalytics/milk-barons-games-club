@@ -206,7 +206,7 @@ function drawPipHead(ctx, x, y, angle, mood, portrait = false) {
   ctx.restore();
 }
 
-export function drawPipPortrait(canvas, expression) {
+export function drawPipPortrait(canvas, expression, disguise) {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -244,6 +244,33 @@ export function drawPipPortrait(canvas, expression) {
   ctx.translate(114, 83);
   ctx.scale(4.25, 4.25);
   drawPipHead(ctx, 0, 0, 0, expression, true);
+  if (disguise === 'moustache' || disguise === 'eyePatch') {
+    stroke(ctx, 2.2, '#2d211e', c => {
+      c.moveTo(-1, 3);
+      c.quadraticCurveTo(1, 0.5, 4.1, 2.4);
+      c.quadraticCurveTo(7, 0.6, 9.8, 2.8);
+    });
+  }
+  if (disguise === 'eyePatch') {
+    stroke(ctx, 0.8, '#1c1816', c => {
+      c.moveTo(-12.1, -4.1);
+      c.lineTo(12.2, 0.5);
+    });
+    ellipse(ctx, 2, -1.25, 2.8, 2.6, '#1c1816');
+  }
+  if (disguise === 'woman') {
+    stroke(ctx, 5, '#332522', c => {
+      c.moveTo(-10, 10);
+      c.bezierCurveTo(-17, -4, -10, -14, 0, -13);
+      c.quadraticCurveTo(8, -14, 12, -8);
+    });
+    stroke(ctx, 2.8, '#624438', c => {
+      c.moveTo(-10, 7);
+      c.bezierCurveTo(-15, -5, -9, -12, 0, -12);
+      c.quadraticCurveTo(7, -13, 11, -8.5);
+    });
+    ellipse(ctx, -7, 6.4, 1.05, 1.05, '#f2d89f');
+  }
   ctx.restore();
 }
 

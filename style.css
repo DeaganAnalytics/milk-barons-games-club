@@ -423,3 +423,21 @@ canvas {
   20% { opacity: 1; }
   42% { opacity: 1; transform: translateX(-110%) rotate(-8deg); }
 }
+
+.executive-fade::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: #000;
+  animation: executive-fade 1.2s ease-in-out both;
+}
+
+@keyframes executive-fade {
+  0%, 100% { opacity: 0; }
+  40%, 65% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .executive-fade::after { animation: none; }
+}

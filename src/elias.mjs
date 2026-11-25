@@ -107,11 +107,27 @@ const karmaExchange = [
   ['Why?', 'To assess your future employment prospects, of course.', 'devious', 'worried']
 ];
 
+function milkTokenExchange(menu) {
+  const alternatives = [
+    exchange([
+      ['You said they were worth their weight in gold!', 'Da, according to our internal valuation. Convertibility is an entirely separate matter.', 'self-assured-smirk', 'alarmed'],
+      ["So who decides what they're worth?", 'Ze Baron, naturally. A remarkably efficient monetary system.', 'current-smile']
+    ], menu),
+    exchange([
+      ["People recognise gold. I've never seen these before.", 'Milk tokens are ze currency of ze future, Master Pip!', 'laugh', 'thinking']
+    ], menu)
+  ];
+  return [
+    ['What are these coins?', 'Milk tokens, of course. Vorth zeir weight in gold. Silly peasant.', 'self-assured-smirk'],
+    ['Can I exchange them for gold, then?', 'Vhat?! No! Vhy on earth?', 'insulted', 'thinking', {replies: alternatives}]
+  ];
+}
+
 function buildConversation(exchanges) {
   const menu = {text: elias.message, mood: 'current-smile', replies: []};
-  menu.replies = exchanges.map(lines => {
+  menu.replies = [...exchanges, milkTokenExchange(menu)].map(lines => {
     const option = exchange(lines, menu);
-    return {...option, once: 'Elias: ' + option.label, consumeOnSelect: true};
+    return {...option, once: 'Elias: ' + option.label, consumeOnSelect: true, requiresKarmaChange: lines === karmaExchange};
   });
   return menu;
 }

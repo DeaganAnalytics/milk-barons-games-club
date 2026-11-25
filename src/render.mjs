@@ -523,7 +523,7 @@ export function createRenderer(canvas, onCowGuardSeen) {
       drawSpeech(ctx, baron.speech.text, speechOpacity(baron, cameraX, elapsed, cameraY),
         baron.x, baron.y - 61, baron.y + 34, cameraX, cameraY);
     }
-    if (guestEscort?.phase === 'waiting') {
+    if (guestEscort?.phase === 'waiting' && guestEscort.guest) {
       const guest = guestEscort.guest;
       drawSpeech(ctx, 'Guard, guard, a peasant is near me!', 1, guest.x, guest.y - 68, guest.y, cameraX, cameraY);
     }

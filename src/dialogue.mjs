@@ -1,3 +1,4 @@
+import {createExecutiveConversation, executiveFraudWarning, executiveId, executiveMoods} from './executive-dialogue.mjs';
 import {createPoliticianConversation, politicianId, politicianMoods} from './politician-dialogue.mjs';
 import {slotPlayers} from './slot-machines.mjs';
 import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
@@ -169,6 +170,9 @@ function standalonePortraitUrl(id, withoutMilk = false, mood) {
     const suffix = mood === 'annoyed' ? '-annoyed-portrait.webp' : '-portrait.webp';
     return new URL('../assets/guests/' + id + suffix, import.meta.url);
   }
+  if (id === executiveId && executiveMoods.includes(mood)) {
+    return new URL('../assets/slots/' + id + '-' + mood + '-portrait.webp', import.meta.url);
+  }
   if (id === politicianId && politicianMoods.includes(mood) && mood !== 'weary') {
     return new URL('../assets/slots/' + id + '-' + mood + '-portrait.webp', import.meta.url);
   }
@@ -191,6 +195,7 @@ function warmPortraits() {
   for (const mood of eliasPortraits) urls.push(standalonePortraitUrl(elias.id, false, mood));
   for (const mood of professorMoods) urls.push(standalonePortraitUrl(professor.id, false, mood));
   for (const mood of lifeguardMoods) urls.push(standalonePortraitUrl(lifeguard.id, false, mood));
+  for (const mood of executiveMoods) urls.push(standalonePortraitUrl(executiveId, false, mood));
   for (const mood of politicianMoods) urls.push(standalonePortraitUrl(politicianId, false, mood));
   for (const {id} of slotPlayers.filter(player => player.id !== politicianId)) urls.push(standalonePortraitUrl(id));
   for (const {id} of partyGuests) {
@@ -206,7 +211,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries, hasSeenCowGuard, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -235,6 +240,8 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
   let action = null;
   let activeTarget;
   let autoClose;
+  let disguise;
+  const executiveOpening = createExecutiveConversation(() => baronStanding?.()?.coins ?? 0);
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
@@ -272,6 +279,8 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
 
   function close(runAction = true) {
     clearTimeout(autoClose);
+    panel.classList.remove('executive-fade');
+    disguise = null;
     panel.hidden = true;
     map.hidden = info.hidden = controls.hidden = false;
     interact.focus({preventScroll: true});
@@ -291,6 +300,8 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
 
   function show(node, character, playerMood, withoutMilk) {
     clearTimeout(autoClose);
+    panel.classList.toggle('executive-fade', Boolean(node.fadeTo));
+    if (node.disguise !== undefined) disguise = node.disguise;
     action = node.action ?? null;
     if (node.vampireStage) vampireStage = Math.max(vampireStage, node.vampireStage);
     if (node.remembersPoolEntry) askedPoolEntry = true;
@@ -312,9 +323,10 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
       line.prepend(direction);
     }
     const playerExpression = node.playerMood ?? playerMood;
-    if (playerPortrait.dataset.expression !== playerExpression) {
-      drawPipPortrait(playerArt, playerExpression);
-      playerPortrait.dataset.expression = playerExpression;
+    const portraitKey = playerExpression + ':' + (disguise ?? '');
+    if (playerPortrait.dataset.expression !== portraitKey) {
+      drawPipPortrait(playerArt, playerExpression, disguise);
+      playerPortrait.dataset.expression = portraitKey;
     }
     const currentSpeaker = node.character ?? character;
     speaker.textContent = node.speaker ?? (currentSpeaker === elias.id ? elias.title
@@ -331,6 +343,7 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
     const seenCowGuard = hasSeenCowGuard?.();
     const availableReplies = replies.filter(reply => !usedReplies.has(reply.once)
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
+      && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
     replyList.replaceChildren(...availableReplies.map(reply => {
       const button = document.createElement('button');
@@ -368,7 +381,9 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
       closeButton.hidden = false;
     }
     if (node.enterAction) finishAction(node.enterAction, activeTarget);
-    if (node.autoCloseMs) autoClose = setTimeout(close, node.autoCloseMs);
+    if (node.fadeTo) {
+      autoClose = setTimeout(() => show(node.fadeTo, character, playerMood, withoutMilk), 1200);
+    } else if (node.autoCloseMs) autoClose = setTimeout(close, node.autoCloseMs);
   }
 
   closeButton.addEventListener('click', requestClose);
@@ -432,6 +447,7 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
 
   function open(target) {
     activeTarget = target;
+    disguise = target.executiveFraud ? 'woman' : null;
     injured = target.id === 'milo' && Boolean(takeMiloInjury?.());
     const opening = partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
@@ -443,6 +459,8 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
       : target.id === bartender.id ? bartenderOpening(bartenderGreetingIndex++)
       : target.id === professor.id ? professorOpening()
       : target.id === politicianId ? politicianOpening()
+      : target.id === executiveId ? executiveOpening()
+      : target.executiveFraud ? executiveFraudWarning
       : target.id === poolClothing.id ? poolClothingDialogue
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.poolClothesThanks ? {
