@@ -28,11 +28,11 @@ const continueTo = next => ({label: 'Continue', playerMood: 'attentive', next});
 const back = [continueTo(questions)];
 
 questions.replies.push(
-  {label: "I didn't do it!", playerMood: 'alarmed',
+  {label: "I didn't do it!", once: 'eliasWelcome:denial', consumeOnSelect: true, playerMood: 'alarmed',
     next: {text: 'Zat is not a question.', mood: 'insulted', replies: back}},
-  {label: 'How did I get here?', playerMood: 'thinking',
+  {label: 'How did I get here?', once: 'eliasWelcome:arrival', consumeOnSelect: true, playerMood: 'thinking',
     next: {text: 'Ah... one of ze great secrets of ze universe.', mood: 'devious', replies: back}},
-  {label: 'What is this place?', playerMood: 'thinking',
+  {label: 'What is this place?', once: 'eliasWelcome:club', consumeOnSelect: true, playerMood: 'thinking',
     next: {
       text: 'Ah! I am delighted you asked.',
       mood: 'laugh',
@@ -47,7 +47,7 @@ questions.replies.push(
         })]
       })]
     }},
-  {label: 'How do I double my money?', playerMood: 'thinking', next: {
+  {label: 'How do I double my money?', once: 'eliasWelcome:money', consumeOnSelect: true, playerMood: 'thinking', next: {
     text: 'As an aspiring capitalist, I am sure you vill figure it out. Zis establishment offers many delightful games through vich you may multiply your fortune.',
     mood: 'self-assured-smirk', replies: back
   }},

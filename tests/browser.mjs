@@ -125,6 +125,8 @@ async function load(width, height, mobile, name, url = site) {
     await reply('Continue', 'Now, Master Pip, do you have any questions?');
     await reply('How do I double my money?', 'As an aspiring capitalist, I am sure you vill figure it out. Zis establishment offers many delightful games through vich you may multiply your fortune.');
     await reply('Continue', 'Now, Master Pip, do you have any questions?');
+    const remaining = await evaluate('Array.from(document.querySelectorAll("#conversation-replies button"), button => button.textContent)');
+    assert.deepEqual(remaining, ['I have no more questions.']);
   }
   await reply('I have no more questions.', 'Vonderful. I vish you a most profitable evening, Master Pip.');
   assert.equal(await evaluate('document.querySelector("#coin-counter").hidden'), true);
