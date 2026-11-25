@@ -118,8 +118,8 @@ const baronReplies = [
     next: {text: 'What do you mean?', mood: 'flustered', replies: [
       {
         label: 'The guards are cows.', playerMood: 'attentive',
-        next: {text: 'I have guards.', mood: 'flustered', keepPortrait: true, replies: [
-          {label: 'But the horns?', playerMood: 'thinking', next: {text: 'I have guards.', mood: 'flustered', keepPortrait: true}}
+        next: {text: 'I have guards.', mood: 'displeased', replies: [
+          {label: 'But the horns?', playerMood: 'thinking', next: {text: 'I have guards.', mood: 'displeased'}}
         ]}
       }
     ]}
@@ -369,7 +369,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const npcHistory = {};
   const pipHistory = {};
 
-  function setPortrait(element, character, mood, withoutMilk, keepPortrait) {
+  function setPortrait(element, character, mood, withoutMilk) {
     const expressions = [
       ...(npcExpressions.get(character) ?? []),
       ...(!withoutMilk ? extraPortraitMoods.get(character) ?? [] : [])
@@ -381,7 +381,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       npcHistory.mood = null;
     }
     const family = expressionFamilies.find(group => group.includes(mood)) ?? [];
-    const alternatives = special || withoutMilk || keepPortrait ? [] : [
+    const alternatives = special || withoutMilk ? [] : [
       ...family.filter(expression => expressions.includes(expression)),
       ...['attentive', 'deadpan', 'thinking', 'reserved', 'worried', 'skeptical', 'suspicious', 'polite', 'stern'].filter(expression => expressions.includes(expression)),
       ...expressions
@@ -477,7 +477,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       : currentSpeaker === bartender.id ? bartender.title
       : currentSpeaker === 'guard' ? 'Bull Guard'
       : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
-    setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk, node.keepPortrait);
+    setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk);
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
     const options = character === lifeguard.id
       ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
