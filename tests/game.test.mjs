@@ -1861,3 +1861,52 @@ test('the Baron walks to his nearest rug after a karma audience without counting
   assert.equal(baron.returningToRug, false);
   assert.equal(baron.completedRugTrips, 0);
 });
+
+test('a jackpot pays only the remaining pokie profit before the ban', async () => {
+  const {createPokieProfit, createPokieConversation} = await import('../src/pokie-dialogue.mjs');
+  const profit = createPokieProfit();
+  const coins = createCoinBalance();
+  const open = createPokieConversation((stake, roll) => {
+    const result = coins.wager(stake, roll, profit.maxPayout(stake));
+    return {...result, banned: profit.record(stake, result.payout)};
+  }, () => 0.999);
+  const first = open().replies[2].next();
+  assert.equal(coins.count, 190);
+  const second = first.replies[2].next();
+  assert.equal(coins.count, 195);
+  assert.equal(coins.outcome, null);
+  assert.equal(second.mood, 'jackpot');
+  assert.match(second.text, /Payout: ₥15\./);
+  assert.equal(second.action, 'summonEliasForPokieBan');
+  assert.equal(profit.banned, true);
+});
+
+test('Elias collects a one-time rounded tax on actual pokie profit before checking victory', async () => {
+  const {createPokieProfit} = await import('../src/pokie-dialogue.mjs');
+  const {eliasPokieBan} = await import('../src/elias.mjs');
+  const uncapped = createPokieProfit();
+  assert.equal(uncapped.collectTax(), 0);
+  uncapped.record(10, 107);
+  assert.equal(uncapped.collectTax(), 49);
+  assert.equal(uncapped.collectTax(), 0);
+
+  const profit = createPokieProfit();
+  const coins = createCoinBalance();
+  coins.change(20);
+  for (const multiplier of [5, 10]) {
+    const stake = 10;
+    const result = coins.wager(stake, () => multiplier, profit.maxPayout(stake), true);
+    assert.equal(result.outcome, null);
+    profit.record(stake, result.payout);
+  }
+  assert.equal(coins.count, 215);
+  const due = profit.collectTax();
+  assert.equal(due, 48);
+  coins.change(-due);
+  assert.equal(coins.count, 167);
+  assert.equal(coins.outcome, null);
+  assert.equal(profit.collectTax(), 0);
+  let line = eliasPokieBan;
+  while (line.replies.length) line = line.replies[0].next;
+  assert.equal(line.action, 'collectPokieTax');
+});

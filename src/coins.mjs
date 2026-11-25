@@ -7,9 +7,9 @@ export function createCoinBalance(onChange) {
   let earningStreak = 0;
   let streakEarnings = 0;
   let pendingTax = null;
-  function publish() {
+  function publish(deferWin = false) {
     if (count === 0) outcome = 'loss';
-    if (count === WINNING_COINS) outcome = 'win';
+    if (!deferWin && count === WINNING_COINS) outcome = 'win';
     onChange?.(count, outcome);
   }
   return {
@@ -22,15 +22,18 @@ export function createCoinBalance(onChange) {
       pendingTax = null;
       return this.change(-due);
     },
-    wager(stake, rollMultiplier) {
+    wager(stake, rollMultiplier, maxPayout = Infinity, deferWinAtCap = false) {
       if (outcome || !Number.isSafeInteger(stake) || stake < 1 || stake > count) return null;
       count -= stake;
       // Settle the stake and payout together so an all-in win can recover from zero.
-      const payout = stake * rollMultiplier();
-      count = Math.min(WINNING_COINS, count + payout);
+      const payout = Math.min(stake * rollMultiplier(), maxPayout);
+      // A banned player settles the extraordinary tax before the victory check.
+      const deferWin = deferWinAtCap && payout === maxPayout;
+      count += payout;
+      if (!deferWin) count = Math.min(WINNING_COINS, count);
       earningStreak = 0;
       streakEarnings = 0;
-      publish();
+      publish(deferWin);
       return {payout, outcome};
     },
     change(delta) {

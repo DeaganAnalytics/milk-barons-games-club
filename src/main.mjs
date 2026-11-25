@@ -195,7 +195,7 @@ const dialogue = createDialogue(baron, {
     if (pokieProfit.banned) return null;
     placingPokieWager = true;
     try {
-      const result = coinBalance.wager(stake, rollMultiplier);
+      const result = coinBalance.wager(stake, rollMultiplier, pokieProfit.maxPayout(stake), true);
       if (result) result.banned = pokieProfit.record(stake, result.payout);
       return result;
     } finally {
@@ -223,6 +223,10 @@ const dialogue = createDialogue(baron, {
   },
   onAction: (action, target) => {
     if (action === 'summonEliasForPokieBan') startEliasScene({pokieBan: true});
+    if (action === 'collectPokieTax') {
+      const tax = pokieProfit.collectTax();
+      if (tax) clubEvent('Elias collects the extraordinary profits tax.', () => coinBalance.change(-tax));
+    }
     if (action === 'finishPokieGame') showCoinOutcome(coinBalance.outcome);
     if (action === 'wakeSleepingGambler' && sleepingGambler.takeTokens(true, elapsed)) {
       clubEvent('Pip wakes the gambler and points out his tokens.', () => karma.change(2));
