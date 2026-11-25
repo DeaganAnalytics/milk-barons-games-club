@@ -37,11 +37,16 @@ const normalDialogue = say('If you have something to report, find one of the rov
 ]);
 
 const apologyDialogue = say('Come to apologise?', 'suspicious', [
-  reply('Yes.', say("Great. That'll be ₥10 for wasting my time.", 'formal', [], {action: 'payGuardApology'}), 'sorry'),
+  reply('Yes.', say("Great. That'll be ₥10 for wasting my time.", 'formal', [], {enterAction: 'payGuardApology'}), 'sorry'),
   reply('Apologise? You hit me!', say('Udderly ridiculous. Now MOOVE it!', 'angry'), 'alarmed'),
   reply('No.', say("Then I'm not talking to you.", 'deadpan'))
 ]);
 
+const drunkDialogue = say('Why am I seeing double?', 'suspicious', [
+  reply("I'll leave you to it.", null)
+], {mustContinue: true});
+
 export function creameryGuardDialogue(guard) {
+  if (guard.drunk) return drunkDialogue;
   return guard.apologyRequired ? apologyDialogue : normalDialogue;
 }

@@ -304,6 +304,13 @@ try {
   await closeConversation();
 
   await load(412, 915, true, 'pixel-8a-club-text');
+  assert.ok(await evaluate(`(() => {
+    const canvas = document.getElementById('game');
+    const playfield = canvas.parentElement.getBoundingClientRect();
+    const available = document.querySelector('.shell').getBoundingClientRect().width;
+    return playfield.width <= available * 0.96 + 1
+      && Math.abs(canvas.clientHeight - canvas.clientWidth * 1370 / 1380) < 1;
+  })()`));
   const wrapping = await evaluate(`(() => {
     const info = document.getElementById('info');
     const sample = info.cloneNode();
@@ -443,6 +450,20 @@ try {
   await expressions('thinking', 'suspicious');
   await reply('But you have horns.', 'I am a guard.');
   await expressions('thinking', 'angry');
+  await closeConversation();
+  await activate('Bull Guard');
+  await reply('You look parched. Can I buy you a drink?', 'Oi! Wait, for real?');
+  await reply('Psych! Just kidding!', '(The guard strikes Pip with the butt of his rifle.) Piss off.');
+  await closeConversation();
+  await activate('Bull Guard');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Come to apologise?');
+  const beforeApology = Number(await evaluate('document.getElementById("coin-count").textContent'));
+  await reply('Yes.', "Great. That'll be ₥10 for wasting my time.");
+  assert.equal(Number(await evaluate('document.getElementById("coin-count").textContent')), beforeApology - 10);
+  await closeConversation();
+  assert.equal(Number(await evaluate('document.getElementById("coin-count").textContent')), beforeApology - 10);
+  await activate('Bull Guard');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), postedGreeting);
   await closeConversation();
   await hold('ArrowLeft', 170);
   await hold('ArrowDown', 1900);

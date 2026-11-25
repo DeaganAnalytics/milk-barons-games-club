@@ -101,7 +101,7 @@ export const karma = createKarma((score, position) => {
   karmaMeter.style.setProperty('--karma-position', `${position * 100}%`);
   karmaMeter.setAttribute('aria-valuenow', score);
   karmaMeter.setAttribute('aria-valuetext', score === 0 ? 'Neutral' : String(score));
-  const event = score <= -0.5 ? 'reward' : score >= 5 ? 'fine' : null;
+  const event = score <= -5 ? 'reward' : score >= 5 ? 'fine' : null;
   if (event && !triggeredBaronKarma.has(event)) {
     triggeredBaronKarma.add(event);
     pendingBaronKarma.push(event);
@@ -207,12 +207,12 @@ const dialogue = createDialogue(baron, {
           creameryGuard.drunk = true;
           creameryGuard.drunkSince ??= elapsed;
         }
-        if (action === 'payGuardApology') creameryGuard.apologyRequired = false;
         if (action === 'guardRifleStrike') {
           creameryGuard.apologyRequired = true;
           health.change(-2, 'The Creamery guard knocked you out.');
         }
         if (coins) coinBalance.change(coins);
+        if (action === 'payGuardApology') creameryGuard.apologyRequired = false;
         if (karmaPoints) karma.change(karmaPoints);
       });
     }

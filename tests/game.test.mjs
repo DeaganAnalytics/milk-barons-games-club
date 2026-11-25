@@ -1593,7 +1593,7 @@ test('the Creamery guard offers both drinks and gates his regular replies behind
   guard.apologyRequired = true;
   const apology = creameryGuardDialogue(guard);
   assert.equal(apology.text, 'Come to apologise?');
-  assert.deepEqual(apology.replies.map(reply => reply.next.action), ['payGuardApology', undefined, undefined]);
+  assert.deepEqual(apology.replies.map(reply => reply.next.enterAction), ['payGuardApology', undefined, undefined]);
   assert.equal(creameryGuardDialogue(guard), apology);
   guard.apologyRequired = false;
   assert.equal(creameryGuardDialogue(guard), opening);
