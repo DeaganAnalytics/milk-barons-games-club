@@ -215,10 +215,6 @@ canvas {
   --portrait-width: 104%;
 }
 
-.conversation-portrait[data-portrait="pillory-commissioner"] {
-  --portrait-width: 98%;
-}
-
 .conversation-portrait[data-portrait="slot-executive"]:is(
   [data-expression="skeptical"], [data-expression="smug"], [data-expression="exasperated"], [data-expression="tousled"]
 ) {
