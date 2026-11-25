@@ -379,7 +379,7 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
   }
 
   function reportingReplies(target) {
-    const report = guardReplies[2];
+    const [cow, decline, report] = guardReplies;
     const status = canReportMilo?.() ?? {};
     const reports = [...availableReports(baron.completedRugTrips, status.seen, status.unavailable, reportedBaronFollowing)];
     if (canReportPool?.()) reports.push(...poolReports.filter(report =>
@@ -390,8 +390,9 @@ export function createDialogue(baron, {onAction, baronStanding, hasSeenCowGuard,
       playerMood: 'alarmed',
       next: {text: 'What?! Unacceptable. Show me where this is!', mood: 'speaking', action: 'reportPillory'}
     });
-    const replies = guardReplies.slice(0, 2);
+    const replies = [cow];
     if (reports.length) replies.push({...report, next: {...report.next, replies: [...reports, ...report.next.replies]}});
+    replies.push(decline);
     return replies;
   }
 

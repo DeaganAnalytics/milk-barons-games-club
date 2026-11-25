@@ -326,6 +326,27 @@ try {
     assert.ok(lines > 0 && lines <= 3, `Club notice "${key}" wraps to ${lines} lines at 412px`);
   }
 
+  const karmaPositions = await evaluate(`(async () => {
+    const {karma} = await import('./src/main.mjs');
+    const meter = document.getElementById('karma-meter');
+    const marker = meter.querySelector('.karma-marker');
+    return [0, -10, -5, -0.5, -0.25, 0, 2.5, 5, 10].map(score => {
+      karma.change(score - karma.score);
+      const bar = meter.getBoundingClientRect();
+      const dot = marker.getBoundingClientRect();
+      return {
+        score, accessibleScore: Number(meter.getAttribute('aria-valuenow')),
+        left: (dot.left + dot.width / 2 - bar.left) / bar.width
+      };
+    });
+  })()`, true);
+  for (const {score, accessibleScore, left} of karmaPositions) {
+    assert.equal(accessibleScore, score);
+    // These are the positions of the first and last ticks in the artwork.
+    const expected = 0.237 + 0.526 * (score + 10) / 20;
+    assert.ok(Math.abs(left - expected) < 0.005, `Karma marker at ${score}: ${left}`);
+  }
+
   await load(1100, 950, false, 'guard-walk');
   assert.equal(await evaluate('window.guardSteps.length'), 0);
   await frames(180);
