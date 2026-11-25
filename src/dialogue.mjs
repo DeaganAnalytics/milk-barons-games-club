@@ -534,7 +534,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       playerMood: target.slotReaction.playerMood,
       replies: [{label: target.slotReaction.response, next: null}]
     } : partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening
-      : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.())
+      : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.(), isCommissionerSplattered?.(), baronDiscoveries?.()?.pool)
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
       : target.id === elias.id && target.pokieBan ? eliasPokieBan
       : target.id === elias.id && target.pokieRefusal ? eliasPokieRefusal

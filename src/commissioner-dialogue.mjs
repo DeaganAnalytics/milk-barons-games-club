@@ -21,19 +21,37 @@ export function createCommissionerConversation() {
     }), null);
   }
 
-  const introduction = {
-    text: 'Please... help me.',
-    mood: stressed,
-    replies: [exchange([
-      ['Who are you?', "I'm the Stickman Rights Commissioner. Or at least, I was.", sad],
-      ['What happened?', 'I asked the Baron to increase milk rations for the poor. I thought if I presented enough evidence, he might listen.', sad],
-      ['And he put you here?', 'He called it a public consultation exercise.', deadpan, 'alarmed'],
-      ['A public consultation?', 'Apparently, the public is invited to express its opinion of my work through milk balloons.', frowning],
-      ['How long have you been here?', "I've lost track of the days. Nobody will tell me when I'm being released.", despondent, 'worried'],
-      ['Is there anything I can do?', "I don't know anymore. You're the first person who's stopped to speak to me without throwing something.", sad, 'worried']
-    ])]
-  };
+  const introductionStart = [
+    ['Who are you?', "I'm the Stickman Rights Commissioner. Or at least, I was.", sad],
+    ['What happened?', 'I asked the Baron to increase milk rations for the poor. I thought if I presented enough evidence, he might listen.', sad],
+    ['And he put you here?', 'He called it a public consultation exercise.', deadpan, 'alarmed']
+  ];
+  const publicConsultation = ['A public consultation?', 'Apparently, the public is invited to express its opinion of my work through milk balloons.', frowning];
+  const timeInPillory = ['How long have you been here?', "I've lost track of the days. Nobody will tell me when I'm being released.", despondent, 'worried'];
 
+  function introduction(played, splattered) {
+    const text = played ? "Oh... it's you. Come to throw another balloon?"
+      : splattered ? 'Please... not another one.' : 'Please... help me.';
+    const consultation = played
+      ? [['A public consultation?', "Yes. You've already participated.", deadpan]]
+      : [publicConsultation];
+    if (splattered && !played) {
+      consultation.push(['Does everyone throw them?', 'Some even come back for another turn.', despondent]);
+    }
+    const finalReply = played ? "Haven't you done enough?"
+      : splattered ? "Just... please don't be like the others."
+        : "I don't know anymore. You're the first person who's stopped to speak to me without throwing something.";
+    return {
+      text,
+      mood: played ? despondent : stressed,
+      replies: [exchange([
+        ...introductionStart,
+        ...consultation,
+        timeInPillory,
+        ['Is there anything I can do?', finalReply, played ? frowning : sad, 'worried']
+      ])]
+    };
+  }
 
   const thankHer = {
     ...exchange([['My family is struggling. Thank you for standing up for us.', "I'm not sure it was worth it.", despondent, 'attentive']]),
@@ -94,10 +112,55 @@ export function createCommissionerConversation() {
     ], [{label: 'Continue', playerMood: 'attentive', next: guardWarning}])
   );
 
-  return (played = false) => {
+  const poolTopic = 'commissionerMilkPool';
+  const poolBranches = [
+    exchange([['I just thought it was cool.', 'What... are you? A... child?', frowning]]),
+    exchange([
+      ["Apparently, it's good for your skin.", 'How... is this... relevant?', deadpan],
+      ['It might help you see the bright side of all this?', 'God help me.', despondent]
+    ]),
+    exchange([
+      ['Just another display of wastefulness.', "Be quiet! That's how I ended up here.", stressed],
+      ['By complaining about the pool?', "I'm surrounded by idiots.", frowning]
+    ])
+  ];
+  poolBranches[2].next.direction = 'Whispers';
+  const poolQuestion = {
+    ...exchange([["Did you know there's a milk pool here?", 'Why... are you telling me this?', deadpan]],
+      poolBranches.map(branch => ({...branch, once: poolTopic, consumeOnSelect: true}))),
+    once: poolTopic
+  };
+
+  let milkQuestionAnswered = false;
+  const milkQuestion = {
+    label: "What's that on your face?",
+    playerMood: 'thinking',
+    next: null
+  };
+  const finishMilkQuestion = {
+    label: 'Continue',
+    next: () => {
+      milkQuestionAnswered = true;
+      menu.replies = menu.replies.filter(reply => reply !== milkQuestion);
+      return menu;
+    }
+  };
+
+  return (played = false, splattered = false, seenMilkPool = false) => {
+    if (seenMilkPool && !menu.replies.includes(poolQuestion)) menu.replies.push(poolQuestion);
+    menu.replies = menu.replies.filter(reply => reply !== milkQuestion);
+    if (splattered && !milkQuestionAnswered) {
+      milkQuestion.next = {
+        text: played ? 'Milk. You put it there...' : 'Milk. It drips off eventually.',
+        mood: played ? frowning : deadpan,
+        mustContinue: true,
+        replies: [finishMilkQuestion]
+      };
+      menu.replies.push(milkQuestion);
+    }
     if (!met) {
       met = true;
-      return introduction;
+      return introduction(played, splattered);
     }
     if (canPickpocket) {
       menu.replies.push(pickpocket);
