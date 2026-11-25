@@ -195,6 +195,16 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    if (action === 'blackmailPolitician') {
+      clubEvent('Pip threatens to expose the politician.', () => karma.change(-1));
+    }
+    if (action === 'politicianHit') {
+      health.change(-0.5, 'The politician knocked you out.');
+      clubEvent('The politician hits Pip. Health lost.');
+    }
+    if (action === 'politicianBribe') {
+      clubEvent('The politician pays Pip to keep quiet.', () => coinBalance.change(10));
+    }
     const coinEvent = coinEvents[action];
     if (coinEvent) {
       const [text, amount] = coinEvent;

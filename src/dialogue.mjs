@@ -1,3 +1,4 @@
+import {createPoliticianConversation, politicianId, politicianMoods} from './politician-dialogue.mjs';
 import {slotPlayers} from './slot-machines.mjs';
 import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
 import {bartenderExit, bartenderMoods, bartenderOpening} from './bartender-dialogue.mjs';
@@ -168,6 +169,9 @@ function standalonePortraitUrl(id, withoutMilk = false, mood) {
     const suffix = mood === 'annoyed' ? '-annoyed-portrait.webp' : '-portrait.webp';
     return new URL('../assets/guests/' + id + suffix, import.meta.url);
   }
+  if (id === politicianId && politicianMoods.includes(mood) && mood !== 'weary') {
+    return new URL('../assets/slots/' + id + '-' + mood + '-portrait.webp', import.meta.url);
+  }
   if (slotPlayers.some(player => player.id === id)) return new URL('../assets/slots/' + id + '-portrait.webp', import.meta.url);
   const filename = id + (withoutMilk ? '-empty-portrait.webp' : '-portrait.webp');
   return new URL('../assets/waiters/' + filename, import.meta.url);
@@ -187,7 +191,8 @@ function warmPortraits() {
   for (const mood of eliasPortraits) urls.push(standalonePortraitUrl(elias.id, false, mood));
   for (const mood of professorMoods) urls.push(standalonePortraitUrl(professor.id, false, mood));
   for (const mood of lifeguardMoods) urls.push(standalonePortraitUrl(lifeguard.id, false, mood));
-  for (const {id} of slotPlayers) urls.push(standalonePortraitUrl(id));
+  for (const mood of politicianMoods) urls.push(standalonePortraitUrl(politicianId, false, mood));
+  for (const {id} of slotPlayers.filter(player => player.id !== politicianId)) urls.push(standalonePortraitUrl(id));
   for (const {id} of partyGuests) {
     urls.push(standalonePortraitUrl(id), standalonePortraitUrl(id, false, 'annoyed'));
   }
@@ -229,6 +234,8 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
   const closeButton = document.getElementById('conversation-close');
   let action = null;
   let activeTarget;
+  let autoClose;
+  const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
   const professorOpening = createProfessorConversation();
@@ -264,6 +271,7 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
   }
 
   function close(runAction = true) {
+    clearTimeout(autoClose);
     panel.hidden = true;
     map.hidden = info.hidden = controls.hidden = false;
     interact.focus({preventScroll: true});
@@ -282,6 +290,7 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
   }
 
   function show(node, character, playerMood, withoutMilk) {
+    clearTimeout(autoClose);
     action = node.action ?? null;
     if (node.vampireStage) vampireStage = Math.max(vampireStage, node.vampireStage);
     if (node.remembersPoolEntry) askedPoolEntry = true;
@@ -290,7 +299,7 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
     closeButton.hidden = Boolean((activeTarget.bartenderExitPending && node.replies?.length && !action)
       || node === lifeguardDialogue || node.mustContinue
       || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.baronKarma) && !action));
-    panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap');
+    panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || node.action === 'politicianHit');
     panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
@@ -359,6 +368,7 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
       closeButton.hidden = false;
     }
     if (node.enterAction) finishAction(node.enterAction, activeTarget);
+    if (node.autoCloseMs) autoClose = setTimeout(close, node.autoCloseMs);
   }
 
   closeButton.addEventListener('click', requestClose);
@@ -432,6 +442,7 @@ export function createDialogue(baron, {onAction, baronStanding, baronDiscoveries
       : target.id === 'baron' && target.baronKarma ? baronKarmaDialogue[target.baronKarma]
       : target.id === bartender.id ? bartenderOpening(bartenderGreetingIndex++)
       : target.id === professor.id ? professorOpening()
+      : target.id === politicianId ? politicianOpening()
       : target.id === poolClothing.id ? poolClothingDialogue
       : target.id === lifeguard.id ? lifeguardDialogue
       : target.poolClothesThanks ? {
