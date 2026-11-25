@@ -77,18 +77,29 @@ export function baronGreetings(karma, coins) {
   ];
 }
 
-export function baronDanceDialogue(used) {
+export const DJ_ADMISSION_PRICE = 60;
+
+export function baronDanceDialogue(used, canPay = () => false, hasAccess = false) {
   const exhausted = say('Good heavens... that was exhausting. Next time, I ought to just fine you.', 'displeased');
   const breathing = say('', 'winded', {direction: 'Heavy breathing', replies: more(exhausted), mustContinue: true});
   const slap = say('I SAID NO!', 'displeased', {
     playerMood: 'alarmed', enterAction: 'baronSlap', replies: more(breathing), mustContinue: true
   });
+  const offer = say('For ₥60, I can make an exception.', 'pleased', {replies: [
+    reply('Pay ₥60.', () => canPay()
+      ? say('Elias, open the rope. The boy has paid!', 'pleased', {enterAction: 'payDjAdmission'})
+      : say("You don't have ₥60, boy!", 'displeased')),
+    reply('Never mind.', null)
+  ]});
+  const admission = reply('What if I paid to speak to him?', offer, 'thinking');
   const fanRequest = say('The man is an artist! He has no time for the likes of you!', 'displeased', {replies: [
     reply('Oh, okay.', null, 'sorry'),
-    reply('Please, Baron, sir? Pretty please?', slap, 'worried')
+    reply('Please, Baron, sir? Pretty please?', slap, 'worried'),
+    ...(!hasAccess ? [admission] : [])
   ]});
   return say('Not now, boy! This is my favourite song!', 'pleased', {
-    replies: used ? [] : [reply('Can I speak to DJ Dairy?', fanRequest, 'thinking')]
+    replies: used ? (hasAccess || !canPay() ? [] : [admission])
+      : [reply('Can I speak to DJ Dairy?', fanRequest, 'thinking')]
   });
 }
 
@@ -157,16 +168,55 @@ function baronRewardDialogue(spokeToMilo, askedAboutCowGuards = false) {
   )});
 }
 
-export const baronKarmaDialogue = {
-  reward: baronRewardDialogue,
-  fine: say("Pip, Pip, Pip. I've been exceedingly generous, and you repay me by subjecting my guests to all this COMMUNISM?!", 'displeased', {replies: more(
+function baronPenaltyDialogue(spokeToProfessor) {
+  const elias = (text, replies, action) => say(text, 'current-smile', {character: 'elias', replies, action});
+  const end = (text, mood = 'displeased') => say(text, mood, {action: 'finishBaronPenalty'});
+  const professorResponse = spokeToProfessor
+    ? say("I'm not sitting through another economics lecture.", 'suspicious', {
+      speaker: 'Pip', playerMood: 'exasperated', action: 'finishBaronPenalty'
+    })
+    : say("There is absolutely no way that's a real name.", 'flustered', {
+      speaker: 'Pip', playerMood: 'alarmed',
+      replies: more(elias('Zere vere two before him, Master Pip.', undefined, 'finishBaronPenalty'))
+    });
+
+  const responses = [
+    reply("Isn't capitalism supposed to reward individual choice?",
+      say('My choices, boy! MY CHOICES!', 'displeased', {replies: more(
+        elias('Individual choice remains a privilege of ze individual who owns ze establishment.', undefined, 'finishBaronPenalty')
+      )})),
+    reply('You sound more like a communist than a capitalist.',
+      say('HOW DARE YOU!', 'displeased', {replies: [
+        reply("You're redistributing wealth.", say("TO ME! THAT'S ENTIRELY DIFFERENT!", 'displeased', {replies: more(
+          elias('A distinction of considerable economic importance, as our esteemed guest, Professor Archibald Reginald Montgomery von Butterworth-Smythe the Third, can happily explain.', more(professorResponse))
+        )}))
+      ]})),
+    reply("There's nothing wrong with helping people.",
+      say("Of course there isn't! People help me all the time!", 'pleased', {replies: [
+        reply("That's not what I meant.", end('Then I suggest you reconsider what you meant.'))
+      ]})),
+    reply('Did you ever actually study economics?',
+      say('Study it? I practically invented it!', 'laughing', {replies: [
+        reply('Economics?', say('Milking the market, boy!', 'laughing', {replies: more(
+          elias("Ze Baron's qualifications are predominantly financial rather than academic.", undefined, 'finishBaronPenalty')
+        )}))
+      ]})),
+    reply('Fine. Whatever.',
+      say("Excellent! You're beginning to understand the importance of fiscal responsibility.", 'pleased', {replies: more(
+        elias('Your fiscal responsibility, specifically. Not ours.', undefined, 'finishBaronPenalty')
+      )}), 'exasperated')
+  ];
+  const fine = say("And I'm exceptionally good at making them up!", 'laughing', {
+    enterAction: 'baronKarmaFine', replies: responses
+  });
+  return say("Pip, Pip, Pip. I've been exceedingly generous, and you repay me by subjecting my guests to all this COMMUNISM?!", 'displeased', {replies: more(
     say("I'm afraid your conduct necessitates a punitive fiscal adjustment in the form of an extraordinary behavioural compliance levy!", 'displeased', {replies: [
-      reply('Sorry, what?', say('Ve are taking your money. Consider it a tax on your unfortunate moral convictions.', 'self-assured-smirk', {
-        character: 'elias', replies: more(say('CAPITALISM, BOY! LEARN IT!', 'displeased', {action: 'baronKarmaFine'}))
-      }), 'alarmed')
+      reply('Is that another one of your made-up taxes?', elias('All taxes are made up, Master Pip.', more(fine)), 'thinking')
     ]})
-  )})
-};
+  )});
+}
+
+export const baronKarmaDialogue = {reward: baronRewardDialogue, fine: baronPenaltyDialogue};
 
 const assessments = [
   [

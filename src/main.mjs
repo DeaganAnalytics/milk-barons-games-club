@@ -1,3 +1,5 @@
+import {DJ_ADMISSION_PRICE} from './baron-dialogue.mjs';
+import {djTarget} from './dj-dialogue.mjs';
 import {dancerTargets} from './dancer-dialogue.mjs';
 import {createTally} from './elias-accounting.mjs';
 import {WAITER_MILK_PRICE} from './waiter-dialogue.mjs';
@@ -130,6 +132,7 @@ export const karma = createKarma((score, position) => {
 
 let placingPokieWager = false;
 let baronRewardPaid = false;
+let baronCompassionFinePaid = false;
 function showCoinOutcome(outcome) {
   if (outcome === 'loss') endGame('Game Over', 'You ran out of coins.');
   if (outcome === 'win') endGame('You Win!', 'You reached 200 coins.');
@@ -221,6 +224,8 @@ const dialogue = createDialogue(baron, {
   baronDiscoveries: () => ({
     pillory: seenPillory, attendant: spokeToPilloryAttendant, pool: seenMilkPool, fountain: seenMilkFountain
   }),
+  hasDjAccess: () => player.djAccess,
+  hasSeducedExecutive: () => player.lipstick,
   baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
   getStolenClothing: () => milkPool.stolenClothing,
   hasPlayedMilkBalloon: () => playedMilkBalloon,
@@ -321,8 +326,12 @@ const dialogue = createDialogue(baron, {
     }
     if (action === 'threatenMilo') clubEvent('Pip threatens Milo.', () => karma.change(-1));
     if (action === 'comfortMilo') clubEvent('Pip apologises to Milo.', () => karma.change(0.5));
+    if (action === 'payDjAdmission' && !player.djAccess && coinBalance.count >= DJ_ADMISSION_PRICE) {
+      player.djAccess = true;
+      clubEvent('The Baron charges you ₥60 to speak to DJ Dairy.', () => coinBalance.change(-DJ_ADMISSION_PRICE));
+    }
     if (action === 'baronSlap') health.change(-0.5, 'You have displeased the Baron!');
-    if (action === 'baronKarmaFine') returnBaronToRug(baron);
+    if (action === 'finishBaronPenalty') returnBaronToRug(baron);
     if (action === 'baronKarmaReward' && !baronRewardPaid) {
       baronRewardPaid = true;
       clubEvent('The Baron awards a performance incentive.', () => coinBalance.change(15, true));
@@ -336,7 +345,10 @@ const dialogue = createDialogue(baron, {
       if (coinBalance.count < 20) endGame('Game Over', 'Pip asked too many questions for his level of wealth.');
       else clubEvent('Elias fines Pip ₥20 for asking about the guards.', () => coinBalance.change(-20));
     }
-    if (action === 'baronKarmaFine') clubEvent('The Baron charges a behavioural compliance levy.', () => coinBalance.change(-15));
+    if (action === 'baronKarmaFine' && !baronCompassionFinePaid) {
+      baronCompassionFinePaid = true;
+      clubEvent('The Baron charges a behavioural compliance levy.', () => coinBalance.change(-15));
+    }
     if (action === 'eliasVampireFine') clubEvent('Elias charges you for bringing up vampires again.', () => coinBalance.change(-1));
     if (action === 'collectTax') clubEvent('Elias takes the Baron’s cut.', () => coinBalance.collectTax());
     if (action === 'finishEliasWelcome') {
@@ -464,6 +476,7 @@ const {readMovement, clearInput} = bindControls({
     const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
       && !(guestEnclosure.active && insideGuestEnclosure(guest))
       && !(guest === sleepingGamblerTarget && sleepingGambler.pose(elapsed).awake));
+    if (player.djAccess) nearbyGuests.push(djTarget);
     if (!milkPool.stolenClothing) nearbyGuests.push(poolClothing);
     const target = nearbyPracticeGuard(player) ?? nearestInteraction(player, baron, milo, guards, nearbyGuests);
     if (target) {

@@ -1,3 +1,4 @@
+import {createDjConversation, djMoods, djTarget} from './dj-dialogue.mjs';
 import {miloIntroduction, miloMenu} from './milo-dialogue.mjs';
 import {createMiloGreeting} from './milo.mjs';
 import {createDancerConversation, dancerMoods, dancerPortraitName, dancerTargets} from './dancer-dialogue.mjs';
@@ -11,7 +12,7 @@ import {createPoliticianConversation, politicianId, politicianMoods} from './pol
 import {slotPlayers} from './slot-machines.mjs';
 import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
 import {bartenderExit, bartenderMoods, bartenderOpening} from './bartender-dialogue.mjs';
-import {additionalBaronReplies, baronCowGuardReply, baronDanceDialogue, baronGreetings, baronKarmaDialogue} from './baron-dialogue.mjs';
+import {additionalBaronReplies, baronCowGuardReply, baronDanceDialogue, baronGreetings, baronKarmaDialogue, DJ_ADMISSION_PRICE} from './baron-dialogue.mjs';
 import {isBaronDancing} from './baron.mjs';
 import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasPokieBan, eliasPokieRefusal, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
@@ -149,6 +150,7 @@ const portraitCache = new Map();
 
 const npcExpressions = new Map([
   ...Object.entries(portraits).map(([id, portrait]) => [id, portrait.expressions]),
+  [djTarget.id, djMoods],
   ...dancerTargets.map(({id}) => [id, dancerMoods]),
   ...partyGuests.map(({id}) => [id, ['attentive', 'annoyed']]),
   [skimId, ['attentive', 'distressed']],
@@ -218,6 +220,7 @@ const pipReactions = {
 const cameraPortrait = new URL('../assets/dialogue/security-camera.webp', import.meta.url);
 
 function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false, tousled = false) {
+  if (id === djTarget.id) return new URL('../assets/dance/portraits/dj-' + mood + '.webp', import.meta.url);
   if (id === 'security-camera') return cameraPortrait;
   if (id.startsWith('dancer-')) return new URL('../assets/dance/portraits/' + dancerPortraitName(id, mood), import.meta.url);
   if (id === skimId && mood === 'distressed') return new URL('../assets/waiters/edmund-vale-distressed-portrait.webp', import.meta.url);
@@ -253,6 +256,7 @@ function warmPortraits() {
   for (const [id, moods] of extraPortraitMoods) {
     for (const mood of moods) urls.push(extraPortraitUrl(id, mood));
   }
+  for (const mood of djMoods) urls.push(standalonePortraitUrl(djTarget.id, false, mood));
   for (const {id} of dancerTargets) {
     for (const mood of dancerMoods) urls.push(standalonePortraitUrl(id, false, mood));
   }
@@ -291,7 +295,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury} = {}) {
+export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeducedExecutive} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -330,6 +334,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
   const skimOpening = createSkimConversation();
+  const djOpening = createDjConversation(() => hasSeducedExecutive?.());
   const dancerOpening = createDancerConversation();
   const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0);
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
@@ -339,6 +344,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const guestGreetingSeen = new Set();
   const miloGreeting = createMiloGreeting();
   let metMilo = false;
+  let spokeToProfessor = false;
   let miloWasInjured = false;
   let miloInjuryReplyPending = false;
 
@@ -552,7 +558,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   });
 
   function baronConversation() {
-    if (isBaronDancing(baron)) return baronDanceDialogue(askedDancingBaron);
+    if (isBaronDancing(baron)) return baronDanceDialogue(askedDancingBaron, () => (baronStanding?.()?.coins ?? 0) >= DJ_ADMISSION_PRICE, hasDjAccess?.());
     const {karma = 0, coins = 100} = baronStanding?.() ?? {};
     const greetings = baronGreetings(karma, coins);
     const replies = availableBaronReplies(baron);
@@ -608,6 +614,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   function open(target) {
     npcHistory.mood = pipHistory.mood = null;
     activeTarget = target;
+    spokeToProfessor ||= target.id === professor.id;
     pokieCounter.hidden = target.id !== pokieId;
     disguise = target.executiveFraud ? 'woman' : null;
     const firstGuestGreeting = !guestGreetingSeen.has(target.id);
@@ -624,7 +631,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       : target.id === elias.id && target.tax ? eliasTaxConversation(target.tax)
       : target.id === elias.id && target.danceFee ? eliasDanceConversation
       : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)
-      : target.id === 'baron' && target.baronKarma ? (target.baronKarma === 'reward' ? baronKarmaDialogue.reward(metMilo, completedBaronCowEncounters > 0) : baronKarmaDialogue.fine)
+      : target.id === 'baron' && target.baronKarma ? (target.baronKarma === 'reward' ? baronKarmaDialogue.reward(metMilo, completedBaronCowEncounters > 0) : baronKarmaDialogue.fine(spokeToProfessor))
       : target.id === bartender.id ? bartenderOpening(bartenderGreetingIndex++)
       : target.id === professor.id ? professorOpening()
       : target.id === sleepingGamblerId ? sleepingGamblerDialogue(sleepingGambler)
@@ -647,6 +654,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
           mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
         }
       : target.id === skimId ? skimOpening()
+      : target.id === djTarget.id ? djOpening()
       : target.id.startsWith('dancer-') ? dancerOpening(target.id)
       : staffIds.includes(target.id) ? waiterOpening(target.withoutMilk)
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
