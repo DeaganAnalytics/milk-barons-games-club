@@ -279,8 +279,9 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
   const hallImages = Object.values(hallArt);
   const eliasArt = loadSprite('hall/elias', 'webp');
   const rangeSpeech = createRangeSpeech();
-  const rangeArt = Object.fromEntries(['aim', 'fire', 'recover', 'target'].map(pose =>
+  const rangeArt = Object.fromEntries(['aim', 'fire', 'recover'].map(pose =>
     [pose, loadSprite('guards/range-' + pose, 'webp')]));
+  rangeArt.targets = [1, 2, 3].map(number => loadSprite('guards/range-protester-' + number, 'webp'));
   const slotArt = loadSprite('slots/milk-slot', 'webp');
   const seatedSlotArt = slotPlayers.map(({id}) => loadSprite('slots/' + id + '-seated', 'webp'));
   const professorArt = loadSprite('hall/professor', 'webp');
