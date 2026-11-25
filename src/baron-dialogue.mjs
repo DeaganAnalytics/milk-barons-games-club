@@ -138,9 +138,24 @@ export function additionalBaronReplies({used, standing, discoveries, discussedVa
     say('Did I? I delegate so many of these things.', 'pleased', {replies: more(
       elias('Ze Baron is a very busy man. He has considerable quantities of money to count.', back)
     )}), 'worried')));
-  if (discoveries.fountain) replies.push(once('baronFountain', reply('You have a fountain of milk?',
-    say('Do you not?', 'pleased', {replies: [
-      reply('People are starving! My family is starving!', say('Then you must simply buy a milk fountain. What seems to be the problem?', 'displeased', {replies: back}), 'alarmed')
-    ]}))));
+  if (discoveries.fountain) {
+    const options = [
+      ['baronFountainPoverty', "We can't afford milk, let alone a fountain!", 'Good heavens! Not even a small fountain?', 'flustered', 'alarmed'],
+      ['baronFountainInsult', 'How have you survived this long without a brain?', 'Generational wealth, my boy!', 'laughing', 'exasperated'],
+      ['baronFountainRequest', 'Perhaps you could buy my family a fountain?', 'And create a competitor? Absolutely not!', 'displeased', 'thinking'],
+      ['baronFountainLeave', 'Never mind.']
+    ];
+    const remaining = () => options.filter(([key]) => !used.has(key));
+    const fountainMenu = () => say('Then you must simply buy a milk fountain. What seems to be the problem?', 'displeased', {
+      replies: remaining().map(([key, label, text, mood, playerMood]) => once(key, reply(label,
+        text ? say(text, mood, {replies: more(() => remaining().length ? fountainMenu() : returnToMenu())}) : null,
+        playerMood)))
+    });
+    if (remaining().length) {
+      replies.push(reply('You have a fountain of milk?', say('Do you not?', 'pleased', {
+        replies: [reply('People are starving! My family is starving!', fountainMenu(), 'alarmed')]
+      })));
+    }
+  }
   return replies;
 }
