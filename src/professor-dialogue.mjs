@@ -91,7 +91,7 @@ const moneyLecture = exchange([
 ], back, 'chargeProfessorFee');
 moneyLecture.once = 'chargeProfessorFee';
 
-menu.replies.push(
+const oneTimeTopics = [
   exchange([
     ['What are you doing here?', 'Drinking milk, of course. Keeps the bones strong, the skin youthful and the intellect sharp.', smirk],
     ['From a fountain?', 'Naturally. Where do you drink your milk from?', skeptical, 'alarmed'],
@@ -112,7 +112,11 @@ menu.replies.push(
     ['They have horns!', 'Guards.', deadpan, 'alarmed'],
     ['And udders!', 'My dear boy, I cannot make this any simpler for you. They are guards.', condescending, 'alarmed'],
     ['But...', 'Guards!', skeptical, 'worried']
-  ], []),
+  ], [])
+];
+
+menu.replies.push(
+  ...oneTimeTopics.map(reply => ({...reply, once: 'professor: ' + reply.label, consumeOnSelect: true})),
   moneyLecture
 );
 

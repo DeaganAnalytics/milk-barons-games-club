@@ -270,6 +270,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const speaker = document.getElementById('conversation-speaker');
   const line = document.getElementById('conversation-line');
   const replyList = document.getElementById('conversation-replies');
+  const advance = document.getElementById('conversation-advance');
   const playerPortrait = document.getElementById('conversation-player');
   const playerArt = playerPortrait.querySelector('canvas');
   const npcPortrait = document.getElementById('conversation-npc');
@@ -402,6 +403,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
+    closeButton.classList.toggle('conversation-exit', closeButton.textContent === 'End conversation');
     line.textContent = node.text;
     line.hidden = !node.text && !node.direction;
     if (node.direction) {
@@ -439,10 +441,13 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
-    replyList.replaceChildren(...availableReplies.map(reply => {
+    const choiceButtons = [];
+    const advanceButtons = [];
+    for (const reply of availableReplies) {
+      const isContinue = reply.label === 'Continue';
       const button = document.createElement('button');
       button.type = 'button';
-      button.textContent = reply.label;
+      button.textContent = isContinue ? 'Continue →' : reply.label;
       button.addEventListener('click', () => {
         if (character === elias.id && reply.label === 'Are you a vampire?') askedEliasAboutVampires = true;
         if (character === 'baron' && reply.label === 'Can I speak to DJ Dairy?') askedDancingBaron = true;
@@ -465,15 +470,17 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
           show(next, character, reply.playerMood, withoutMilk);
         }
       });
-      return button;
-    }));
-    (replyList.firstElementChild ?? closeButton).focus();
+      (isContinue ? advanceButtons : choiceButtons).push(button);
+    }
+    replyList.replaceChildren(...choiceButtons);
+    advance.replaceChildren(...advanceButtons);
     if (node.order) {
       activeTarget.order = node.order;
       activeTarget.boughtDrink = true;
       activeTarget.bartenderExitPending = false;
       closeButton.hidden = false;
     }
+    (replyList.firstElementChild ?? advance.firstElementChild ?? (closeButton.hidden ? null : closeButton))?.focus();
     if (node.enterAction) finishAction(node.enterAction, activeTarget);
     if (node.advanceTo) {
       if (node.mood === 'toward') {

@@ -273,8 +273,48 @@ canvas {
   cursor: pointer;
 }
 
+.conversation-advance {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.conversation-replies:empty,
+.conversation-advance:empty {
+  display: none;
+}
+
+.conversation-advance button {
+  border-color: #c8a66f;
+  background: #302c24;
+  color: #f3d5a1;
+  font-weight: 700;
+}
+
+.conversation-advance button:hover,
+.conversation-advance button:focus-visible {
+  background: #453827;
+}
+
 #conversation-close {
   margin-top: 12px;
+}
+
+#conversation-close.conversation-exit {
+  border-color: #718778;
+  background: transparent;
+  color: #deeadf;
+}
+
+@media (max-width: 600px) {
+  .conversation-advance {
+    flex-direction: column;
+  }
+
+  .conversation-advance button {
+    width: 100%;
+  }
 }
 
 /* These marks share the portrait atlas' position and scale. */
