@@ -1,5 +1,6 @@
+import {sleepingGamblerId} from './sleeping-gambler.mjs';
 import {SLOT_STATIONS} from './room.mjs';
-import {drawPipAtSlot, drawSleepingSlotPlayer} from './pip-art.mjs';
+import {drawSleepingSlotPlayer} from './pip-art.mjs';
 
 const cabinetWidth = 56;
 const cabinetHeight = 108;
@@ -25,28 +26,19 @@ export const openSlot = {
   x: freeSlot.x + seatOffsetX, radius: 22
 };
 
-export function sitAtSlot(player) {
-  const station = freeSlot;
-  player.slotSeat = {station, previousX: player.x, previousY: player.y};
-  player.x = station.x + seatOffsetX;
-  player.y = station.y;
-  player.walking = false;
-}
+export const sleepingGamblerTarget = {
+  ...sleepingSlot, id: sleepingGamblerId, title: 'Sleeping Gambler',
+  x: sleepingSlot.x + seatOffsetX, radius: 22
+};
 
-export function leaveSlot(player) {
-  player.x = player.slotSeat.previousX;
-  player.y = player.slotSeat.previousY;
-  player.slotSeat = null;
-}
-
-export function drawSlotStation(ctx, art, station, seatedArt, playerSeated, elapsed, index) {
+export function drawSlotStation(ctx, art, station, seatedArt, elapsed, index, gamblerPose) {
   if (!art?.naturalWidth) return;
   const {x, y} = station;
   const left = x - cabinetWidth / 2;
   const top = y - cabinetHeight;
   const seatX = x + seatOffsetX;
   const seatY = y + seatOffsetY;
-  const pull = seatedArt?.naturalWidth ? slotLeverPull(elapsed, index) : 0;
+  const pull = gamblerPose?.pull ?? (seatedArt?.naturalWidth ? slotLeverPull(elapsed, index) : 0);
   ctx.drawImage(art, left, top, cabinetWidth, cabinetHeight);
   if (pull) {
     // Stretch above the knob and compress toward the pivot, keeping the mount fixed.
@@ -72,10 +64,16 @@ export function drawSlotStation(ctx, art, station, seatedArt, playerSeated, elap
   ctx.fill();
   ctx.restore();
 
-  if (playerSeated) {
-    drawPipAtSlot(ctx, seatX, seatY, elapsed);
-  } else if (station === sleepingSlot) {
-    drawSleepingSlotPlayer(ctx, seatX, seatY, elapsed);
+  if (gamblerPose) {
+    if (gamblerPose.tokens) {
+      ctx.fillStyle = '#f4c45a';
+      for (const offset of [0, 4, 7]) {
+        ctx.beginPath();
+        ctx.ellipse(seatX - 22 + offset, seatY - 19, 2.4, 1.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    drawSleepingSlotPlayer(ctx, seatX, seatY, elapsed, gamblerPose);
   } else if (seatedArt?.naturalWidth) {
     const height = 55;
     const width = seatedArt.naturalWidth / seatedArt.naturalHeight * height;

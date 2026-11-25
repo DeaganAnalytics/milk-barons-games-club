@@ -1,5 +1,6 @@
+import {createSleepingGambler} from './sleeping-gambler.mjs';
 import {createSlotReactions} from './slot-reactions.mjs';
-import {leaveSlot, openSlot, sitAtSlot, slotPlayers} from './slot-machines.mjs';
+import {openSlot, sleepingGamblerTarget, slotPlayers} from './slot-machines.mjs';
 import {clubSightLines} from './club-sight-lines.mjs';
 import {facingIndex} from './directions.mjs';
 import {advanceEliasRun, elias, routeEliasToPip, updateEliasFollow} from './elias.mjs';
@@ -35,7 +36,8 @@ const creameryGuard = createCreameryGuard();
 guards.push(creameryGuard);
 const staff = createStaff(player, baron, milo, guards);
 const slotReactions = createSlotReactions(staff, guards);
-const guests = [...staff, ...slotPlayers, openSlot, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
+const sleepingGambler = createSleepingGambler();
+const guests = [...staff, ...slotPlayers, openSlot, sleepingGamblerTarget, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
 const milkService = createMilkService();
@@ -43,7 +45,7 @@ const attendantMilk = createAttendantMilk();
 const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
 let seenCowGuard = false;
-const render = createRenderer(document.getElementById('game'), () => { seenCowGuard = true; });
+const render = createRenderer(document.getElementById('game'), () => { seenCowGuard = true; }, sleepingGambler);
 let eliasApproaching = true;
 let eliasScene = null;
 let seenMilo = false;
@@ -113,12 +115,17 @@ export const karma = createKarma((score, position) => {
   }
 });
 
+let placingPokieWager = false;
+function showCoinOutcome(outcome) {
+  if (outcome === 'loss') endGame('Game Over', 'You ran out of coins.');
+  if (outcome === 'win') endGame('You Win!', 'You reached 200 coins.');
+}
+
 export const coinBalance = createCoinBalance((count, outcome) => {
   if (!gameOver.hidden) return;
   coinCount.textContent = count;
   coinAnnouncement.textContent = `${count} coins`;
-  if (outcome === 'loss') endGame('Game Over', 'You ran out of coins.');
-  if (outcome === 'win') endGame('You Win!', 'You reached 200 coins.');
+  if (!placingPokieWager) showCoinOutcome(outcome);
 });
 
 const firstSightLines = new Map(clubSightLines);
@@ -181,6 +188,15 @@ const clothingEvents = {
 };
 
 const dialogue = createDialogue(baron, {
+  placePokieWager(stake, rollMultiplier) {
+    placingPokieWager = true;
+    try {
+      return coinBalance.wager(stake, rollMultiplier);
+    } finally {
+      placingPokieWager = false;
+    }
+  },
+  sleepingGambler,
   hasSeenCowGuard: () => seenCowGuard,
   hasKarmaChanged: () => hasChangedKarma,
   baronDiscoveries: () => ({
@@ -200,6 +216,16 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    if (action === 'finishPokieGame') showCoinOutcome(coinBalance.outcome);
+    if (action === 'wakeSleepingGambler' && sleepingGambler.takeTokens(true, elapsed)) {
+      clubEvent('Pip wakes the gambler and points out his tokens.', () => karma.change(2));
+    }
+    if (action === 'stealSleepingGamblerTokens' && sleepingGambler.takeTokens(false, elapsed)) {
+      clubEvent('Pip pockets the sleeping gambler’s tokens.', () => {
+        karma.change(-2);
+        coinBalance.change(10);
+      });
+    }
     if (action === 'blackmailPolitician') {
       clubEvent('Pip threatens to expose the politician.', () => karma.change(-1));
     }
@@ -367,30 +393,19 @@ function warnAtGuestGate() {
 const {readMovement, clearInput} = bindControls({
   isPaused: () => eliasApproaching || Boolean(eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene),
   nudge: (dx, dy) => {
-    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || player.slotSeat) return;
+    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else movePlayer(player, baron, dx, dy, guards);
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
     if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon) return;
-    if (player.slotSeat) {
-      leaveSlot(player);
-      clearInput();
-      clubEvent('Pip leaves the milk slot machine.');
-      return;
-    }
     const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
-      && !(guestEnclosure.active && insideGuestEnclosure(guest)));
+      && !(guestEnclosure.active && insideGuestEnclosure(guest))
+      && !(guest === sleepingGamblerTarget && sleepingGambler.pose(elapsed).awake));
     if (!milkPool.stolenClothing) nearbyGuests.push(poolClothing);
     const target = nearestInteraction(player, baron, milo, guards, nearbyGuests);
     if (target) {
-      if (target.id === openSlot.id) {
-        sitAtSlot(player);
-        clearInput();
-        clubEvent('Pip takes the empty seat. Interact again to stand up.');
-        return;
-      }
       if (target.id === pilloryAttendant.id) spokeToPilloryAttendant = true;
       if (target.id === 'milo') seenMilo = true;
       if (target.id === lifeguard.id && !milkPool.clothingReported) target.missingClothing = milkPool.stolenClothing;
@@ -523,7 +538,7 @@ function frame(timestamp) {
       requestAnimationFrame(frame);
       return;
     }
-    if (!player.slotSeat) updatePlayer(player, baron, movement, dt, guards);
+    updatePlayer(player, baron, movement, dt, guards);
   }
   if (!guestEscort && takeDanceExit(player)) {
     startEliasScene({danceFee: true});

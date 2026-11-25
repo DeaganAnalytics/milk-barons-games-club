@@ -1,3 +1,4 @@
+import {createCoinBalance} from '../src/coins.mjs';
 import {createProfessorConversation, professorMoods} from '../src/professor-dialogue.mjs';
 import {createProfessorSpeech, professor, professorPose} from '../src/professor.mjs';
 import {createMilkPool, lifeguard, milkPoolSpeech, poolClothing, remainingClothing, takePoolClothing, updateMilkPool} from '../src/milk-pool.mjs';
@@ -1746,4 +1747,78 @@ test('post-seduction reactions follow arrival order and release each NPC after o
   assert.ok(staff.every(actor => !actor.serviceDuty));
   assert.ok(guards.every(actor => !actor.slotReaction));
   assert.equal(reactions.update(player, baron, 0.05), undefined);
+});
+
+test('pokie rolls cover all 100 values and return 75 percent across every stake', async () => {
+  const {createPokieConversation} = await import('../src/pokie-dialogue.mjs');
+  for (const stake of [1, 5, 10]) {
+    let total = 0;
+    const outcomes = {};
+    for (let roll = 1; roll <= 100; roll++) {
+      const coins = createCoinBalance();
+      const random = () => (roll - 0.5) / 100;
+      const open = createPokieConversation(coins.wager.bind(coins), random);
+      const menu = open();
+      assert.equal(menu.mood, 'default');
+      const result = menu.replies.find(reply => reply.label === 'Bet ₥' + stake).next();
+      const payout = coins.count - 100 + stake;
+      total += payout;
+      outcomes[result.mood] = (outcomes[result.mood] ?? 0) + 1;
+      assert.equal(payout, stake * (roll <= 65 ? 0 : roll <= 80 ? 1 : roll <= 95 ? 2 : roll <= 99 ? 5 : 10));
+      assert.equal(open().mood, 'default');
+    }
+    assert.deepEqual(outcomes, {loss: 65, 'break-even': 15, 'small-win': 15, 'big-win': 4, jackpot: 1});
+    assert.equal(total, stake * 75);
+  }
+});
+
+test('pokie wagers settle all-in balances, preserve portraits on rejected bets, and show terminal outcomes', async () => {
+  const {createPokieConversation} = await import('../src/pokie-dialogue.mjs');
+  const coins = createCoinBalance();
+  coins.change(-95);
+  const rolls = [0.70, 0, 0.01, 0];
+  const open = createPokieConversation(coins.wager.bind(coins), () => rolls.shift());
+  const menu = open();
+  const even = menu.replies[1].next();
+  assert.equal(even.mood, 'break-even');
+  assert.equal(coins.count, 5);
+  const rejected = even.replies[2].next();
+  assert.equal(rejected.text, 'No money, no honey!');
+  assert.equal(rejected.mood, 'break-even');
+  const loss = rejected.replies[1].next();
+  assert.equal(loss.action, 'finishPokieGame');
+  assert.equal(coins.outcome, 'loss');
+  assert.deepEqual(loss.replies.map(reply => reply.label), ['Walk away']);
+
+  const allIn = createCoinBalance();
+  allIn.change(-90);
+  assert.deepEqual(allIn.wager(10, () => {
+    assert.equal(allIn.count, 0); // Debit is applied before the draw.
+    return 10;
+  }), {payout: 100, outcome: null});
+  assert.equal(allIn.count, 100);
+  allIn.change(95);
+  assert.deepEqual(allIn.wager(10, () => 10), {payout: 100, outcome: 'win'});
+  assert.equal(allIn.count, 200);
+});
+
+test('the sleeping gambler allows exactly one token choice and only waking plays the scripted loss', async () => {
+  const {createSleepingGambler, sleepingGamblerDialogue} = await import('../src/sleeping-gambler.mjs');
+  for (const wake of [true, false]) {
+    const man = createSleepingGambler();
+    const opening = sleepingGamblerDialogue(man);
+    assert.equal(opening.mood, 'asleep');
+    assert.equal(opening.replies[2].next, null);
+    assert.equal(sleepingGamblerDialogue(man).replies.length, 3);
+    assert.equal(opening.replies[0].next.mood, 'awake');
+    assert.equal(opening.replies[1].next.exitAction, 'stealSleepingGamblerTokens');
+    assert.equal(man.takeTokens(wake, 10), true);
+    assert.equal(man.takeTokens(!wake, 11), false);
+    assert.equal(man.pose(10.3).tokens, wake);
+    assert.equal(man.pose(11.4).pull > 0, wake);
+    assert.equal(man.pose(12.2).remark, wake ? 'Damn it! There goes breakfast.' : null);
+    assert.equal(man.pose(16).awake, false);
+    assert.equal(man.pose(16).tokens, false);
+    assert.equal(sleepingGamblerDialogue(man).text, 'The man is fast asleep.');
+  }
 });

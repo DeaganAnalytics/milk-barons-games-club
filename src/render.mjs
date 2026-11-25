@@ -1,5 +1,5 @@
 import {createSlotSpeech} from './slot-speech.mjs';
-import {drawSlotStation, slotPlayers} from './slot-machines.mjs';
+import {drawSlotStation, sleepingGamblerTarget, slotPlayers} from './slot-machines.mjs';
 import {drawElias, elias} from './elias.mjs';
 import {drawMilkBalloon, guardBalloonPose, milkBalloonHand} from './milk-balloon.mjs';
 import {createPillorySpeech} from './pillory.mjs';
@@ -266,7 +266,7 @@ function drawBartender(ctx, sprite, elapsed) {
   ctx.drawImage(sprite, x, sill - bustHeight, width * 82 / 384, bustHeight);
 }
 
-export function createRenderer(canvas, onCowGuardSeen) {
+export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
   let seenCowGuard = false;
   const danceGuardIndex = dancers.findIndex(dancer => dancer.id === 'guard');
   const ctx = canvas.getContext('2d');
@@ -368,18 +368,19 @@ export function createRenderer(canvas, onCowGuardSeen) {
     const ropeScene = ropeWarning?.scene;
     const pipFalling = ropeScene?.phase === 'fall' || ropeScene?.phase === 'over';
     const actors = [
-      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene, drawPip) : !player.slotSeat && drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant && !milkBalloon.guard ? milkBalloonHand(milkBalloon, player) : null)},
+      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene, drawPip) : drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant && !milkBalloon.guard ? milkBalloonHand(milkBalloon, player) : null)},
       {depth: baron.y + 34, draw: () => {
         if (dancing) drawBaronDance(ctx, baronDancePose, baron, elapsed);
         else drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed);
       }},
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
+    const gamblerPose = sleepingGambler.pose(elapsed);
     SLOT_STATIONS.forEach((station, index) => {
       if (station.x + 39 < cameraX || station.x - 39 > cameraX + ROOM_WIDTH
         || station.y < cameraY || station.y - 148 > cameraY + ROOM_HEIGHT) return;
       actors.push({depth: station.y, draw: () => drawSlotStation(ctx, slotArt, station, seatedSlotArt[index],
-        player.slotSeat?.station === station, elapsed, index)});
+        elapsed, index, station.y === sleepingGamblerTarget.y ? gamblerPose : null)});
     });
     const fountainFront = MILK_FOUNTAIN.y + 58;
     if (isReady(fountainArt) && fountainFront >= cameraY && fountainFront - fountainHeight <= cameraY + ROOM_HEIGHT
@@ -563,6 +564,11 @@ export function createRenderer(canvas, onCowGuardSeen) {
     if (slotRemark) {
       const {player: person, text, opacity} = slotRemark;
       drawSpeech(ctx, text, opacity, person.x - 10, person.y - 80, person.y, cameraX, cameraY);
+    }
+    const gambler = sleepingGamblerTarget;
+    if (gamblerPose.remark && gambler.x >= cameraX && gambler.x <= cameraX + ROOM_WIDTH
+        && gambler.y - 80 >= cameraY && gambler.y <= cameraY + ROOM_HEIGHT) {
+      drawSpeech(ctx, gamblerPose.remark, 1, gambler.x - 23, gambler.y - 80, gambler.y, cameraX, cameraY);
     }
     const professorRemark = professorSpeech(elapsed, professorVisible && !ropeScene);
     if (professorRemark) {
