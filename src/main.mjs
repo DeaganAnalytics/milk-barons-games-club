@@ -333,6 +333,11 @@ const dialogue = createDialogue(baron, {
       player.djAccess = true;
       clubEvent('The Baron charges you ₥60 to speak to DJ Dairy.', () => coinBalance.change(-DJ_ADMISSION_PRICE));
     }
+    if (action === 'awardDjDairyGift') clubEvent('Elias gives Pip ₥60 to tip DJ Dairy.', () => coinBalance.change(60));
+    if (action === 'tipDjDairy' && coinBalance.count >= 5) clubEvent('Pip tips DJ Dairy.', () => {
+      karma.change(0.5);
+      coinBalance.change(-5);
+    });
     if (action === 'baronFreeMilk') clubEvent('The Baron gives Pip a glass of milk. One heart restored.', () => health.change(1));
     if (action === 'baronSlap') health.change(-0.5, 'You have displeased the Baron!');
     if (action === 'finishBaronPenalty') returnBaronToRug(baron);

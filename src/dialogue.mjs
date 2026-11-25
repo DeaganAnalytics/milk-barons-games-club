@@ -334,7 +334,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
   const skimOpening = createSkimConversation();
-  const djOpening = createDjConversation(() => hasSeducedExecutive?.());
+  const djOpening = createDjConversation(() => hasSeducedExecutive?.(), () => (baronStanding?.()?.coins ?? 0) >= 5);
   const dancerOpening = createDancerConversation();
   const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0);
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
@@ -344,6 +344,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const guestGreetingSeen = new Set();
   const miloGreeting = createMiloGreeting();
   let metMilo = false;
+  let spokeToDjDairy = false;
   let spokeToProfessor = false;
   let miloWasInjured = false;
   let miloInjuryReplyPending = false;
@@ -586,6 +587,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
         discussedVampires: vampireStage > 0,
         askedEliasAboutVampires,
         spokeToMilo: metMilo,
+        spokeToDjDairy,
         seducedExecutive: hasSeducedExecutive?.(),
         returnToMenu: menu
       })]
@@ -626,6 +628,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   }
 
   function open(target) {
+    spokeToDjDairy ||= target.id === djTarget.id;
     npcHistory.mood = pipHistory.mood = null;
     activeTarget = target;
     spokeToProfessor ||= target.id === professor.id;
