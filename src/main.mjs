@@ -323,6 +323,10 @@ const dialogue = createDialogue(baron, {
     if (action === 'baronSlap') health.change(-0.5, 'You have displeased the Baron!');
     if (action === 'baronKarmaReward' || action === 'baronKarmaFine') returnBaronToRug(baron);
     if (action === 'baronKarmaReward') clubEvent('The Baron awards a performance incentive.', () => coinBalance.change(15));
+    if (action === 'baronCowFine') {
+      if (coinBalance.count < 20) endGame('Game Over', 'Pip asked too many questions for his level of wealth.');
+      else clubEvent('Elias fines Pip ₥20 for asking about the guards.', () => coinBalance.change(-20));
+    }
     if (action === 'baronKarmaFine') clubEvent('The Baron charges a behavioural compliance levy.', () => coinBalance.change(-15));
     if (action === 'eliasVampireFine') clubEvent('Elias charges you for bringing up vampires again.', () => coinBalance.change(-1));
     if (action === 'collectTax') clubEvent('Elias takes the Baron’s cut.', () => coinBalance.collectTax());

@@ -4,6 +4,37 @@ const say = (text, mood = 'pleased', extras = {}) => ({text, mood, ...extras});
 const reply = (label, next, playerMood = 'attentive') => ({label, next, playerMood});
 const more = next => [reply('Continue', next)];
 
+const finishCowEncounter = (text, mood) => say(text, mood, {action: 'finishBaronCowEncounter'});
+const cowExchange = (text, mood, replies, character) => say(text, mood, {replies, character, mustContinue: true});
+const cowGuardEncounters = [
+  reply('Why do you have cows for guards?', cowExchange('What do you mean?', 'flustered', [
+    reply('The guards are cows.', cowExchange('I have guards.', 'displeased', [
+      reply('But the horns?', finishCowEncounter('I have guards.', 'displeased'), 'thinking')
+    ]))
+  ]), 'thinking'),
+  reply('Why are the guards cows?', finishCowEncounter("Pip, we've discussed this already. They are not cows. End of story!", 'displeased')),
+  reply('Your guards are carrying guns.', finishCowEncounter('An excellent deterrent against criminal activity.', 'pleased')),
+  reply('One of your guards mooed at me.', finishCowEncounter('My guards are multilingual, young Pip.', 'pleased')),
+  reply('Have you ever actually looked at your guards?', finishCowEncounter("Of course not. That's what Elias is for.", 'laughing')),
+  reply('The cows...', cowExchange('GUARDS!', 'displeased', [
+    reply('The guards...', cowExchange('Better.', 'pleased', [
+      reply('...are cows.', cowExchange('ELIAS!', 'displeased', more(
+        cowExchange('Zat will be a fine of ₥20.', 'current-smile', [
+          reply('For asking questions?!', cowExchange('₥2 per question, plus interest, an administration fee and stamp duty.', 'reading-figures', [
+            reply('Stamp duty?!', say('Vould you like zat question added to your bill?', 'current-smile', {
+              character: 'elias', action: 'finishBaronCowFine'
+            }), 'alarmed')
+          ], 'elias'), 'alarmed')
+        ], 'elias')
+      )))
+    ]))
+  ]), 'worried')
+];
+
+export function baronCowGuardReply(completed, seenCowGuard) {
+  return seenCowGuard ? cowGuardEncounters[completed] : undefined;
+}
+
 const defaults = [
   say('Welcome, welcome to my establishment!'),
   say('Pip! Good to see you!', 'laughing'),
@@ -109,8 +140,6 @@ export function additionalBaronReplies({used, standing, discoveries, discussedVa
   const once = (key, option) => ({...option, once: key, consumeOnSelect: true});
   const elias = (text, replies, direction) => say(text, 'self-assured-smirk', {character: 'elias', replies, direction});
   const replies = [];
-  if (used.has('baronCowFirst')) replies.push(once('baronCowSecond', reply('Why are the guards cows?',
-    say("Pip, we've discussed this already. They are not cows. End of story!", 'displeased', {replies: back}))));
   if (used.has('baronFollowing') && used.has('baronWatching')) {
     const assess = () => {
       const {coins = 100, karma = 0} = standing?.() ?? {};

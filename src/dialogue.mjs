@@ -11,7 +11,7 @@ import {createPoliticianConversation, politicianId, politicianMoods} from './pol
 import {slotPlayers} from './slot-machines.mjs';
 import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
 import {bartenderExit, bartenderMoods, bartenderOpening} from './bartender-dialogue.mjs';
-import {additionalBaronReplies, baronDanceDialogue, baronGreetings, baronKarmaDialogue} from './baron-dialogue.mjs';
+import {additionalBaronReplies, baronCowGuardReply, baronDanceDialogue, baronGreetings, baronKarmaDialogue} from './baron-dialogue.mjs';
 import {isBaronDancing} from './baron.mjs';
 import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasPokieBan, eliasPokieRefusal, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
@@ -112,17 +112,6 @@ const baronReplies = [
   {
     label: 'Do you own this place?', once: 'baronOwnership', consumeOnSelect: true, playerMood: 'thinking',
     next: {text: 'Of course, I own nearly every place.', mood: 'laughing'}
-  },
-  {
-    label: 'Why do you have cows for guards?', once: 'baronCowFirst', consumeOnSelect: true, playerMood: 'thinking',
-    next: {text: 'What do you mean?', mood: 'flustered', replies: [
-      {
-        label: 'The guards are cows.', playerMood: 'attentive',
-        next: {text: 'I have guards.', mood: 'displeased', replies: [
-          {label: 'But the horns?', playerMood: 'thinking', next: {text: 'I have guards.', mood: 'displeased'}}
-        ]}
-      }
-    ]}
   }
 ];
 
@@ -321,6 +310,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   let greetingIndex = 0;
   let bartenderGreetingIndex = 0;
   let askedDancingBaron = false;
+  let completedBaronCowEncounters = 0;
   let slappedByBaron = false;
   let askedEliasAboutVampires = false;
   let vampireStage = 0;
@@ -405,6 +395,16 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   }
 
   function finishAction(finishedAction, target) {
+    if (finishedAction === 'finishBaronCowEncounter') {
+      completedBaronCowEncounters++;
+      return;
+    }
+    if (finishedAction === 'finishBaronCowFine') {
+      if (completedBaronCowEncounters !== 5) return;
+      completedBaronCowEncounters++;
+      onAction?.('baronCowFine', target);
+      return;
+    }
     if (finishedAction === 'reportBaronFollowing') {
       reportedBaronFollowing = true;
       return;
@@ -556,6 +556,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     const {karma = 0, coins = 100} = baronStanding?.() ?? {};
     const greetings = baronGreetings(karma, coins);
     const replies = availableBaronReplies(baron);
+    const cowGuardReply = baronCowGuardReply(completedBaronCowEncounters, hasSeenCowGuard?.());
+    if (cowGuardReply) replies.splice(1, 0, cowGuardReply);
     const opening = greetings[greetingIndex++ % greetings.length];
     const menu = () => ({
       ...opening,
