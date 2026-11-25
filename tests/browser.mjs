@@ -72,8 +72,12 @@ async function activate(heading, withButton = false) {
     await key('keyDown', 'KeyE', 'e');
     await key('keyUp', 'KeyE', 'e');
   }
-  const visibleHeading = heading === 'The club' ? 'heading' : 'conversation-title';
-  assert.equal(await evaluate(`document.getElementById('${visibleHeading}').textContent`), heading);
+  if (heading === null) {
+    assert.equal(await evaluate("document.getElementById('conversation').hidden"), true);
+    assert.equal(await evaluate("document.getElementById('heading')"), null);
+  } else {
+    assert.equal(await evaluate("document.getElementById('conversation-title').textContent"), heading);
+  }
 }
 
 async function reply(label, expected) {
@@ -239,7 +243,7 @@ try {
   `});
 
   await load(1100, 950, false, 'desktop');
-  await activate('The club');
+  await activate(null);
   await key('keyDown', 'ArrowUp');
   await key('keyDown', 'KeyW', 'w');
   await key('keyUp', 'KeyW', 'w');

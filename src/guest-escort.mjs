@@ -1,6 +1,6 @@
 import {movePlayer} from './player.mjs';
 import {partyGuests} from './party-guests.mjs';
-import {ROOM_HEIGHT, ROOM_WIDTH, SOUTH_TRIM_Y, routeAroundBaron} from './room.mjs';
+import {insidePracticeRange, ROOM_HEIGHT, ROOM_WIDTH, SOUTH_TRIM_Y, routeAroundBaron} from './room.mjs';
 
 const speed = 125;
 const escortX = Math.max(...partyGuests.map(guest => guest.x)) + ROOM_WIDTH / 2 + 34;
@@ -37,7 +37,11 @@ export function advanceGuestEscort(escort, player, baron, guards, elapsed, dt) {
     const target = escort.guardRoute?.[0] ?? player;
     const toTarget = Math.hypot(target.x - guard.x, target.y - guard.y);
     const move = toTarget ? Math.min(1, step / toTarget) : 0;
-    movePlayer(guard, baron, (target.x - guard.x) * move, (target.y - guard.y) * move, guards);
+    const dx = (target.x - guard.x) * move;
+    const dy = (target.y - guard.y) * move;
+    if (insidePracticeRange(guard.x + dx, guard.y, guard.radius)
+      || insidePracticeRange(guard.x + dx, guard.y + dy, guard.radius)) guard.walking = false;
+    else movePlayer(guard, baron, dx, dy, guards);
     if (!guard.walking && toTarget > 1) escort.guardRoute = routeAroundBaron(guard, player, baron);
     else if (escort.guardRoute && Math.hypot(target.x - guard.x, target.y - guard.y) <= 1) escort.guardRoute.shift();
     guard.facing = guard.walking ? Math.round(guard.facing / 2) % 4 : facing;

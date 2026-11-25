@@ -30,6 +30,29 @@ export const SLOT_STATIONS = [0, 1, 2, 3].map(index => ({
   halfHeight: 11
 }));
 
+export const PRACTICE_RANGE = {
+  west: EAST_EDGE - 315, east: EAST_EDGE,
+  north: SOUTH_TRIM_Y - 290, south: SOUTH_TRIM_Y - 102,
+  guardX: EAST_EDGE - 291, targetX: EAST_EDGE - 27,
+  lanes: [SOUTH_TRIM_Y - 262, SOUTH_TRIM_Y - 194, SOUTH_TRIM_Y - 126]
+};
+const rangeBounds = {
+  x: (PRACTICE_RANGE.west + PRACTICE_RANGE.east) / 2,
+  y: (PRACTICE_RANGE.north + PRACTICE_RANGE.south) / 2,
+  halfWidth: (PRACTICE_RANGE.east - PRACTICE_RANGE.west) / 2,
+  halfHeight: (PRACTICE_RANGE.south - PRACTICE_RANGE.north) / 2
+};
+
+export function insidePracticeRange(x, y, radius = 0) {
+  return overlaps(x, y, radius, rangeBounds);
+}
+
+export function crossesPracticeRange(from, to) {
+  return Math.max(from.x, to.x) >= PRACTICE_RANGE.west - 40
+    && Math.min(from.y, to.y) <= PRACTICE_RANGE.south + 40
+    && Math.max(from.y, to.y) >= PRACTICE_RANGE.north - 40;
+}
+
 const columns = (EAST_EDGE - WEST_EDGE) / ROOM_WIDTH;
 const rows = MAP_HEIGHT / ROOM_HEIGHT;
 
@@ -125,7 +148,7 @@ export function onDanceFloor(x, y, radius = 0) {
 }
 
 export function isNpcBlocked(x, y, radius, baron, from) {
-  return onDanceFloor(x, y, radius) || isBlocked(x, y, radius, baron, from);
+  return insidePracticeRange(x, y, radius) || onDanceFloor(x, y, radius) || isBlocked(x, y, radius, baron, from);
 }
 
 export function isBlocked(x, y, radius, baron, from) {
@@ -195,7 +218,7 @@ function crossesSlotArea(from, to) {
 }
 
 export function crossesScenery(from, to) {
-  return crossesSlotArea(from, to) || crossesPoolArea(from, to) || crossesFountainArea(from, to) || crossesPilloryArea(from, to) || Math.max(from.y, to.y) >= DANCE_FLOOR.y - 340
+  return crossesPracticeRange(from, to) || crossesSlotArea(from, to) || crossesPoolArea(from, to) || crossesFountainArea(from, to) || crossesPilloryArea(from, to) || Math.max(from.y, to.y) >= DANCE_FLOOR.y - 340
     && Math.min(from.x, to.x) < DANCE_FLOOR.x + 250
     && Math.max(from.x, to.x) > DANCE_FLOOR.x - 250;
 }
@@ -211,6 +234,7 @@ export function routeAroundBaron(member, target, baron) {
   if (crossesFountainArea(member, target)) obstacles.push(fountainBounds, professorBounds);
   if (crossesPilloryArea(member, target)) obstacles.push(...pilloryFixtures);
   if (crossesPoolArea(member, target)) obstacles.push(...poolFixtures);
+  if (crossesPracticeRange(member, target)) obstacles.push(rangeBounds);
   if (crossesSlotArea(member, target)) obstacles.push(...SLOT_STATIONS);
   if (guestEnclosure.active) obstacles.push(enclosureBounds);
   const corners = obstacles.flatMap(obstacleCorners)

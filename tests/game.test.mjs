@@ -1910,3 +1910,57 @@ test('Elias collects a one-time rounded tax on actual pokie profit before checki
   while (line.replies.length) line = line.replies[0].next;
   assert.equal(line.action, 'collectPokieTax');
 });
+
+test('the range lets Pip enter the danger zone but NPC routes go around it', async () => {
+  const {PRACTICE_RANGE, insidePracticeRange, isNpcBlocked, crossesScenery} = await import('../src/room.mjs');
+  const baron = {x: 0, y: 0};
+  const {guardX, lanes, north, south, targetX} = PRACTICE_RANGE;
+  assert.equal(lanes.length, 3);
+  assert.ok(targetX - guardX >= 260);
+  for (const y of lanes) {
+    assert.equal(insidePracticeRange(guardX + 50, y), true);
+    assert.equal(isBlocked(guardX + 50, y, 14, baron), false);
+    assert.equal(isNpcBlocked(guardX + 50, y, 14, baron), true);
+  }
+  const start = {x: guardX + 110, y: north - 62, radius: 14};
+  const end = {x: start.x, y: south + 45};
+  assert.equal(crossesScenery(start, end), true);
+  const route = routeAroundBaron(start, end, baron);
+  assert.ok(route.length > 1);
+  let from = start;
+  for (const to of route) {
+    for (let part = 1; part <= 50; part++) {
+      assert.equal(insidePracticeRange(from.x + (to.x - from.x) * part / 50,
+        from.y + (to.y - from.y) * part / 50, start.radius), false);
+    }
+    from = to;
+  }
+});
+
+test('practice range remarks run every 15 seconds and rotate across all three guards', async () => {
+  const {createRangeSpeech} = await import('../src/practice-range-speech.mjs');
+  const speech = createRangeSpeech(() => 0);
+  assert.equal(speech(14.9, true), undefined);
+  const remarks = [];
+  for (let index = 0; index < 30; index++) {
+    const time = (index + 1) * 15;
+    const remark = speech(time, true);
+    assert.equal(remark.lane, index % 3);
+    assert.equal(speech(time + 4, true), undefined);
+    remarks.push(remark.text);
+  }
+  assert.equal(new Set(remarks).size, 30);
+});
+
+test('only a live projectile intersecting Pip triggers a range hit', async () => {
+  const {rangeBullet, practiceRangeHit} = await import('../src/practice-range.mjs');
+  const bullet = rangeBullet(1.49, 0);
+  const pip = {x: bullet.x, y: bullet.y + 12, radius: 13};
+  assert.equal(practiceRangeHit(pip, pip, 1.44, 1.54), true);
+  assert.equal(practiceRangeHit(pip, pip, 1.70, 1.75), false);
+  const above = {...pip, y: pip.y - 35};
+  const below = {...pip, y: pip.y + 35};
+  assert.equal(practiceRangeHit(above, above, 1.44, 1.54), false);
+  assert.equal(practiceRangeHit(above, below, 1.49, 1.49), true);
+  assert.equal(practiceRangeHit({...pip, x: 900}, {...pip, x: 900}, 1.44, 1.54), false);
+});

@@ -1,3 +1,5 @@
+import {createRangeSpeech} from './practice-range-speech.mjs';
+import {drawRangeBoundary, drawRangeLane} from './practice-range-art.mjs';
 import {createSlotSpeech} from './slot-speech.mjs';
 import {drawSlotStation, sleepingGamblerTarget, slotPlayers} from './slot-machines.mjs';
 import {drawElias, elias} from './elias.mjs';
@@ -20,7 +22,7 @@ import {staffFrame, staffIds} from './staff.mjs';
 import {speechBubbleLayout} from './speech-layout.mjs';
 import {TURN} from './directions.mjs';
 import {isBaronDancing, isOnscreen, speechOpacity} from './baron.mjs';
-import {DANCE_FLOOR, guestEnclosure, MILK_BAG_BASKET, MILK_FOUNTAIN, MILK_POOL, NORTH_EDGE, PILLORY, PILLORY_ATTENDANT, professorFeet, ROOM_WIDTH, ROOM_HEIGHT, SLOT_STATIONS, WEST_EDGE} from './room.mjs';
+import {DANCE_FLOOR, guestEnclosure, MILK_BAG_BASKET, MILK_FOUNTAIN, MILK_POOL, NORTH_EDGE, PILLORY, PILLORY_ATTENDANT, PRACTICE_RANGE, professorFeet, ROOM_WIDTH, ROOM_HEIGHT, SLOT_STATIONS, WEST_EDGE} from './room.mjs';
 import {composeHall, loadHallArt} from './hall-art.mjs';
 
 function loadSprite(name, extension = "png") {
@@ -276,6 +278,9 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
   const hallArt = loadHallArt();
   const hallImages = Object.values(hallArt);
   const eliasArt = loadSprite('hall/elias', 'webp');
+  const rangeSpeech = createRangeSpeech();
+  const rangeArt = Object.fromEntries(['aim', 'fire', 'recover', 'target'].map(pose =>
+    [pose, loadSprite('guards/range-' + pose, 'webp')]));
   const slotArt = loadSprite('slots/milk-slot', 'webp');
   const seatedSlotArt = slotPlayers.map(({id}) => loadSprite('slots/' + id + '-seated', 'webp'));
   const professorArt = loadSprite('hall/professor', 'webp');
@@ -323,7 +328,7 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
 
   const professorSpeech = createProfessorSpeech();
   let world;
-  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool, milkBalloon = null, attendantMilk = null) => {
+  return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool, milkBalloon = null, attendantMilk = null, rangeFall = null) => {
     ctx.clearRect(0, 0, ROOM_WIDTH, ROOM_HEIGHT);
     if (world || hallImages.every(isReady)) {
       world ??= composeHall(hallArt);
@@ -341,6 +346,8 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
       && DANCE_FLOOR.x + 235 > cameraX && DANCE_FLOOR.x - 235 < cameraX + ROOM_WIDTH;
     const poolVisible = isReady(poolArt) && MILK_POOL.x + 239 > cameraX && MILK_POOL.x - 297 < cameraX + ROOM_WIDTH
       && MILK_POOL.y + 64 > cameraY && MILK_POOL.y - 202 < cameraY + ROOM_HEIGHT;
+    const rangeVisible = PRACTICE_RANGE.west <= cameraX + ROOM_WIDTH && PRACTICE_RANGE.east >= cameraX
+      && PRACTICE_RANGE.north - 48 <= cameraY + ROOM_HEIGHT && PRACTICE_RANGE.south >= cameraY;
     if (onCowGuardSeen && !seenCowGuard) {
       const inView = (x, top, bottom, halfWidth) =>
         x + halfWidth > cameraX && x - halfWidth < cameraX + ROOM_WIDTH
@@ -352,12 +359,15 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
           && inView(lifeguard.x, lifeguard.y - 58, lifeguard.y, 56 * lifeguardArt.naturalWidth / lifeguardArt.naturalHeight / 2))
         || (danceVisible && isReady(dancerSprites[danceGuardIndex])
           && inView(danceGuard.x, danceGuard.y - danceGuard.height, danceGuard.y, 24));
+      seenCowGuard ||= rangeVisible && isReady(rangeArt.aim) && PRACTICE_RANGE.lanes.some(y =>
+        inView(PRACTICE_RANGE.guardX, y - 66, y, 22));
       if (seenCowGuard) onCowGuardSeen();
     }
     if (poolVisible) {
       const clothes = milkPool.stolenClothing ? poolClothes[remainingClothing[milkPool.stolenClothing]] : poolClothes.intact;
       drawMilkPool(ctx, poolArt, elapsed, milkPool, poolHeads, clothes, lifeguardArt);
     }
+    if (rangeVisible) drawRangeBoundary(ctx);
     if (danceVisible) drawDanceFloor(ctx, danceArt);
     if (guestEnclosure.active) drawGuestRopes(ctx, guestEnclosure, false);
     if (world) drawBartender(ctx, bartenderSprite, elapsed);
@@ -368,13 +378,16 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
     const ropeScene = ropeWarning?.scene;
     const pipFalling = ropeScene?.phase === 'fall' || ropeScene?.phase === 'over';
     const actors = [
-      {depth: player.y + 22, draw: () => pipFalling ? drawPipFall(ctx, player, ropeScene, drawPip) : drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant && !milkBalloon.guard ? milkBalloonHand(milkBalloon, player) : null)},
+      {depth: player.y + 22, draw: () => rangeFall || pipFalling ? drawPipFall(ctx, player, rangeFall ?? ropeScene, drawPip) : drawPip(ctx, player, elapsed, milkBalloon && !milkBalloon.attendant && !milkBalloon.guard ? milkBalloonHand(milkBalloon, player) : null)},
       {depth: baron.y + 34, draw: () => {
         if (dancing) drawBaronDance(ctx, baronDancePose, baron, elapsed);
         else drawBaron(ctx, animateBaronArm ? milkPose : baronFrames[baron.facing], fallback, baron, elapsed);
       }},
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
+    if (rangeVisible) PRACTICE_RANGE.lanes.forEach((y, index) => {
+      actors.push({depth: y, draw: () => drawRangeLane(ctx, rangeArt, y, elapsed, index)});
+    });
     const gamblerPose = sleepingGambler.pose(elapsed);
     SLOT_STATIONS.forEach((station, index) => {
       if (station.x + 39 < cameraX || station.x - 39 > cameraX + ROOM_WIDTH
@@ -569,6 +582,15 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
     if (gamblerPose.remark && gambler.x >= cameraX && gambler.x <= cameraX + ROOM_WIDTH
         && gambler.y - 80 >= cameraY && gambler.y <= cameraY + ROOM_HEIGHT) {
       drawSpeech(ctx, gamblerPose.remark, 1, gambler.x - 23, gambler.y - 80, gambler.y, cameraX, cameraY);
+    }
+    const rangeRemark = rangeSpeech(elapsed, rangeVisible);
+    if (rangeRemark) {
+      const y = PRACTICE_RANGE.lanes[rangeRemark.lane];
+      if (y - 66 >= cameraY && y <= cameraY + ROOM_HEIGHT && PRACTICE_RANGE.guardX >= cameraX
+          && PRACTICE_RANGE.guardX <= cameraX + ROOM_WIDTH) {
+        drawSpeech(ctx, rangeRemark.text, rangeRemark.opacity, PRACTICE_RANGE.guardX,
+          y - 66, y, cameraX, cameraY);
+      }
     }
     const professorRemark = professorSpeech(elapsed, professorVisible && !ropeScene);
     if (professorRemark) {

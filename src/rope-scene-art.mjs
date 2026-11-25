@@ -85,6 +85,7 @@ export function drawPipFall(ctx, player, scene, drawPip) {
   drawPip(ctx, player, 0);
   ctx.restore();
 
+  if (scene.blood === false) return;
   const spread = Math.min(1, time / 0.35);
   ctx.fillStyle = '#a72b36';
   for (let i = 0; i < 8; i++) {
