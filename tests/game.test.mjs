@@ -1711,3 +1711,39 @@ test('Elias’s karma topic requires a change and both token branches return to 
     assert.equal(future.next.replies[0].next, menu);
   }
 });
+
+test('post-seduction reactions follow arrival order and release each NPC after one line', async () => {
+  const {createSlotReactions} = await import('../src/slot-reactions.mjs');
+  const staff = [
+    {id: 'male-waiter', x: -320, y: 85},
+    {id: 'handlebar-waiter', x: -380, y: 225},
+    {id: 'martini-waiter', x: -230, y: 375},
+    {id: 'female-waiter', x: -480, y: 250}
+  ].map(actor => ({...actor, title: 'Waiter', radius: 14, walkTime: 0}));
+  const guards = [{x: -479, y: 250}, {x: -360, y: 430}, {x: -481, y: 250, posted: true}]
+    .map(actor => ({...actor, radius: 14, stride: 0}));
+  const reactions = createSlotReactions(staff, guards);
+  const executive = {x: -620, y: 250};
+  const player = {x: -620, y: 250, walking: true};
+  const baron = {x: 345, y: 345};
+  reactions.queue(player, executive);
+  player.x += 139;
+  assert.equal(reactions.update(player, baron, 0.05), undefined);
+  player.x += 1;
+  const arrivals = [reactions.update(player, baron, 0.05)];
+  for (let tick = 0; tick < 200 && arrivals.length < 5; tick++) {
+    const arrival = reactions.update(player, baron, 0.05);
+    if (arrival) arrivals.push(arrival);
+  }
+  assert.equal(arrivals[0]?.id, 'guard');
+  assert.deepEqual(arrivals.map(arrival => arrival?.slotReaction), [
+    'Nice!', 'You absolute legend!', 'A man of exceptional talent, I see!',
+    'Respect, brother. Respect.', 'Respect, brother. Respect.'
+  ]);
+  assert.deepEqual(arrivals.map(arrival => arrival.id).sort(), [
+    'guard', 'guard', 'handlebar-waiter', 'male-waiter', 'martini-waiter'
+  ]);
+  assert.ok(staff.every(actor => !actor.serviceDuty));
+  assert.ok(guards.every(actor => !actor.slotReaction));
+  assert.equal(reactions.update(player, baron, 0.05), undefined);
+});

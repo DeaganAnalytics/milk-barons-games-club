@@ -1,3 +1,4 @@
+import {createSlotReactions} from './slot-reactions.mjs';
 import {leaveSlot, openSlot, sitAtSlot, slotPlayers} from './slot-machines.mjs';
 import {clubSightLines} from './club-sight-lines.mjs';
 import {facingIndex} from './directions.mjs';
@@ -33,6 +34,7 @@ const guards = createGuards(player, baron, milo);
 const creameryGuard = createCreameryGuard();
 guards.push(creameryGuard);
 const staff = createStaff(player, baron, milo, guards);
+const slotReactions = createSlotReactions(staff, guards);
 const guests = [...staff, ...slotPlayers, openSlot, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
@@ -274,6 +276,7 @@ const dialogue = createDialogue(baron, {
         health.change(MAX_HEARTS);
         coinBalance.change(-100);
       });
+      slotReactions.queue(player, target);
     }
     if (action === 'executiveRedundancy1' || action === 'executiveRedundancy2' || action === 'executiveRedundancy3') {
       const stage = Number(action.at(-1));
@@ -581,6 +584,13 @@ function frame(timestamp) {
       id: 'guard', title: 'Bull Guard', summoned: true,
       executiveFraud: executive === 'fraud', repeat: !executive && completedGuestEscorts > 0
     });
+    requestAnimationFrame(frame);
+    return;
+  }
+  const reaction = !guestEscort && slotReactions.update(player, baron, dt);
+  if (reaction) {
+    clearInput();
+    dialogue.open(reaction);
     requestAnimationFrame(frame);
     return;
   }
