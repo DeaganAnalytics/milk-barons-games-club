@@ -521,7 +521,7 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
       }});
     });
     if (danceVisible) {
-      actors.push({depth: DANCE_FLOOR.y - 175, draw: () => drawDanceBooth(ctx, danceArt, elapsed)});
+      actors.push({depth: DANCE_FLOOR.y - 175, draw: () => drawDanceBooth(ctx, danceArt, elapsed, player.djAccess)});
       dancers.forEach((dancer, index) => {
         const sprite = dancerSprites[index];
         if (isReady(sprite)) actors.push({depth: dancer.y, draw: () => drawDancer(ctx, sprite, dancer, elapsed)});

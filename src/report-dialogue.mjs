@@ -55,7 +55,7 @@ const manInPool = {
       ['[Lie] A poor man.', 'Good heavens! How did he get past security?', 'speaking', 'worried'],
       ['Continue', 'Lifeguard, this is Roaming One. Is there a man in the pool?', 'radio', 'worried', 'Speaks into radio.'],
       ['Continue', 'And is he poor?', 'radio', 'worried', '...'],
-      ['Continue', 'How wealthy?', 'radio', 'worried', '...'],
+      ['Continue', 'How wealthy?', 'listening', 'worried', 'Listens to the radio.'],
       ['Continue', 'Ah. Understood. Give him my regards.', 'radio', 'worried', '...'],
       ['Continue', 'Get out of here, you liar! Wasting valuable security resources! ₥10 fine. Pay up!', 'angry', 'alarmed']
     ], {action: 'finePoolLie'})

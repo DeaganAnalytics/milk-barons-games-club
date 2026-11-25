@@ -8,7 +8,7 @@ export const lifeguardDialogue = say('', deadpan, []);
 const back = [reply('Continue', 'attentive', lifeguardDialogue)];
 
 const poolSafety = {
-  ...say('Oh, you know... pool safety and all that.', deadpan, back),
+  ...say('Oh, you know... pool safety and all that.', 'sheepish', back),
   direction: 'Turns his gaze back towards the pool.'
 };
 

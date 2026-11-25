@@ -7,7 +7,7 @@ const song = [...chorus, ...chorus, ...chorus, ...chorus, ...verse, ...verse];
 const secondsPerLine = 2;
 const scale = 0.68;
 const artOrigin = {x: 627, y: 759};
-export const danceLayers = ['floor', 'speakers', 'booth', 'dj'];
+export const danceLayers = ['floor', 'speakers', 'booth', 'booth-open', 'dj'];
 
 export function danceLyric(elapsed) {
   const index = Math.floor(elapsed / secondsPerLine) % song.length;
@@ -29,19 +29,21 @@ export function drawDanceFloor(ctx, art) {
   drawLayer(ctx, art.floor, 365, 503);
 }
 
-export function drawDanceBooth(ctx, art, elapsed) {
+export function drawDanceBooth(ctx, art, elapsed, rearRopeOpen = false) {
   const bob = Math.sin(elapsed * 5) * 1.9;
-  ctx.save();
-  // Restore the short piece of rear rope hidden behind the DJ in the reference art.
-  ctx.strokeStyle = '#a81919';
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.moveTo(DANCE_FLOOR.x - 17, DANCE_FLOOR.y - 326);
-  ctx.quadraticCurveTo(DANCE_FLOOR.x, DANCE_FLOOR.y - 335, DANCE_FLOOR.x + 17, DANCE_FLOOR.y - 326);
-  ctx.stroke();
-  ctx.restore();
+  if (!rearRopeOpen) {
+    ctx.save();
+    // Restore the short piece of rear rope hidden behind the DJ in the reference art.
+    ctx.strokeStyle = '#a81919';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.moveTo(DANCE_FLOOR.x - 17, DANCE_FLOOR.y - 326);
+    ctx.quadraticCurveTo(DANCE_FLOOR.x, DANCE_FLOOR.y - 335, DANCE_FLOOR.x + 17, DANCE_FLOOR.y - 326);
+    ctx.stroke();
+    ctx.restore();
+  }
   drawLayer(ctx, art.dj, 593, 252 + bob);
-  drawLayer(ctx, art.booth, 411, 252);
+  drawLayer(ctx, rearRopeOpen ? art['booth-open'] : art.booth, 411, 252);
   drawLayer(ctx, art.speakers, 284, 317);
 }
 

@@ -9,7 +9,7 @@ export const elias = {
 
 export const eliasPortraits = [
   'devious', 'insulted', 'evil-laugh', 'self-assured-smirk',
-  'thinking', 'current-smile', 'laugh', 'demonic-angry', 'worried'
+  'thinking', 'current-smile', 'laugh', 'demonic-angry', 'worried', 'reading-figures'
 ];
 
 const welcomeLines = [

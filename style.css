@@ -16,6 +16,10 @@ h1 {
   font-size: clamp(20px,5vw,30px);
   margin: 0 0 5px;
 }
+
+.game-version {
+  font-size: 0.65em;
+}
 .viewport {
   width: 100%;
   aspect-ratio: 690/685;
@@ -171,10 +175,6 @@ canvas {
   background: url('./assets/dialogue/portraits.webp') var(--portrait-position, 0% 0%) / 300% 400% no-repeat;
 }
 
-.conversation-portrait[data-portrait-pose="shifted"]::before {
-  rotate: -2deg;
-}
-
 .conversation-portrait[data-portrait="baron"] {
   --portrait-width: 114%;
 }
@@ -196,6 +196,11 @@ canvas {
   width: var(--portrait-width, 91%);
   height: 91%;
   background: var(--portrait-image) center / contain no-repeat;
+}
+
+.conversation-portrait:is([data-portrait="baron"], [data-portrait="milo"]).standalone-portrait:not(.report-portrait)::before {
+  width: var(--portrait-width, 128%);
+  height: auto;
 }
 
 /* Keep the whole expression set at the same scale, including drink variants. */

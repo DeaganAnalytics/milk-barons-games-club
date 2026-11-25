@@ -1570,10 +1570,31 @@ test('the dancing Baron offers one DJ request and the karma encounters switch to
   assert.equal(slap.enterAction, 'baronSlap');
   assert.equal(slap.playerMood, 'alarmed');
   assert.equal(slap.replies[0].next.direction, 'Heavy breathing');
-  for (const [event, action] of [['reward', 'baronKarmaReward'], ['fine', 'baronKarmaFine']]) {
-    const eliasReply = baronKarmaDialogue[event].replies[0].next.replies[0].next;
-    assert.equal(eliasReply.character, 'elias');
-    assert.equal(eliasReply.replies[0].next.action, action);
+  for (const spokeToProfessor of [false, true]) {
+    const elias = baronKarmaDialogue.fine(spokeToProfessor).replies[0].next.replies[0].next;
+    assert.equal(elias.character, 'elias');
+    const fine = elias.replies[0].next;
+    assert.equal(fine.enterAction, 'baronKarmaFine');
+    assert.equal(fine.replies.length, 5);
+    const response = fine.replies[1].next.replies[0].next.replies[0].next.replies[0].next;
+    assert.equal(response.speaker, 'Pip');
+    if (spokeToProfessor) assert.equal(response.action, 'finishBaronPenalty');
+    else assert.equal(response.replies[0].next.text, 'Zere vere two before him, Master Pip.');
+    assert.ok(!response.replies || response.replies.every(reply => reply.label === 'Continue'));
+  }
+  for (const [spokeToMilo, askedAboutCowGuards] of [[false, false], [false, true], [true, false], [true, true]]) {
+    const reward = baronKarmaDialogue.reward(spokeToMilo, askedAboutCowGuards).replies[0].next.replies[0].next;
+    assert.equal(reward.character, 'elias');
+    assert.equal(reward.enterAction, 'baronKarmaReward');
+    assert.equal(reward.replies.length, spokeToMilo ? 5 : 4);
+    const endings = [];
+    function verify(node) {
+      if (node.action) endings.push(node.action);
+      for (const reply of node.replies ?? []) verify(reply.next);
+    }
+    verify(reward);
+    assert.equal(endings.filter(action => action === 'finishBaronReward').length, 4);
+    assert.equal(endings.filter(action => action === 'finishBaronRewardWithGuard').length, spokeToMilo ? 1 + Number(askedAboutCowGuards) : 0);
   }
 });
 
@@ -2153,5 +2174,78 @@ test('the Commissioner’s milk pool topic unlocks on sight and each branch exha
     }
     assert.equal(node.text, endings[index]);
     assert.equal(node.action, undefined);
+  }
+});
+
+test('the Baron’s pillory branches are single-use with two ways out of the figures', async () => {
+  const {commissionerDiscussion} = await import('../src/baron-commissioner-dialogue.mjs');
+  const choose = (node, label) => {
+    const choice = node.replies.find(reply => reply.label === label);
+    assert.ok(choice, label);
+    return typeof choice.next === 'function' ? choice.next() : choice.next;
+  };
+  const skip = (node) => {
+    while (node.replies?.length === 1 && node.replies[0].label === 'Continue') node = choose(node, 'Continue');
+    return node;
+  };
+
+  for (const vampire of [false, true]) {
+    let node = skip(commissionerDiscussion(vampire));
+    assert.equal(node.replies.length, 4);
+    node = skip(choose(node, 'How much money do you make from the pillory?'));
+    assert.equal(node.replies.some(reply => reply.label === 'Garlic.'), vampire);
+    if (vampire) node = skip(choose(node, 'Garlic.'));
+    else {
+      node = skip(choose(node, 'Check watch'));
+      for (let i = 0; i < 3; i++) node = choose(node, 'Wait');
+      assert.equal(node.replies.length, 1);
+      node = skip(choose(node, 'Elias, have you heard of a calculator?'));
+      assert.equal(node.mood, 'milk-drool');
+      node = choose(node, "Never mind. I'm no longer interested.");
+    }
+    assert.equal(node.replies.length, 3);
+    assert.ok(!node.replies.some(reply => reply.label === 'How much money do you make from the pillory?'));
+    node = skip(choose(node, "Surely you can't imprison someone for criticising you?"));
+    node = skip(choose(node, 'Who gave you the authority to do that?'));
+    node = choose(node, 'Could you let her go?');
+    node = skip(choose(node, 'When do business hours end?'));
+    assert.equal(node.text, 'One could say you are ze real victim, my lord.');
+    assert.ok(node.autoCloseMs > 0);
+    assert.equal(node.replies, undefined);
+  }
+});
+
+test('DJ Dairy admission can be retried until paid, then disappears', async () => {
+  const {baronDanceDialogue} = await import('../src/baron-dialogue.mjs');
+  let canPay = false;
+  const opening = baronDanceDialogue(false, () => canPay);
+  const offer = opening.replies[0].next.replies[2].next;
+  assert.equal(offer.replies[0].next().enterAction, undefined);
+  canPay = true;
+  const retry = baronDanceDialogue(true, () => canPay);
+  assert.equal(retry.replies[0].next.replies[0].next().enterAction, 'payDjAdmission');
+  assert.equal(baronDanceDialogue(true, () => canPay, true).replies.length, 0);
+});
+
+test('DJ Dairy remembers finished topics and selects the romantic advice branch', async () => {
+  const {createDjConversation} = await import('../src/dj-dialogue.mjs');
+  for (const seduced of [false, true]) {
+    const open = createDjConversation(() => seduced);
+    const follow = option => typeof option.next === 'function' ? option.next() : option.next;
+    const opening = open();
+    assert.equal(opening.replies.length, 6);
+    const advice = follow(opening.replies[4]);
+    const response = follow(follow(advice.replies[0]).replies[0]);
+    const next = follow(response.replies[0]);
+    if (seduced) {
+      assert.equal(next.character, 'security-camera');
+      assert.equal(next.text, '');
+      assert.equal(next.replies[0].label, 'Oh MILK!');
+    } else {
+      assert.match(response.text, /I AM THE MILK!/);
+    }
+    assert.equal(follow(next.replies[0]).replies.length, 5);
+    assert.equal(open().replies.length, 5);
+    assert.equal(open().replies.at(-1).label, 'Enjoy your music.');
   }
 });

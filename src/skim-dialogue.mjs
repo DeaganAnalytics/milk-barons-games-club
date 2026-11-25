@@ -23,7 +23,7 @@ const exchange = (lines, ending = []) => lines.reduceRight((replies, [label, tex
   [reply(label, say(text, replies, extras))], ending)[0];
 
 const distressed = {mood: 'distressed'};
-const lookingAround = {...distressed, direction: 'Skim looks around.'};
+const lookingAround = {mood: 'conspiratorial', direction: 'Skim looks around.'};
 const whisper = {...distressed, direction: 'Whispers.'};
 
 export function createSkimConversation() {
@@ -39,11 +39,11 @@ export function createSkimConversation() {
         ['So your job is to clean up after the Baron?', 'Correct.'],
         ['That must be humiliating.', 'Not at all! It is an extraordinary privilege to serve such a magnificent individual.'],
         ['Really?', 'The fat bastard spills more milk than my entire electorate used to receive.', {...lookingAround, direction: 'Skim looks around and whispers.'}],
-        ['What?!', "I SAID HE'S A MAGNIFICENT INDIVIDUAL!", distressed]
+        ['What?!', "I SAID HE'S A MAGNIFICENT INDIVIDUAL!", {mood: 'exasperated'}]
       ], back),
       exchange([
         ["Do you think you'll ever return to politics?", 'Politics? Me? Good heavens, no!', distressed],
-        ['But you were quite popular.', "Yes. I've since learnt the dangers of popularity."],
+        ['But you were quite popular.', "Yes. I've since learnt the dangers of popularity.", {mood: 'wistful'}],
         ["My dad said you should've been Prime Minister.", 'Your father sounds like an intelligent man.'],
         ['Should I tell the Baron that?', 'Your father sounds like a dangerously misinformed individual.', distressed]
       ], back),

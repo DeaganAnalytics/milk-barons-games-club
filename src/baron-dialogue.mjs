@@ -1,6 +1,39 @@
+import {commissionerDiscussion} from './baron-commissioner-dialogue.mjs';
+
 const say = (text, mood = 'pleased', extras = {}) => ({text, mood, ...extras});
 const reply = (label, next, playerMood = 'attentive') => ({label, next, playerMood});
 const more = next => [reply('Continue', next)];
+
+const finishCowEncounter = (text, mood) => say(text, mood, {action: 'finishBaronCowEncounter'});
+const cowExchange = (text, mood, replies, character) => say(text, mood, {replies, character, mustContinue: true});
+const cowGuardEncounters = [
+  reply('Why do you have cows for guards?', cowExchange('What do you mean?', 'flustered', [
+    reply('The guards are cows.', cowExchange('I have guards.', 'displeased', [
+      reply('But the horns?', finishCowEncounter('I have guards.', 'displeased'), 'thinking')
+    ]))
+  ]), 'thinking'),
+  reply('Why are the guards cows?', finishCowEncounter("Pip, we've discussed this already. They are not cows. End of story!", 'displeased')),
+  reply('Your guards are carrying guns.', finishCowEncounter('An excellent deterrent against criminal activity.', 'pleased')),
+  reply('One of your guards mooed at me.', finishCowEncounter('My guards are multilingual, young Pip.', 'pleased')),
+  reply('Have you ever actually looked at your guards?', finishCowEncounter("Of course not. That's what Elias is for.", 'laughing')),
+  reply('The cows...', cowExchange('GUARDS!', 'displeased', [
+    reply('The guards...', cowExchange('Better.', 'pleased', [
+      reply('...are cows.', cowExchange('ELIAS!', 'displeased', more(
+        cowExchange('Zat will be a fine of ₥20.', 'current-smile', [
+          reply('For asking questions?!', cowExchange('₥2 per question, plus interest, an administration fee and stamp duty.', 'reading-figures', [
+            reply('Stamp duty?!', say('Vould you like zat question added to your bill?', 'current-smile', {
+              character: 'elias', action: 'finishBaronCowFine'
+            }), 'alarmed')
+          ], 'elias'), 'alarmed')
+        ], 'elias')
+      )))
+    ]))
+  ]), 'worried')
+];
+
+export function baronCowGuardReply(completed, seenCowGuard) {
+  return seenCowGuard ? cowGuardEncounters[completed] : undefined;
+}
 
 const defaults = [
   say('Welcome, welcome to my establishment!'),
@@ -44,37 +77,146 @@ export function baronGreetings(karma, coins) {
   ];
 }
 
-export function baronDanceDialogue(used) {
+export const DJ_ADMISSION_PRICE = 60;
+
+export function baronDanceDialogue(used, canPay = () => false, hasAccess = false) {
   const exhausted = say('Good heavens... that was exhausting. Next time, I ought to just fine you.', 'displeased');
-  const breathing = say('', 'displeased', {direction: 'Heavy breathing', replies: more(exhausted), mustContinue: true});
+  const breathing = say('', 'winded', {direction: 'Heavy breathing', replies: more(exhausted), mustContinue: true});
   const slap = say('I SAID NO!', 'displeased', {
     playerMood: 'alarmed', enterAction: 'baronSlap', replies: more(breathing), mustContinue: true
   });
+  const offer = say('For ₥60, I can make an exception.', 'pleased', {replies: [
+    reply('Pay ₥60.', () => canPay()
+      ? say('Elias, open the rope. The boy has paid!', 'pleased', {enterAction: 'payDjAdmission'})
+      : say("You don't have ₥60, boy!", 'displeased')),
+    reply('Never mind.', null)
+  ]});
+  const admission = reply('What if I paid to speak to him?', offer, 'thinking');
   const fanRequest = say('The man is an artist! He has no time for the likes of you!', 'displeased', {replies: [
     reply('Oh, okay.', null, 'sorry'),
-    reply('Please, Baron, sir? Pretty please?', slap, 'worried')
+    reply('Please, Baron, sir? Pretty please?', slap, 'worried'),
+    ...(!hasAccess ? [admission] : [])
   ]});
   return say('Not now, boy! This is my favourite song!', 'pleased', {
-    replies: used ? [] : [reply('Can I speak to DJ Dairy?', fanRequest, 'thinking')]
+    replies: used ? (hasAccess || !canPay() ? [] : [admission])
+      : [reply('Can I speak to DJ Dairy?', fanRequest, 'thinking')]
   });
 }
 
-export const baronKarmaDialogue = {
-  reward: say("Pip, my boy! You're beginning to impress me. Here I thought you were just another tiresome little activist.", 'pleased', {replies: more(
+function baronRewardDialogue(spokeToMilo, askedAboutCowGuards = false) {
+  const elias = (text, mood = 'current-smile') => say(text, mood, {character: 'elias'});
+  const guard = text => say(text, 'formal', {character: 'guard'});
+  const scene = (lines, ending) => lines.reduceRight((next, line) => ({
+    ...line, replies: next ? more(next) : ending
+  }), null);
+  const end = (line, sendGuard = false) => ({...line, action: sendGuard ? 'finishBaronRewardWithGuard' : 'finishBaronReward'});
+
+  const replies = [
+    reply('Thank you, Baron!', scene([
+      say("You're most welcome, young Pip. Generosity is one of my many admirable qualities."),
+      say('Elias, make a note of that.'),
+      elias('Verbatim or ad sensum, my lord?'),
+      say('Add some sense in, obviously!', 'flustered', {direction: 'Confused'}),
+      end(elias('Very good, my lord.'))
+    ])),
+    reply('How do I qualify for another one?', scene([
+      say('Already thinking about your next payment? Excellent!', 'laughing'),
+      say('Elias! The boy has ambition!', 'laughing'),
+      elias('Yes... unfortunately. An ambitious little meal.', 'devious')
+    ], [
+      reply('WHAT?!', {...elias('I mean, an ambitious little male.'), replies: [
+        reply('...', end(elias('A most admirable quality.')), 'alarmed')
+      ]}, 'alarmed')
+    ])),
+    reply('So this is how corruption works.', end(elias('Ve prefer ze term "professional development".')), 'thinking')
+  ];
+
+  if (spokeToMilo) {
+    const challenge = reply("You've got to be kidding me. THAT IS A COW!", say(
+      'Pip, please. The guard is trying to conduct himself professionally.', 'suspicious', {replies: [
+        reply('HE JUST SAID MOO!', {...elias('A perfectly acceptable military expression.'), replies: [
+          reply('Since when?!', end(say('Since I started paying their wages. Now, enough of this nonsense!', 'displeased'), true), 'exasperated')
+        ]}, 'exasperated')
+      ]}
+    ), 'alarmed');
+    replies.push(reply('I feel like Milo would be disappointed in me.', scene([
+      say("You've seen Milo? Elias, get me a guard!", 'flustered'),
+      elias('At once, my lord.'),
+      guard('Reporting for duty. Ready to MOOVE.'),
+      say('Find Milo! The boy is wandering around my establishment spreading economically damaging ideas!', 'displeased'),
+      guard('Understood. Mooving out.')
+    ], [
+      ...(askedAboutCowGuards ? [challenge] : []),
+      reply("I didn't mean to get him into trouble...", scene([
+        say("Nonsense, young Pip! You've done me a great service."),
+        end(elias('Ze Baron appreciates your cooperation.'), true)
+      ]), 'sorry')
+    ]), 'worried'));
+  }
+
+  replies.push(reply('Is that all?', scene([
+    say("Good heavens! You're developing a sense of entitlement already! Splendid!", 'laughing'),
+    say('You remind me of myself at your age.', 'pleased'),
+    end(say('Though I was much fatter!', 'laughing'))
+  ])));
+
+  return say("Pip, my boy! You're beginning to impress me. Here I thought you were just another tiresome little activist.", 'pleased', {replies: more(
     say("In recognition of your demonstrated alignment with our corporate values, I'm awarding you a discretionary short-term performance incentive!", 'laughing', {replies: [
-      reply('A what?', say('He is giving you money. Honestly, ze financial literacy of ze peasants... Tsk, tsk.', 'insulted', {character: 'elias', replies: [
-        reply('Thanks, I guess.', say('Thanks, I guess.', 'pleased', {speaker: 'Pip', action: 'baronKarmaReward'}), 'sorry')
-      ]}), 'thinking')
+      reply('A what?', {...elias('He is giving you money. Honestly, ze financial literacy of ze peasants... Tsk, tsk.', 'insulted'),
+        enterAction: 'baronKarmaReward', replies}, 'thinking')
     ]})
-  )}),
-  fine: say("Pip, Pip, Pip. I've been exceedingly generous, and you repay me by subjecting my guests to all this COMMUNISM?!", 'displeased', {replies: more(
+  )});
+}
+
+function baronPenaltyDialogue(spokeToProfessor) {
+  const elias = (text, replies, action) => say(text, 'current-smile', {character: 'elias', replies, action});
+  const end = (text, mood = 'displeased') => say(text, mood, {action: 'finishBaronPenalty'});
+  const professorResponse = spokeToProfessor
+    ? say("I'm not sitting through another economics lecture.", 'suspicious', {
+      speaker: 'Pip', playerMood: 'exasperated', action: 'finishBaronPenalty'
+    })
+    : say("There is absolutely no way that's a real name.", 'flustered', {
+      speaker: 'Pip', playerMood: 'alarmed',
+      replies: more(elias('Zere vere two before him, Master Pip.', undefined, 'finishBaronPenalty'))
+    });
+
+  const responses = [
+    reply("Isn't capitalism supposed to reward individual choice?",
+      say('My choices, boy! MY CHOICES!', 'displeased', {replies: more(
+        elias('Individual choice remains a privilege of ze individual who owns ze establishment.', undefined, 'finishBaronPenalty')
+      )})),
+    reply('You sound more like a communist than a capitalist.',
+      say('HOW DARE YOU!', 'displeased', {replies: [
+        reply("You're redistributing wealth.", say("TO ME! THAT'S ENTIRELY DIFFERENT!", 'displeased', {replies: more(
+          elias('A distinction of considerable economic importance, as our esteemed guest, Professor Archibald Reginald Montgomery von Butterworth-Smythe the Third, can happily explain.', more(professorResponse))
+        )}))
+      ]})),
+    reply("There's nothing wrong with helping people.",
+      say("Of course there isn't! People help me all the time!", 'pleased', {replies: [
+        reply("That's not what I meant.", end('Then I suggest you reconsider what you meant.'))
+      ]})),
+    reply('Did you ever actually study economics?',
+      say('Study it? I practically invented it!', 'laughing', {replies: [
+        reply('Economics?', say('Milking the market, boy!', 'laughing', {replies: more(
+          elias("Ze Baron's qualifications are predominantly financial rather than academic.", undefined, 'finishBaronPenalty')
+        )}))
+      ]})),
+    reply('Fine. Whatever.',
+      say("Excellent! You're beginning to understand the importance of fiscal responsibility.", 'pleased', {replies: more(
+        elias('Your fiscal responsibility, specifically. Not ours.', undefined, 'finishBaronPenalty')
+      )}), 'exasperated')
+  ];
+  const fine = say("And I'm exceptionally good at making them up!", 'laughing', {
+    enterAction: 'baronKarmaFine', replies: responses
+  });
+  return say("Pip, Pip, Pip. I've been exceedingly generous, and you repay me by subjecting my guests to all this COMMUNISM?!", 'displeased', {replies: more(
     say("I'm afraid your conduct necessitates a punitive fiscal adjustment in the form of an extraordinary behavioural compliance levy!", 'displeased', {replies: [
-      reply('Sorry, what?', say('Ve are taking your money. Consider it a tax on your unfortunate moral convictions.', 'self-assured-smirk', {
-        character: 'elias', replies: more(say('CAPITALISM, BOY! LEARN IT!', 'displeased', {action: 'baronKarmaFine'}))
-      }), 'alarmed')
+      reply('Is that another one of your made-up taxes?', elias('All taxes are made up, Master Pip.', more(fine)), 'thinking')
     ]})
-  )})
-};
+  )});
+}
+
+export const baronKarmaDialogue = {reward: baronRewardDialogue, fine: baronPenaltyDialogue};
 
 const assessments = [
   [
@@ -102,13 +244,11 @@ export function baronAssessment(coins, karma) {
   return say(...assessments[moneyTier][karmaTier]);
 }
 
-export function additionalBaronReplies({used, standing, discoveries, discussedVampires, returnToMenu}) {
+export function additionalBaronReplies({used, standing, discoveries, discussedVampires, askedEliasAboutVampires = discussedVampires, returnToMenu}) {
   const back = more(returnToMenu);
   const once = (key, option) => ({...option, once: key, consumeOnSelect: true});
   const elias = (text, replies, direction) => say(text, 'self-assured-smirk', {character: 'elias', replies, direction});
   const replies = [];
-  if (used.has('baronCowFirst')) replies.push(once('baronCowSecond', reply('Why are the guards cows?',
-    say("Pip, we've discussed this already. They are not cows. End of story!", 'displeased', {replies: back}))));
   if (used.has('baronFollowing') && used.has('baronWatching')) {
     const assess = () => {
       const {coins = 100, karma = 0} = standing?.() ?? {};
@@ -120,27 +260,66 @@ export function additionalBaronReplies({used, standing, discoveries, discussedVa
         reply('Yes, yes. Supervising.', say("You're learning, young Pip!", 'laughing', {replies: [review]}))
       ]}), 'thinking')));
   }
-  if (discussedVampires) replies.push(once('baronVampire', reply('Is Elias a vampire?',
-    say("Vam-pire? If it isn't milk-related, I don't want to know!", 'displeased', {replies: [
-      reply('But look at him!', elias('Ze Baron is exceptionally well endowed in terms of wealth and body mass. Less so in terms of vhat ve might politely call higher education.', more(
-        elias('Or secondary education.', more(elias('Or primary education, for zat matter.', more(
-          say('Is it time for milk?', 'pleased', {replies: back})
-        ))))
-      ), 'Whispers'), 'alarmed')
-    ]}))));
-  if (discoveries.pool) replies.push(once('baronMilkPool', reply('Is that a pool... of milk?',
-    say('Yes! One of my greatest inventions! I do love a good cannonball. A very expensive splash!', 'laughing', {replies: [
-      reply('You invented the swimming pool?', say('I invented the MILK swimming pool!', 'pleased', {replies: more(
-        elias('Our lord is a genius.', back)
-      )}), 'alarmed')
-    ]}))));
-  if (discoveries.pillory && discoveries.attendant) replies.push(once('baronCommissioner', reply('You put the Stickman Rights Commissioner in a pillory?',
-    say('Did I? I delegate so many of these things.', 'pleased', {replies: more(
-      elias('Ze Baron is a very busy man. He has considerable quantities of money to count.', back)
-    )}), 'worried')));
-  if (discoveries.fountain) replies.push(once('baronFountain', reply('You have a fountain of milk?',
-    say('Do you not?', 'pleased', {replies: [
-      reply('People are starving! My family is starving!', say('Then you must simply buy a milk fountain. What seems to be the problem?', 'displeased', {replies: back}), 'alarmed')
-    ]}))));
+  if (discussedVampires) {
+    const education = elias('Ze Baron is exceptionally well endowed in terms of wealth and body mass. Less so in terms of vhat ve might politely call higher education.', more(
+      elias('Or secondary education.', more(elias('Or primary education, for zat matter.', more(
+        say('Is it time for milk?', 'pleased', {replies: back})
+      ))))
+    ), 'Whispers');
+    const thanks = say('Thank you, Master Pip.', 'insulted', {character: 'elias', replies: more(education)});
+    const demand = say("ELIAS! WHY AREN'T YOU DRINKING MILK?!", 'displeased', {replies: more(thanks)});
+    replies.push(once('baronVampire', reply('Is Elias a vampire?',
+      say("Vam-pire? If it isn't milk-related, I don't want to know!", 'displeased', {replies: [
+        reply('Does he drink milk?', say("Come to think of it, I've never seen him drink milk.", 'pleased', {replies: more(demand)}), 'thinking')
+      ]}))));
+  }
+  if (discoveries.pool) {
+    const afterReply = more(() => poolMenu());
+    const options = [
+      once('baronPoolInnovation', reply('So you filled an existing invention with milk?',
+        say('Precisely! You have an excellent grasp of innovation, young Pip!', 'laughing', {replies: afterReply}))),
+      once('baronPoolInventions', reply('What else have you invented?',
+        say('The milk fountain, the milk balloon, the milk swimming pool...', 'pleased', {replies: [
+          reply("Have you invented anything that didn't already exist?",
+            say('What a peculiar question.', 'flustered', {replies: afterReply}), 'thinking')
+        ]}))),
+      once('baronPoolMilkChange', reply('How often do you change the milk?',
+        say('Change it?', 'flustered', {replies: afterReply}), 'thinking'))
+    ];
+    const remaining = () => options.filter(option => !used.has(option.once));
+    const poolMenu = () => {
+      const choices = remaining();
+      return choices.length ? elias('Our lord is a genius.', choices) : returnToMenu();
+    };
+    if (remaining().length) {
+      replies.push(reply('Is that a pool... of milk?',
+        say('Yes! One of my greatest inventions! I do love a good cannonball. A very expensive splash!', 'laughing', {replies: [
+          reply('You invented the swimming pool?', say('I invented the MILK swimming pool!', 'pleased', {replies: more(poolMenu)}), 'alarmed')
+        ]})));
+    }
+  }
+  if (discoveries.pillory && discoveries.attendant && !used.has('baronCommissioner')) {
+    replies.push(once('baronCommissioner', reply('You put the Stickman Rights Commissioner in a pillory?',
+      () => commissionerDiscussion(askedEliasAboutVampires), 'worried')));
+  }
+  if (discoveries.fountain) {
+    const options = [
+      ['baronFountainPoverty', "We can't afford milk, let alone a fountain!", 'Good heavens! Not even a small fountain?', 'flustered', 'alarmed'],
+      ['baronFountainInsult', 'How have you survived this long without a brain?', 'Generational wealth, my boy!', 'laughing', 'exasperated'],
+      ['baronFountainRequest', 'Perhaps you could buy my family a fountain?', 'And create a competitor? Absolutely not!', 'displeased', 'thinking'],
+      ['baronFountainLeave', 'Never mind.']
+    ];
+    const remaining = () => options.filter(([key]) => !used.has(key));
+    const fountainMenu = () => say('Then you must simply buy a milk fountain. What seems to be the problem?', 'displeased', {
+      replies: remaining().map(([key, label, text, mood, playerMood]) => once(key, reply(label,
+        text ? say(text, mood, {replies: more(() => remaining().length ? fountainMenu() : returnToMenu())}) : null,
+        playerMood)))
+    });
+    if (remaining().length) {
+      replies.push(reply('You have a fountain of milk?', say('Do you not?', 'pleased', {
+        replies: [reply('People are starving! My family is starving!', fountainMenu(), 'alarmed')]
+      })));
+    }
+  }
   return replies;
 }
