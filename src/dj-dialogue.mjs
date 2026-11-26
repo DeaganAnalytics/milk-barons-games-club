@@ -3,7 +3,7 @@ import {DANCE_FLOOR} from './room.mjs';
 export const djTarget = {id: 'dj', title: 'DJ Dairy', x: DANCE_FLOOR.x, y: DANCE_FLOOR.y - 315, radius: 16};
 export const djMoods = ['smirk', 'excited', 'skeptical', 'laughing', 'thinking', 'deadpan'];
 
-export function createDjConversation(hasSeducedExecutive, canTip = () => true) {
+export function createDjConversation(hasSeducedExecutive, canTip = () => true, canDeliverGift = () => false) {
   const used = new Set();
   const say = (text, mood, replies) => ({text, mood, replies, mustContinue: true});
   const reply = (label, next, playerMood = 'attentive') => ({label, next, playerMood});
@@ -98,10 +98,24 @@ export function createDjConversation(hasSeducedExecutive, canTip = () => true) {
     ]))
   ];
 
+  const gift = reply('The Baron sent me to give you this.', {
+    ...say('Milky.', 'smirk', more(say('THIS NEXT SONG IS FOR THE BARON!', 'microphone', more({
+      ...say("Vow. I didn't think you vould do zat.", 'thinking', [
+        reply('So do you approve or disapprove?', {
+          text: 'I am happy you followed orders. I am not happy you are being selfless.',
+          mood: 'current-smile', character: 'elias'
+        }, 'thinking')
+      ]),
+      character: 'elias'
+    })))),
+    enterAction: 'deliverDjDairyGift'
+  });
+
   function menu() {
     return {
       text: '', mood: 'smirk', mustContinue: true,
       replies: [
+        ...(canDeliverGift() ? [gift] : []),
         ...topics.filter(topic => !used.has(topic)).map(topic => ({...topic, next: () => {
           used.add(topic);
           return typeof topic.next === 'function' ? topic.next() : topic.next;

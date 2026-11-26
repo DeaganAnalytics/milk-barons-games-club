@@ -256,7 +256,7 @@ function warmPortraits() {
   for (const [id, moods] of extraPortraitMoods) {
     for (const mood of moods) urls.push(extraPortraitUrl(id, mood));
   }
-  for (const mood of djMoods) urls.push(standalonePortraitUrl(djTarget.id, false, mood));
+  for (const mood of [...djMoods, 'microphone']) urls.push(standalonePortraitUrl(djTarget.id, false, mood));
   for (const {id} of dancerTargets) {
     for (const mood of dancerMoods) urls.push(standalonePortraitUrl(id, false, mood));
   }
@@ -295,7 +295,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeducedExecutive} = {}) {
+export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeducedExecutive, canDeliverDjGift} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -334,7 +334,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
   const skimOpening = createSkimConversation();
-  const djOpening = createDjConversation(() => hasSeducedExecutive?.(), () => (baronStanding?.()?.coins ?? 0) >= 5);
+  const djOpening = createDjConversation(() => hasSeducedExecutive?.(),
+    () => (baronStanding?.()?.coins ?? 0) >= 5, canDeliverDjGift);
   const dancerOpening = createDancerConversation();
   const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0);
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
@@ -371,7 +372,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       ...(npcExpressions.get(character) ?? []),
       ...(!withoutMilk ? extraPortraitMoods.get(character) ?? [] : [])
     ];
-    const special = reportPortraits.has(character + '-' + mood) || mood === 'tousled' || mood === 'asleep';
+    const special = (character === djTarget.id && mood === 'microphone') || reportPortraits.has(character + '-' + mood) || mood === 'tousled' || mood === 'asleep';
     if (expressions.length && !special && !expressions.includes(mood)) mood = expressions[0];
     if (npcHistory.character !== character) {
       npcHistory.character = character;

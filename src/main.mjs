@@ -206,6 +206,9 @@ const clothingEvents = {
   women: 'Two dresses disappear. The suit stays put.'
 };
 
+let djGiftPending = false;
+const canDeliverDjGift = () => djGiftPending && coinBalance.count >= 60;
+
 const dialogue = createDialogue(baron, {
   tallies,
   placePokieWager(stake, rollMultiplier) {
@@ -226,6 +229,7 @@ const dialogue = createDialogue(baron, {
     pillory: seenPillory, attendant: spokeToPilloryAttendant, pool: seenMilkPool, fountain: seenMilkFountain,
     canAskForFreeMilk: boughtCreameryMilk && MAX_HEARTS - health.hearts >= 1
   }),
+  canDeliverDjGift,
   hasDjAccess: () => player.djAccess,
   hasSeducedExecutive: () => player.lipstick,
   baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
@@ -333,7 +337,17 @@ const dialogue = createDialogue(baron, {
       player.djAccess = true;
       clubEvent('The Baron charges you ₥60 to speak to DJ Dairy.', () => coinBalance.change(-DJ_ADMISSION_PRICE));
     }
-    if (action === 'awardDjDairyGift') clubEvent('Elias gives Pip ₥60 to tip DJ Dairy.', () => coinBalance.change(60));
+    if (action === 'awardDjDairyGift') {
+      djGiftPending = true;
+      clubEvent('Elias gives Pip ₥60 to tip DJ Dairy.', () => coinBalance.change(60));
+    }
+    if (action === 'deliverDjDairyGift' && canDeliverDjGift()) {
+      djGiftPending = false;
+      clubEvent('Pip passes the Baron’s gift to DJ Dairy.', () => {
+        karma.change(2);
+        coinBalance.change(-60);
+      });
+    }
     if (action === 'tipDjDairy' && coinBalance.count >= 5) clubEvent('Pip tips DJ Dairy.', () => {
       karma.change(0.5);
       coinBalance.change(-5);
