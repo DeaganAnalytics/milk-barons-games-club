@@ -367,6 +367,7 @@ const dialogue = createDialogue(baron, {
       karma.change(1);
       coinBalance.change(-10);
     });
+    if (action === 'skimEnjoyStatus') clubEvent('Pip insists Skim call him “my lord”.', () => karma.change(-0.5));
     if (action === 'tipSkim') clubEvent('Pip tips Skim ₥3.', () => coinBalance.change(-3));
     if (action === 'buyOracleHint') clubEvent('Pip buys a fragment of the Oracle’s wisdom.', () => coinBalance.change(-1));
     if (action === 'tipDjDairy' && coinBalance.count >= 5) clubEvent('Pip tips DJ Dairy.', () => {
