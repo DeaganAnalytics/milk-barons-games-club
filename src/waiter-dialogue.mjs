@@ -1,7 +1,9 @@
+import {eliasTipIntervention, linColdPostBan, postBanLines, waiterTipLines} from './waiter-tipping-dialogue.mjs';
 import {linClothingConfrontation, linPoolJealousy} from './lin-pool-dialogue.mjs';
 import {linColdNameLines, linColdTalkLines, linCrushLines, linFinalInsultLines, linKindnessLines, linPrivateReaction, linPublicReaction, sterlingResponses, waiterNameLines} from './waiter-name-dialogue.mjs';
 
 export const WAITER_MILK_PRICE = 2;
+export const TIPPED_MILK_PRICE = WAITER_MILK_PRICE + 1;
 
 const greetings = [
   'Good evening. How may I assist you?',
@@ -44,6 +46,13 @@ function exchange(lines, ending, playerMood = 'attentive', completeChat) {
   return replies[0];
 }
 
+export function waiterTippingIntervention() {
+  const [first, ...rest] = eliasTipIntervention;
+  const exit = say('', [], undefined, 'current-smile');
+  Object.assign(exit, {direction: 'Elias disappears.', action: 'finishWaiterTipBan', autoCloseMs: 900});
+  return {...say(first.text, [exchange(rest, [reply('Continue', exit)], 'worried')]), ...first};
+}
+
 export function linKindnessDialogue() {
   return say('Pip?', [exchange(linKindnessLines, [], 'worried')], undefined, 'pleased');
 }
@@ -53,6 +62,9 @@ export const linWaitressId = 'lin-waitress';
 export function createWaiterConversation(getCoins, askedAboutCowGuards = () => false,
   hasSeducedExecutive = () => false, poolState = () => ({})) {
   let greetingIndex = 0;
+  const tipped = new Set();
+  const discussedBan = new Set();
+  let tipBanComplete = false;
   const spokenTo = new Set();
   const askedName = new Set();
   let linStage = 0;
@@ -102,6 +114,30 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
       ? sterlingResponses.map((lines, index) => exchange(lines, [finishName], index ? 'worried' : 'alarmed'))
       : [finishName];
 
+    const canTip = () => !withoutMilk && tipped.size < 2 && !tipBanComplete && !tipped.has(id)
+      && getCoins() >= TIPPED_MILK_PRICE && Boolean(waiterTipLines(id, relationship, linStage));
+
+    function buyWithTip() {
+      if (!canTip()) return say("I'm terribly sorry, sir, but that purchase is unavailable.", [back], undefined, 'apologetic');
+      tipped.add(id);
+      const [first, ...rest] = waiterTipLines(id, relationship, linStage);
+      const ending = tipped.size === 2 ? {exitAction: 'beginWaiterTipBan'} : null;
+      const finish = reply('Continue', ending);
+      const opening = say(typeof first === 'string' ? first : first.text, [exchange(rest, [finish])],
+        'buyTippedWaiterMilk', isLin && relationship === 'alienated' ? 'attentive' : 'pleased');
+      return typeof first === 'string' ? opening : {...opening, ...first};
+    }
+
+    function milkOrder(linCold) {
+      return say(linCold ? '₥2.' : "Certainly, sir. That'll be ₥2.", [
+        reply('Yes, please.', () => !withoutMilk && getCoins() >= WAITER_MILK_PRICE
+          ? {...say('Here you are, sir. Enjoy!', [], 'buyWaiterMilk', 'pleased'), autoCloseMs: 1600}
+          : say(withoutMilk ? 'Not now! Busy, busy, busy!' : "I'm terribly sorry, sir, but you appear to have insufficient funds.", [back], undefined, 'apologetic')),
+        ...(canTip() ? [reply('Yes, please. And a coin for you.', buyWithTip)] : []),
+        reply('Actually, never mind.', say('Very well, sir.', [back]))
+      ]);
+    }
+
     function menu() {
       if (currentMenu) return currentMenu;
       const linCold = isLin && relationship === 'alienated';
@@ -137,16 +173,21 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
         }
       }
 
+      if (tipBanComplete && postBanLines[id] && !discussedBan.has(id)) {
+        const lines = isLin && linCold ? linColdPostBan : postBanLines[id];
+        const topic = exchange(["Apparently I'm not allowed to tip anymore.", ...lines], [back]);
+        personal.push({...topic, next: () => {
+          discussedBan.add(id);
+          currentMenu = undefined;
+          return topic.next;
+        }});
+      }
       currentMenu = say(linCold ? "Will you be ordering any milk, sir?" : greeting, [
-        reply('Could I have a glass of milk, please?', say(isLin && linCold ? '₥2.' : "Certainly, sir. That'll be ₥2.", [
-          reply('Yes, please.', () => !withoutMilk && getCoins() >= WAITER_MILK_PRICE
-            ? {...say('Here you are, sir. Enjoy!', [], 'buyWaiterMilk', 'pleased'), autoCloseMs: 1600}
-            : say(withoutMilk ? 'Not now! Busy, busy, busy!' : "I'm terribly sorry, sir, but you appear to have insufficient funds.", [back], undefined, 'apologetic')),
-          reply('Actually, never mind.', say('Very well, sir.', [back]))
-        ])),
+        reply('Could I have a glass of milk, please?', milkOrder(linCold)),
         ...personal,
         reply("I'll leave you to it.", say(isLin && linCold ? 'Very well.' : 'Enjoy your evening, sir.'))
       ], undefined, index === 2 || index === 8 ? 'hurried' : 'welcoming');
+      if (isLin) currentMenu.mysticVisibilityMenu = true;
       return currentMenu;
     }
     if (reacts) {
@@ -164,12 +205,13 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
     if (confrontClothing || confrontPool) {
       if (confrontClothing) clothingConfrontationSeen = true;
       else poolJealousySeen = true;
-      const lines = confrontClothing ? linClothingConfrontation(pool) : linPoolJealousy(pool.heardBunnies);
+      const lines = confrontClothing ? linClothingConfrontation(pool) : linPoolJealousy(pool.heardBeauties);
       return {...say(lines[0], [exchange(['Continue', ...lines.slice(1)], [back], 'worried')]),
         speaker: 'Pip', playerMood: 'happy'};
     }
     return menu();
   };
+  open.finishTipBan = () => { tipBanComplete = true; };
   open.canOfferKindness = () => linStage >= 2 && relationship === 'normal' && !hasSeducedExecutive();
   open.willConfront = () => linStage > 3 && relationship === 'normal';
   open.relationship = () => relationship;

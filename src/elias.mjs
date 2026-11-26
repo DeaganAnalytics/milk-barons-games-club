@@ -12,53 +12,113 @@ export const eliasPortraits = [
   'thinking', 'current-smile', 'laugh', 'demonic-angry', 'worried', 'reading-figures'
 ];
 
-const welcomeLines = [
-  ["Velcome, velcome to ze Milk Baron's Games Club! Ah, Master Pip. Ve have been expecting you.", 'current-smile', 'attentive'],
-  ['His Excellency, ze Milk Baron, has taken a most considerable interest in you. Your activism at Milk University has not gone unnoticed.', 'thinking', 'thinking'],
-  ['You are a most intriguing young stickman. Ambitious, resourceful, and, if I may be so bold... delightfully impressionable.', 'devious', 'worried'],
-  ["Unfortunately, your most recent protest resulted in considerable damage to ze Baron's property holdings. You are now indebted to His Excellency to ze sum of ₥100.", 'insulted', 'alarmed'],
-  ['But ze Baron is a generous man. Rather than demand immediate repayment, he vishes to play a little game.', 'self-assured-smirk', 'thinking'],
-  ['Here is a sum of ₥100. If you can double zis investment to ₥200, you vill have proven yourself a true capitalist.', 'current-smile', 'attentive'],
-  ['But should you lose ze money... vell, it is off to ze dairy for you, as an indentured servant.', 'demonic-angry', 'alarmed'],
-  ['Consider it a most generous opportunity for professional development, Master Pip.', 'self-assured-smirk', 'worried']
-];
-
-const questions = {text: 'Now, Master Pip, do you have any questions?', mood: 'current-smile', replies: []};
 const continueTo = next => ({label: 'Continue', playerMood: 'attentive', next});
-const back = [continueTo(questions)];
-
-questions.replies.push(
-  {label: "I didn't do it!", once: 'eliasWelcome:denial', consumeOnSelect: true, playerMood: 'alarmed',
-    next: {text: 'Zat is not a question.', mood: 'insulted', replies: back}},
-  {label: 'How did I get here?', once: 'eliasWelcome:arrival', consumeOnSelect: true, playerMood: 'thinking',
-    next: {text: 'Ah... one of ze great secrets of ze universe.', mood: 'devious', replies: back}},
-  {label: 'What is this place?', once: 'eliasWelcome:club', consumeOnSelect: true, playerMood: 'thinking',
-    next: {
-      text: 'Ah! I am delighted you asked.',
-      mood: 'laugh',
-      replies: [continueTo({
-        text: "It is ze Baron's pride and joy. A place vere ze finest members of ze Milk Aristocracy come to mingle, to vheel and deal.",
-        mood: 'current-smile',
-        replies: [continueTo({
-          text: 'A house of amusement, of profligate pleasure, of economic efficiency and, above all... profitability.',
-          mood: 'self-assured-smirk',
-          replies: [{label: 'I thought the Milk Baron made his money from milk?', playerMood: 'thinking',
-            next: {text: 'Da! But he keeps his fortune by selling pleasure and amusement!', mood: 'laugh', replies: back}}]
-        })]
-      })]
-    }},
-  {label: 'How do I double my money?', once: 'eliasWelcome:money', consumeOnSelect: true, playerMood: 'thinking', next: {
-    text: 'As an aspiring capitalist, I am sure you vill figure it out. Zis establishment offers many delightful games through vich you may multiply your fortune.',
-    mood: 'self-assured-smirk', replies: back
-  }},
-  {label: 'I have no more questions.', playerMood: 'attentive', next: {
+const welcomeEnd = {
+  label: 'I have no more questions.', playerMood: 'attentive', next: {
     text: 'Vonderful. I vish you a most profitable evening, Master Pip.',
     mood: 'current-smile', action: 'finishEliasWelcome'
-  }}
-);
+  }
+};
+const questions = {text: 'Now, Master Pip, do you have any questions?', mood: 'current-smile', replies: []};
+const questionLines = [
+  [["I didn't do it!", 'Zat is not a question.', 'insulted', 'alarmed']],
+  [['How did I get here?', 'Ah... one of ze great secrets of ze universe.', 'devious']],
+  [
+    ['What is this place?', 'Ah! I am delighted you asked.', 'laugh'],
+    ['Continue', "It is ze Baron's pride and joy. A place vere ze finest members of ze Milk Aristocracy come to mingle, to vheel and deal.", 'current-smile'],
+    ['Continue', 'A house of amusement, of profligate pleasure, of economic efficiency and, above all... profitability.', 'self-assured-smirk'],
+    ['I thought the Milk Baron made his money from milk?', 'Da! But he keeps his fortune by selling pleasure and amusement!', 'laugh']
+  ],
+  [['How do I double my money?', 'As an aspiring capitalist, I am sure you vill figure it out. Zis establishment offers many delightful games through vich you may multiply your fortune.', 'self-assured-smirk']],
+  [
+    ['Are those guards cows?', 'Nyet.', 'insulted'],
+    ["But they've got horns!", 'Ve have a rather distinctive staff uniform.', 'current-smile'],
+    ['And tails!', 'A particularly distinctive staff uniform.', 'self-assured-smirk']
+  ],
+  [
+    ['Can I just leave?', 'Certainly! Upon settlement of your outstanding financial obligations.', 'current-smile'],
+    ['And if I leave before then?', 'I vould advise against testing our debt recovery procedures.', 'devious', 'worried']
+  ],
+  [
+    ['Does my family know where I am?', 'I cannot comment on ze knowledge of third parties.', 'thinking', 'worried'],
+    ["That's not very reassuring.", 'Reassurance is not among my professional responsibilities.', 'insulted', 'worried']
+  ],
+  [
+    ['Are you actually a vampire?', 'Master Pip, I am a qualified accountant.', 'insulted'],
+    ['You can be both.', 'An interesting observation.', 'worried']
+  ]
+];
+questions.replies = [
+  ...questionLines.map((lines, index) => ({
+    ...exchange(lines, questions), once: 'eliasWelcome:' + index, consumeOnSelect: true
+  })),
+  welcomeEnd
+];
 
-export const eliasWelcome = welcomeLines.reduceRight((next, [text, mood, playerMood]) => ({
-  text, mood, playerMood, replies: [continueTo(next)]
+const welcomeSections = [
+  {
+    text: "Velcome, velcome to ze Milk Baron's Games Club! Ah, Master Pip. Ve have been expecting you.",
+    mood: 'current-smile', playerMood: 'attentive', choices: [
+      [['Where am I?', "Ze Milk Baron's Games Club. I believe I just established zis.", 'self-assured-smirk']],
+      [['How do you know my name?', 'Ve make it our business to know such things.', 'devious', 'worried']],
+      [['BAH! A VAMPIRE!', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed']],
+      [['Lovely establishment.', 'Ah! A young man of discerning taste!', 'laugh']]
+    ]
+  },
+  {
+    text: 'His Excellency, ze Milk Baron, has taken a most considerable interest in you. Your activism at Milk University has not gone unnoticed.',
+    mood: 'thinking', choices: [
+      [['Someone has to stand up for the working class!', 'Ah, ze enthusiasm of youth.', 'self-assured-smirk']],
+      [['I was exercising my democratic rights!', 'Da. Rather expensively, as it turns out.', 'devious']],
+      [['Has he? Is there a job opportunity?', 'In a manner of speaking.', 'self-assured-smirk']],
+      [['Oh God. Am I in trouble?', 'Let us not get ahead of ourselves.', 'current-smile', 'worried']]
+    ]
+  },
+  {text: 'You are a most intriguing young stickman. Ambitious, resourceful, and, if I may be so bold... delightfully impressionable.', mood: 'devious', playerMood: 'worried'},
+  {
+    text: "Unfortunately, your most recent protest resulted in considerable damage to ze Baron's property holdings. You are now indebted to His Excellency to ze sum of ₥100.",
+    mood: 'insulted', playerMood: 'alarmed', choices: [
+      [['A HUNDRED MILK TOKENS?!', 'Da. Your numeracy is most encouraging.', 'self-assured-smirk', 'alarmed']],
+      [["I didn't do it!", 'An assertion of remarkably little financial significance.', 'insulted']],
+      [["I can't afford that!", 'Ve are acutely avare of your financial circumstances.', 'reading-figures', 'worried']],
+      [['The Baron is rich! He can afford it!', 'How do you suppose he remains rich, Master Pip?', 'devious']]
+    ]
+  },
+  {
+    text: 'But ze Baron is a generous man. Rather than demand immediate repayment, he vishes to play a little game.',
+    mood: 'self-assured-smirk', choices: [
+      [['What sort of game?', 'One of considerable educational value.', 'thinking']],
+      [["I don't like the sound of this.", 'Your enthusiasm is not a prerequisite.', 'insulted', 'worried']],
+      [['I like games!', 'Excellent! Zis should be a most productive evening.', 'laugh', 'happy']],
+      [['Can I refuse?', 'Nyet.', 'insulted']]
+    ]
+  },
+  {
+    text: 'Here is a sum of ₥100. If you can double zis investment to ₥200, you vill have proven yourself a true capitalist.',
+    mood: 'current-smile', choices: [
+      [["Wait. You're giving me money because I owe you money?", 'Da. Capital investment.', 'current-smile']],
+      [["Can't I just give you this money back?", 'Vhere is ze profit in zat?', 'thinking']],
+      [['What if I make more than ₥200?', 'Ah! You are already beginning to think like a capitalist!', 'laugh']],
+      [['That sounds easy enough.', 'I admire your optimism.', 'self-assured-smirk']]
+    ]
+  },
+  {
+    text: 'But should you lose ze money... vell, it is off to ze dairy for you, as an indentured servant.',
+    mood: 'demonic-angry', playerMood: 'alarmed', choices: [
+      [["THAT'S SLAVERY!", 'Indentured servitude, Master Pip. Ze distinction is important to our legal department.', 'insulted', 'alarmed']],
+      [
+        ['What happens at the dairy?', 'Vork.', 'current-smile'],
+        ['What sort of work?', 'Considerable quantities of it.', 'self-assured-smirk']
+      ],
+      [["Surely that's illegal?", 'His Excellency maintains an excellent relationship vith ze legislature.', 'devious']],
+      [['I suppose there are worse things.', 'Da. Although relatively few.', 'self-assured-smirk', 'worried']]
+    ]
+  },
+  {text: 'Consider it a most generous opportunity for professional development, Master Pip.', mood: 'self-assured-smirk', playerMood: 'worried'}
+];
+
+export const eliasWelcome = welcomeSections.reduceRight((next, {choices, ...line}) => ({
+  ...line, replies: choices ? choices.map(lines => exchange(lines, next)) : [continueTo(next)]
 }), questions);
 
 function exchange(lines, menu) {

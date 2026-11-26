@@ -3,7 +3,7 @@ import {DJ_ADMISSION_PRICE} from './baron-dialogue.mjs';
 import {djTarget} from './dj-dialogue.mjs';
 import {dancerTargets} from './dancer-dialogue.mjs';
 import {createTally} from './elias-accounting.mjs';
-import {linWaitressId, WAITER_MILK_PRICE} from './waiter-dialogue.mjs';
+import {linWaitressId, TIPPED_MILK_PRICE, WAITER_MILK_PRICE} from './waiter-dialogue.mjs';
 import {nearbyPracticeGuard} from './practice-range-dialogue.mjs';
 import {practiceRangeHit} from './practice-range.mjs';
 import {createPokieProfit} from './pokie-dialogue.mjs';
@@ -317,11 +317,13 @@ const dialogue = createDialogue(baron, {
       clearInput();
       health.change(-0.5, 'Lin’s slap was the last straw.');
     }
-    if (action === 'buyWaiterMilk') {
+    if (action === 'buyWaiterMilk' || action === 'buyTippedWaiterMilk') {
+      const tipped = action === 'buyTippedWaiterMilk';
       const healed = health.hearts < MAX_HEARTS;
       clubEvent(healed ? 'Pip drinks a glass of milk and regains half a heart.' : 'Pip drinks a glass of milk.', () => {
         health.change(0.5);
-        coinBalance.change(-WAITER_MILK_PRICE);
+        if (tipped) karma.change(0.5);
+        coinBalance.change(tipped ? -TIPPED_MILK_PRICE : -WAITER_MILK_PRICE);
       });
     }
     if (action === 'summonEliasForPokieBan') startEliasScene({pokieBan: true});

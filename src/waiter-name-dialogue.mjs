@@ -1,9 +1,9 @@
 export const waiterNameLines = {
   'handlebar-waiter': [
     'Your name is Bull?', 'Correct, sir.',
-    'Are you related to the guards?', 'What an extraordinarily offensive question.',
-    'Sorry.', 'Apology accepted. I shall endeavour not to hold a grudge.',
-    'Thank you.', 'Unlike the guards.'
+    'Are you related to the guards?', {text: 'What an extraordinarily offensive question.', mood: 'offended'},
+    'Sorry.', {text: 'Apology accepted. I shall endeavour not to hold a grudge.', mood: 'welcoming'},
+    'Thank you.', {text: 'Unlike the guards.', mood: 'offended'}
   ],
   'male-waiter': [
     'Your parents actually named you Feta?', 'Indeed, sir.',
@@ -181,7 +181,7 @@ export const linColdNameLines = [
 export const linPrivateReaction = {
   beforeFlirting: [
     'I hear congratulations are in order, sir.',
-    'Oh, not you too.', 'Lady Penelope, was it?',
+    'Oh, not you too.', {text: 'Lady Penelope, was it?', mood: 'skeptical'},
     'Look, it was mostly a financial transaction.', 'How very entrepreneurial of you, sir.',
     'Thank you?', {text: "That wasn't a compliment.", direction: 'Lin slaps Pip.', enterAction: 'linPrivateSlap', mood: 'angry'},
     'OW! What was that for?!', 'Lady Penelope is married, sir.',
@@ -194,7 +194,7 @@ export const linPrivateReaction = {
     "It wasn't what you think!", 'No?',
     'It was a financial transaction!', {text: 'Well, I hope it was profitable.', direction: 'Lin slaps Pip.', enterAction: 'linPrivateSlap', mood: 'angry'},
     'OW!', 'Will you be ordering anything, sir?',
-    'Lin, please...', 'Milk is ₥2 a glass, sir.',
+    'Lin, please...', {text: 'Milk is ₥2 a glass, sir.', mood: 'skeptical'},
     'But I really like you!', 'How unfortunate.'
   ]
 };
@@ -203,12 +203,12 @@ export const linPublicReaction = [
   'Continue', {text: 'Lin! Lovely to see you!', speaker: 'Pip', playerMood: 'happy'},
   'Continue', "Oh, is it? I'm surprised you have time for me.",
   'What do you mean?', "Shouldn't you be upstairs entertaining married women?",
-  "Oh... You've heard.", "Yes. Apparently you're considerably more charming when there's money involved.",
+  "Oh... You've heard.", {text: "Yes. Apparently you're considerably more charming when there's money involved.", mood: 'hurt'},
   'Lin, please. It was a financial transaction!', 'How romantic. And here I was thinking you were just an adorably awkward idiot.',
-  'You thought I was adorable?!', 'Past tense, Pip.',
+  'You thought I was adorable?!', {text: 'Past tense, Pip.', mood: 'hurt'},
   'But—', {text: 'OW!', speaker: 'Pip', playerMood: 'alarmed', direction: 'Lin slaps Pip.', enterAction: 'linSlap'},
   'Continue', 'Perhaps Lady Penelope can kiss it better.',
-  'Lin...', {text: 'And to think I actually looked forward to your stupid little questions.', action: 'linWalkAway'}
+  'Lin...', {text: 'And to think I actually looked forward to your stupid little questions.', action: 'linWalkAway', mood: 'hurt'}
 ];
 
 export const linColdTalkLines = [
@@ -218,7 +218,7 @@ export const linColdTalkLines = [
 ];
 
 export const linKindnessLines = [
-  "Oh, hello, Lin. Sorry, I'm not having the best evening.", 'I saw what happened. That was terribly unfair.',
+  "Oh, hello, Lin. Sorry, I'm not having the best evening.", {text: 'I saw what happened. That was terribly unfair.', mood: 'hurt'},
   'Apparently being a decent person is a punishable offence around here.', {
     text: 'Here. Take this.', direction: 'Lin hands Pip a small collection of milk tokens.', enterAction: 'receiveLinGift', mood: 'pleased'
   },
@@ -226,7 +226,7 @@ export const linKindnessLines = [
   "Lin! I can't take your money!", 'Yes, you can.',
   "But you've worked for this!", "And you've been punished for being a good person. There aren't enough of those around here.",
   "I don't know what to say.", "That's a first. Usually you have some ridiculous question for me.",
-  'You remember those?', 'Every single one.',
+  'You remember those?', {text: 'Every single one.', mood: 'blushing'},
   'Oh...', "Don't ever let this place change you, Pip.",
   "I won't.", {
     text: "Good. Now, I've got work to do.", direction: 'Lin smiles and returns to her normal duties.',

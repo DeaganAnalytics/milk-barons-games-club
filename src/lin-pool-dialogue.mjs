@@ -13,7 +13,7 @@ function insult(clothing) {
   ];
 }
 
-function bunnyBranch(clothing, highKarma) {
+function lifeguardPhraseBranch(phrase, clothing, highKarma) {
   const apology = clothing
     ? highKarma ? [
       "Sorry! I was quoting the lifeguard. That was inappropriate. Will you forgive me?",
@@ -35,13 +35,13 @@ function bunnyBranch(clothing, highKarma) {
       "I won't.", line('Good.', 'skeptical', 'linApologyKarma')
     ];
   return [
-    'I wanted to see some aristocratic bunnies.', line(clothing ? 'You really are disgusting!' : 'You wanted to see WHAT?!', 'angry'),
+    `I wanted to see some aristocratic ${phrase}.`, line(clothing ? 'You really are disgusting!' : 'You wanted to see WHAT?!', 'angry'),
     'Continue', pip('OW!', {enterAction: 'linBunniesSlap', direction: 'Lin slaps Pip.', playerMood: 'alarmed',
       options: [apology, insult(clothing)]})
   ];
 }
 
-export function linPoolJealousy(heardBunnies) {
+export function linPoolJealousy(heardBeauties) {
   const reassurance = [
     ['That\'s okay. This place does have rather loose morals.', "That's putting it politely.",
       'Very politely.', line("I'm glad you're not like some of the other men here.", 'blushing')],
@@ -72,12 +72,13 @@ export function linPoolJealousy(heardBunnies) {
           ]
         ]})
       ],
-      ...(heardBunnies ? [bunnyBranch(false)] : [])
+      ...(heardBeauties ? [lifeguardPhraseBranch('beauties', false)] : [])
     ]})
   ];
 }
 
-export function linClothingConfrontation({clothing, heardBunnies, karma}) {
+export function linClothingConfrontation({clothing, heardBunnies, heardBeauties, karma}) {
+  const phrase = heardBunnies ? 'bunnies' : heardBeauties ? 'beauties' : null;
   const positive = karma > 0;
   return [
     'Hi, Lin!', line(clothing === 'man' ? "I hear you've been stealing clothes from the milk pool." : "I hear you've been stealing women's clothes.", 'angry'),
@@ -116,7 +117,7 @@ export function linClothingConfrontation({clothing, heardBunnies, karma}) {
           'Lin...', line("Don't bother, Pip.", 'hurt', 'alienateLin')
         ])
       ],
-      ...(heardBunnies ? [bunnyBranch(true, karma > 5)] : [])
+      ...(phrase ? [lifeguardPhraseBranch(phrase, true, karma > 5)] : [])
     ]})
   ];
 }

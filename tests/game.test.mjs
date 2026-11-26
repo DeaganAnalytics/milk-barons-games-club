@@ -2503,3 +2503,187 @@ test('Lin can recover from pool jealousy, then confront Pip about theft without 
   advance(choose(options), isMenu);
   assert.equal(visit().replies[1].label, nextChat);
 });
+
+test('server tipping checks funds and stock, limits tips, and unlocks post-ban dialogue after Elias', async () => {
+  const {createWaiterConversation, waiterTippingIntervention, TIPPED_MILK_PRICE} = await import('../src/waiter-dialogue.mjs');
+  const ids = ['male-waiter', 'handlebar-waiter', 'martini-waiter', 'female-waiter', 'blonde-waitress', 'lin-waitress'];
+  const thanks = ['A gratuity', 'A gentleman', 'How exceptionally', 'Oh! Thank you', 'Awww', 'Oh. Thank you'];
+  const tipLabel = 'Yes, please. And a coin for you.';
+  const policy = "Apparently I'm not allowed to tip anymore.";
+  const choose = ({next}) => typeof next === 'function' ? next() : next;
+  const tip = node => node.replies.find(reply => reply.label === tipLabel);
+  const order = (open, id) => open(false, id).replies[0].next;
+  const finish = node => {
+    for (let line = 0; line < 25 && node?.replies?.length; line++) node = choose(node.replies[0]);
+    return node;
+  };
+  for (const [index, id] of ids.entries()) {
+    const open = createWaiterConversation(() => 100);
+    const result = choose(tip(order(open, id)));
+    assert.ok(result.text.startsWith(thanks[index]));
+    assert.equal(result.enterAction, 'buyTippedWaiterMilk');
+    assert.equal(finish(result), null);
+    assert.equal(tip(order(open, id)), undefined);
+  }
+  let balance = 2;
+  const open = createWaiterConversation(() => balance);
+  assert.equal(TIPPED_MILK_PRICE, 3);
+  assert.equal(tip(order(open, ids[0])), undefined);
+  balance = 3;
+  assert.equal(open(true, ids[0]).text, 'Not now! Busy, busy, busy!');
+  const cancelled = choose(order(open, ids[0]).replies.at(-1));
+  assert.equal(cancelled.text, 'Very well, sir.');
+  const staleOffer = tip(order(open, ids[0]));
+  balance = 2;
+  assert.equal(choose(staleOffer).enterAction, undefined);
+  balance = 100;
+  assert.equal(finish(choose(tip(order(open, ids[0])))), null);
+  const second = choose(tip(order(open, ids[5])));
+  assert.equal(second.enterAction, 'buyTippedWaiterMilk');
+  assert.equal(tip(order(open, ids[2])), undefined);
+  assert.deepEqual(finish(second), {exitAction: 'beginWaiterTipBan'});
+  assert.ok(!open(false, ids[0]).replies.some(reply => reply.label === policy));
+  assert.equal(finish(waiterTippingIntervention()).action, 'finishWaiterTipBan');
+  open.finishTipBan();
+  for (const id of ids) {
+    const topic = open(false, id).replies.find(reply => reply.label === policy);
+    assert.ok(topic);
+    assert.equal(choose(topic).enterAction, undefined);
+    assert.ok(!open(false, id).replies.some(reply => reply.label === policy));
+    assert.equal(tip(order(open, id)), undefined);
+  }
+});
+
+test('Lin tip variants use completed flirting milestones and prioritise relationship state', async () => {
+  const {waiterTipLines} = await import('../src/waiter-tipping-dialogue.mjs');
+  const first = (state, chats) => {
+    const line = waiterTipLines('lin-waitress', state, chats)?.[0];
+    return typeof line === 'string' ? line : line?.text;
+  };
+  for (const [chats, text] of [[0, 'Oh.'], [1, 'Oh.'], [2, 'Pip,'], [4, 'Pip,'], [5, 'Aww,'], [7, 'Aww,'], [8, 'PIP!'], [10, 'PIP!']]) {
+    assert.ok(first('normal', chats).startsWith(text));
+  }
+  assert.equal(first('alienated', 10), 'Thank you, sir.');
+  assert.equal(first('departed', 10), undefined);
+});
+
+test('Mystic visibility counts only completed unique conversations and unlocks Elias and the free follow-up in order', async () => {
+  const {createMysticVisibilityDialogue} = await import('../src/mystic-visibility-dialogue.mjs');
+  const mystery = createMysticVisibilityDialogue();
+  const menu = {replies: []};
+  const option = (id, lin) => mystery.option(id, menu, lin);
+  const choose = reply => typeof reply.next === 'function' ? reply.next() : reply.next;
+  const finish = (node, branch = 0) => {
+    for (let step = 0; step < 30 && node !== menu && node !== null; step++) {
+      assert.ok(node.replies.length);
+      assert.equal(node.enterAction, undefined);
+      node = choose(node.replies[node.replies.length > 1 ? branch : 0]);
+    }
+    assert.ok(node === null || node === menu);
+    return node;
+  };
+  assert.equal(option('baron'), null);
+  mystery.meetMystic();
+  assert.equal(option('milk-mystic'), null);
+  assert.equal(option('lin-waitress', {linChats: 4}), null);
+  assert.equal(option('lin-waitress', {linChats: 5, linRelationship: 'alienated'}), null);
+  assert.ok(option('lin-waitress', {linChats: 5}));
+  const held = choose(option('baron'));
+  assert.equal(option('elias'), null);
+  assert.equal(finish(held), null);
+  for (const id of ['guard', 'creamery-bartender', 'dj']) {
+    assert.equal(option('elias'), null);
+    assert.equal(finish(choose(option(id)), id === 'guard' ? 1 : 0), id === 'guard' ? null : menu);
+    assert.equal(option(id), null);
+  }
+  assert.ok(option('elias'));
+  assert.equal(option('milk-mystic'), null);
+  assert.equal(finish(choose(option('elias')), 2), menu);
+  assert.equal(option('elias'), null);
+  assert.equal(finish(choose(option('milk-mystic'))), menu);
+  assert.equal(option('milk-mystic'), null);
+  assert.ok(option('professor'));
+});
+
+test('every Mystic visibility branch reaches its declared ending', async () => {
+  const {createMysticVisibilityDialogue} = await import('../src/mystic-visibility-dialogue.mjs');
+  const ids = ['baron', 'creamery-bartender', 'pillory-attendant', 'pillory-commissioner',
+    'lin-waitress', 'male-waiter', 'handlebar-waiter', 'martini-waiter', 'female-waiter',
+    'blonde-waitress', 'professor', 'lifeguard', 'dj', 'guard', 'elias', 'milk-mystic'];
+  for (let branch = 0; branch < 4; branch++) {
+    const mystery = createMysticVisibilityDialogue();
+    const menu = {text: 'Regular menu'};
+    mystery.meetMystic();
+    for (const id of ids) {
+      const topic = mystery.option(id, menu, {linChats: 5});
+      assert.ok(topic, id);
+      let node = topic.next;
+      while (node && node !== menu) {
+        assert.ok(node.replies.length, id);
+        const {next} = node.replies[Math.min(branch, node.replies.length - 1)];
+        node = typeof next === 'function' ? next() : next;
+      }
+      assert.equal(node, id === 'baron' || (id === 'guard' && branch === 1) ? null : menu, id);
+    }
+  }
+});
+
+test('all Elias introduction branches converge and the final questions have independent one-time keys', async () => {
+  const {eliasWelcome} = await import('../src/elias.mjs');
+  const follow = node => {
+    while (node.replies?.length === 1) {
+      assert.equal(node.action, undefined);
+      node = node.replies[0].next;
+    }
+    return node;
+  };
+  let section = eliasWelcome;
+  for (let index = 0; index < 6; index++) {
+    assert.equal(section.replies.length, 4);
+    const endings = section.replies.map(option => follow(option.next));
+    assert.ok(endings.every(node => node === endings[0]));
+    section = endings[0];
+  }
+  assert.equal(section.text, 'Now, Master Pip, do you have any questions?');
+  const [exit] = section.replies.slice(-1);
+  const questions = section.replies.slice(0, -1);
+  assert.equal(questions.length, 8);
+  assert.equal(new Set(questions.map(question => question.once)).size, 8);
+  for (const question of questions) {
+    assert.equal(question.consumeOnSelect, true);
+    assert.equal(follow(question.next), section);
+  }
+  assert.equal(exit.next.action, 'finishEliasWelcome');
+});
+
+test('Lin uses the lifeguard phrases according to the confrontation and what Pip heard', async () => {
+  const {linPoolJealousy, linClothingConfrontation} = await import('../src/lin-pool-dialogue.mjs');
+  const phraseOptions = scene => scene.at(-1).options.map(([label]) => label)
+    .filter(label => label.includes('aristocratic'));
+  const beauties = 'I wanted to see some aristocratic beauties.';
+  const bunnies = 'I wanted to see some aristocratic bunnies.';
+  for (const heardBeauties of [false, true]) {
+    for (const heardBunnies of [false, true]) {
+      assert.deepEqual(phraseOptions(linPoolJealousy(heardBeauties)), heardBeauties ? [beauties] : []);
+      const clothing = linClothingConfrontation({clothing: 'women', karma: 0, heardBeauties, heardBunnies});
+      assert.deepEqual(phraseOptions(clothing), heardBunnies ? [bunnies] : heardBeauties ? [beauties] : []);
+    }
+  }
+});
+
+test('both lifeguard routes unlock beauties when the phrase is spoken', async () => {
+  const {lifeguardDialogue} = await import('../src/lifeguard-dialogue.mjs');
+  const {createMysticVisibilityDialogue} = await import('../src/mystic-visibility-dialogue.mjs');
+  const work = lifeguardDialogue.replies.find(reply => reply.label === "What's it like working here?");
+  assert.equal(work.consumeOnSelect, true);
+  const phrase = work.next.replies[0].next;
+  assert.match(phrase.text, /aristocratic beauties/);
+  assert.equal(phrase.enterAction, 'hearLifeguardBeauties');
+  assert.equal(phrase.replies[0].next.replies[0].next, lifeguardDialogue);
+
+  const visibility = createMysticVisibilityDialogue();
+  visibility.meetMystic();
+  let node = visibility.option('lifeguard', lifeguardDialogue).next;
+  while (!node.text.includes('aristocratic beauties')) node = node.replies[0].next;
+  assert.equal(node.enterAction, 'hearLifeguardBeauties');
+});
