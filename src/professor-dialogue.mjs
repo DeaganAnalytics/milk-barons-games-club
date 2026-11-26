@@ -1,7 +1,7 @@
 export const professorMoods = ['self-assured-smirk', 'skeptical', 'thinking', 'condescending', 'deadpan'];
 const [smirk, skeptical, thinking, condescending, deadpan] = professorMoods;
 
-const menu = {text: '', mood: smirk, replies: []};
+const menu = {text: '', mysticVisibilityMenu: true, mood: smirk, replies: []};
 const back = [{label: 'Continue', playerMood: 'attentive', next: menu}];
 
 function exchange(steps, replies = back, action) {

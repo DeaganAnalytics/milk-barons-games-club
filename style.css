@@ -639,3 +639,7 @@ canvas {
     animation: none;
   }
 }
+
+#conversation-line {
+  white-space: pre-line;
+}

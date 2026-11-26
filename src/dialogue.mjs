@@ -1,3 +1,4 @@
+import {createMysticVisibilityDialogue} from './mystic-visibility-dialogue.mjs';
 import {createLinDepartureReactions} from './lin-departure-dialogue.mjs';
 import {createMilkMysticConversation, milkMysticId, milkMysticMoods} from './milk-mystic.mjs';
 import {createDjConversation, djMoods, djTarget} from './dj-dialogue.mjs';
@@ -345,6 +346,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     () => hasLinLeft?.() && hasSeducedExecutive?.());
   const linDepartureReaction = createLinDepartureReactions();
   let departureMenu;
+  const mysticVisibility = createMysticVisibilityDialogue();
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
   let skimSpillFollowupPending = false;
@@ -551,7 +553,12 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     const seenCowGuard = hasSeenCowGuard?.();
     const reaction = hasLinLeft?.() && (node === departureMenu || node.linDepartureMenu)
       ? linDepartureReaction(activeTarget, node) : null;
-    const availableReplies = (reaction ? [...replies, reaction] : replies).filter(reply => !usedReplies.has(reply.once)
+    const visibility = node.mysticVisibilityMenu || node.linDepartureMenu
+        || (node === departureMenu && ![pilloryAttendant.id, pilloryCommissioner.id, professor.id, 'lin-waitress'].includes(character))
+      ? mysticVisibility.option(character, node, {
+        linChats: waiterOpening.completedLinChats(), linRelationship: waiterOpening.relationship()
+      }) : null;
+    const availableReplies = [...replies, ...[reaction, visibility].filter(Boolean)].filter(reply => !usedReplies.has(reply.once)
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
@@ -680,6 +687,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   }
 
   function open(target) {
+    if (target.id === milkMysticId) mysticVisibility.meetMystic();
     spokeToDjDairy ||= target.id === djTarget.id;
     npcHistory.mood = pipHistory.mood = null;
     activeTarget = target;

@@ -12,7 +12,7 @@ const guardWarning = {
   }]
 };
 export function createCommissionerConversation() {
-  const menu = {text: '', mood: sad, replies: []};
+  const menu = {text: '', mysticVisibilityMenu: true, mood: sad, replies: []};
   const back = [{label: 'Continue', playerMood: 'attentive', next: menu}];
 
   function exchange(steps, replies = back) {

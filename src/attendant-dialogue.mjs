@@ -1,6 +1,6 @@
 export const attendantMoods = ['exuberant', 'laughing', 'happy', 'self-assured', 'thinking'];
 const [exuberant, laughing, happy, assured, thinking] = attendantMoods;
-const menu = {text: '', mood: happy, replies: []};
+const menu = {text: '', mysticVisibilityMenu: true, mood: happy, replies: []};
 const back = [{label: 'Continue', playerMood: 'attentive', next: menu}];
 
 function exchange(steps, replies = back, action) {

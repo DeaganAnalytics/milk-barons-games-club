@@ -2566,3 +2566,64 @@ test('Lin tip variants use completed flirting milestones and prioritise relation
   assert.equal(first('alienated', 10), 'Thank you, sir.');
   assert.equal(first('departed', 10), undefined);
 });
+
+test('Mystic visibility counts only completed unique conversations and unlocks Elias and the free follow-up in order', async () => {
+  const {createMysticVisibilityDialogue} = await import('../src/mystic-visibility-dialogue.mjs');
+  const mystery = createMysticVisibilityDialogue();
+  const menu = {replies: []};
+  const option = (id, lin) => mystery.option(id, menu, lin);
+  const choose = reply => typeof reply.next === 'function' ? reply.next() : reply.next;
+  const finish = (node, branch = 0) => {
+    for (let step = 0; step < 30 && node !== menu && node !== null; step++) {
+      assert.ok(node.replies.length);
+      assert.equal(node.enterAction, undefined);
+      node = choose(node.replies[node.replies.length > 1 ? branch : 0]);
+    }
+    assert.ok(node === null || node === menu);
+    return node;
+  };
+  assert.equal(option('baron'), null);
+  mystery.meetMystic();
+  assert.equal(option('milk-mystic'), null);
+  assert.equal(option('lin-waitress', {linChats: 4}), null);
+  assert.equal(option('lin-waitress', {linChats: 5, linRelationship: 'alienated'}), null);
+  assert.ok(option('lin-waitress', {linChats: 5}));
+  const held = choose(option('baron'));
+  assert.equal(option('elias'), null);
+  assert.equal(finish(held), null);
+  for (const id of ['guard', 'creamery-bartender', 'dj']) {
+    assert.equal(option('elias'), null);
+    assert.equal(finish(choose(option(id)), id === 'guard' ? 1 : 0), id === 'guard' ? null : menu);
+    assert.equal(option(id), null);
+  }
+  assert.ok(option('elias'));
+  assert.equal(option('milk-mystic'), null);
+  assert.equal(finish(choose(option('elias')), 2), menu);
+  assert.equal(option('elias'), null);
+  assert.equal(finish(choose(option('milk-mystic'))), menu);
+  assert.equal(option('milk-mystic'), null);
+  assert.ok(option('professor'));
+});
+
+test('every Mystic visibility branch reaches its declared ending', async () => {
+  const {createMysticVisibilityDialogue} = await import('../src/mystic-visibility-dialogue.mjs');
+  const ids = ['baron', 'creamery-bartender', 'pillory-attendant', 'pillory-commissioner',
+    'lin-waitress', 'male-waiter', 'handlebar-waiter', 'martini-waiter', 'female-waiter',
+    'blonde-waitress', 'professor', 'lifeguard', 'dj', 'guard', 'elias', 'milk-mystic'];
+  for (let branch = 0; branch < 4; branch++) {
+    const mystery = createMysticVisibilityDialogue();
+    const menu = {text: 'Regular menu'};
+    mystery.meetMystic();
+    for (const id of ids) {
+      const topic = mystery.option(id, menu, {linChats: 5});
+      assert.ok(topic, id);
+      let node = topic.next;
+      while (node && node !== menu) {
+        assert.ok(node.replies.length, id);
+        const {next} = node.replies[Math.min(branch, node.replies.length - 1)];
+        node = typeof next === 'function' ? next() : next;
+      }
+      assert.equal(node, id === 'baron' || (id === 'guard' && branch === 1) ? null : menu, id);
+    }
+  }
+});

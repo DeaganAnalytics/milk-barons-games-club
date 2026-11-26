@@ -187,6 +187,7 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
         ...personal,
         reply("I'll leave you to it.", say(isLin && linCold ? 'Very well.' : 'Enjoy your evening, sir.'))
       ], undefined, index === 2 || index === 8 ? 'hurried' : 'welcoming');
+      if (isLin) currentMenu.mysticVisibilityMenu = true;
       return currentMenu;
     }
     if (reacts) {
