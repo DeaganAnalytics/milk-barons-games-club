@@ -566,6 +566,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
         linChats: waiterOpening.completedLinChats(), linRelationship: waiterOpening.relationship()
       }) : null;
     const availableReplies = [...replies, ...[reaction, visibility].filter(Boolean)].filter(reply => !usedReplies.has(reply.once)
+      && (!reply.requiresUnusedReplies || reply.requiresUnusedReplies.some(key => !usedReplies.has(key)))
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));

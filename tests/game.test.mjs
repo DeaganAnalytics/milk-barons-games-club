@@ -1188,7 +1188,10 @@ test('the attendant introduces the stall once before offering the milk balloon g
   const complaint = 'Hey! You said not a penny, not a dime. Yet you took a coin. What gives?';
   assert.equal(menu.replies.some(reply => reply.label === complaint), false);
   const replayMenu = open(true);
-  const response = replayMenu.replies.find(reply => reply.label === complaint).next;
+  const complaintReply = replayMenu.replies.find(reply => reply.label === complaint);
+  assert.equal(complaintReply.once, 'attendantCoinComplaint');
+  assert.equal(complaintReply.consumeOnSelect, true);
+  const response = complaintReply.next;
   assert.equal(response.text, 'The game is free, just as I said! The fee is for the milk you shed!');
   assert.equal(response.replies[0].next, replayMenu);
 });
