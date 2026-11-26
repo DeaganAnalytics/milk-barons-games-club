@@ -173,6 +173,7 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
   open.canOfferKindness = () => linStage >= 2 && relationship === 'normal' && !hasSeducedExecutive();
   open.willConfront = () => linStage > 3 && relationship === 'normal';
   open.relationship = () => relationship;
+  open.completedLinChats = () => linStage;
   open.endRelationship = state => {
     if (relationship === 'normal' || (relationship === 'alienated' && state === 'departed')) relationship = state;
   };

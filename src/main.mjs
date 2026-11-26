@@ -218,6 +218,7 @@ let linConfrontation = null;
 let linDepartureRegret = false;
 let linKindness = null;
 let linKindnessOffered = false;
+let receivedLinGift = false;
 let compassionFineCollected = 0;
 
 const dialogue = createDialogue(baron, {
@@ -246,6 +247,7 @@ const dialogue = createDialogue(baron, {
   hasSeducedExecutive: () => player.lipstick,
   baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
   hasLinLeft: () => !staff.includes(lin),
+  hasReceivedLinGift: () => receivedLinGift,
   hasVisitedMilkPool: () => visitedMilkPool,
   getStolenClothing: () => milkPool.stolenClothing,
   hasPlayedMilkBalloon: () => playedMilkBalloon,
@@ -282,6 +284,7 @@ const dialogue = createDialogue(baron, {
     if (action === 'receiveLinGift' && linKindness?.gift) {
       const gift = linKindness.gift;
       linKindness.gift = 0;
+      receivedLinGift = true;
       clubEvent('Lin gives Pip some of her tips.', () => coinBalance.change(gift, true));
     }
     if (action === 'releaseLinFromKindness') {

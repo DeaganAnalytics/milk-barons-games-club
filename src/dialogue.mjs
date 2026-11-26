@@ -303,7 +303,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeenDjDairy, hasSeducedExecutive, hasVisitedMilkPool, hasLinLeft, canDeliverDjGift} = {}) {
+export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeenDjDairy, hasSeducedExecutive, hasReceivedLinGift, hasVisitedMilkPool, hasLinLeft, canDeliverDjGift} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -348,6 +348,13 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const skimOpening = createSkimConversation(() => metMilo, () => baronStanding?.() ?? {});
   const askedAboutCowGuards = new Set();
   const mysticOpening = createMilkMysticConversation(() => ({
+    lin: {
+      relationship: waiterOpening.relationship(),
+      normal: waiterOpening.relationship() === 'normal',
+      chats: waiterOpening.completedLinChats(),
+      seduced: hasSeducedExecutive?.(),
+      receivedGift: hasReceivedLinGift?.()
+    },
     seenDj: hasSeenDjDairy?.(),
     canBuyHint: (baronStanding?.()?.coins ?? 0) >= 1,
     askedFourCharacters: askedAboutCowGuards.size >= 4,
