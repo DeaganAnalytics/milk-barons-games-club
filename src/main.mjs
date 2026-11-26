@@ -137,6 +137,7 @@ export const karma = createKarma((score, position) => {
 });
 
 let deferCoinOutcome = false;
+let mysticFatalCoinChange = 0;
 let baronRewardPaid = false;
 let baronCompassionFinePaid = false;
 function showCoinOutcome(outcome) {
@@ -175,6 +176,16 @@ function clubEvent(text, change) {
   ].filter(Boolean);
   info.textContent = [text, ...details].join(' ');
   nextSightNoticeAt = elapsed + 4;
+}
+
+function announceMysticChanges(coins, hearts) {
+  if (!coins && !hearts) return;
+  const signed = value => value > 0 ? '+' : '−';
+  const details = [
+    coins && `Coins: ${signed(coins)}₥${Math.abs(coins)}.`,
+    hearts && `Health: ${signed(hearts)}${Math.abs(hearts)} ${Math.abs(hearts) === 1 ? 'heart' : 'hearts'}.`
+  ].filter(Boolean);
+  clubEvent(['The Milk Mystic settles the exchange.', ...details].join(' '));
 }
 
 const coinEvents = {
@@ -247,9 +258,13 @@ const dialogue = createDialogue(baron, {
       deferCoinOutcome = false;
     }
     if (!outcome.fatal) health.set(outcome.hearts);
+    const coinChange = coinBalance.count - coins;
+    const healthChange = health.hearts - hearts;
+    if (outcome.fatal) mysticFatalCoinChange = coinChange;
+    else announceMysticChanges(coinChange, healthChange);
     return {
-      coinChange: coinBalance.count - coins,
-      healthChange: health.hearts - hearts,
+      coinChange,
+      healthChange,
       fatal: outcome.fatal,
       broke: coinBalance.count === 0
     };
@@ -477,8 +492,11 @@ const dialogue = createDialogue(baron, {
     if (action === 'tipSkim') clubEvent('Pip tips Skim ₥3.', () => coinBalance.change(-3));
     if (action === 'mysticMoneyTheft') karma.change(-0.5);
     if (action === 'finishMysticMoney') showCoinOutcome(coinBalance.outcome);
-    if (action === 'mysticMoneyDeath') health.change(-MAX_HEARTS,
-      'Pip sought financial assistance and received spiritual liberation.');
+    if (action === 'mysticMoneyDeath') {
+      const previousHealth = health.hearts;
+      health.change(-MAX_HEARTS, 'Pip sought financial assistance and received spiritual liberation.');
+      announceMysticChanges(mysticFatalCoinChange, health.hearts - previousHealth);
+    }
     if (action === 'buyOracleHint') clubEvent('Pip buys a fragment of the Oracle’s wisdom.', () => coinBalance.change(-1));
     if (action === 'tipDjDairy' && coinBalance.count >= 5) clubEvent('Pip tips DJ Dairy.', () => {
       karma.change(0.5);
