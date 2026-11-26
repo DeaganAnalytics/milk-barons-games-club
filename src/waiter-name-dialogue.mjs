@@ -234,3 +234,27 @@ export const linKindnessLines = [
   },
   'Continue', {text: "I think I'm in love.", speaker: 'Pip', playerMood: 'happy', action: 'finishLinKindness'}
 ];
+
+export const linFinalInsultLines = [
+  'Are you still upset about Lady Penelope?', "I'm not interested in discussing your private affairs, sir.",
+  "It really didn't mean anything.", {text: 'How lovely for both of you.', mood: 'skeptical', options: [
+    [
+      "I'm genuinely sorry I hurt you.", 'Thank you, sir.',
+      'Can we start again?', 'Will you be ordering any milk?',
+      'Right...'
+    ],
+    [
+      "We weren't even together, Lin.", 'No. Thankfully.',
+      'So why are you so upset?', 'Because I severely misjudged your character.',
+      'Oh.', {text: "Now, if you'll excuse me, I have work to do.", endInteraction: true}
+    ],
+    [
+      "At least Lady Penelope isn't a prude like you.", {text: 'What did you just say?', mood: 'angry'},
+      'Perhaps you could learn a thing or two from her.', 'You know what? I spend all day serving milk to horrible, entitled people.',
+      'Continue', {text: "For a little while, I thought I'd actually met someone different.", mood: 'hurt'},
+      'Lin—', "But you're just another one of them, aren't you?",
+      "That's not—", {text: 'You deserve each other.', mood: 'angry', direction: "Lin throws her glass of milk into Pip's face.", enterAction: 'linThrowMilk'},
+      'Continue', {text: 'I quit.', mood: 'angry', action: 'linDepartWithRegret'}
+    ]
+  ]}
+];

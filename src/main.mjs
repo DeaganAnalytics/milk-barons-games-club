@@ -55,7 +55,7 @@ const attendantMilk = createAttendantMilk();
 const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
 let seenCowGuard = false;
-const render = createRenderer(document.getElementById('game'), () => { seenCowGuard = true; }, sleepingGambler, mystic);
+const render = createRenderer(document.getElementById('game'), () => { seenCowGuard = true; }, sleepingGambler, mystic, () => !staff.includes(lin));
 let eliasApproaching = true;
 let eliasScene = null;
 let seenMilo = false;
@@ -215,6 +215,7 @@ const canDeliverDjGift = () => djGiftPending && coinBalance.count >= 60;
 
 const lin = staff.find(member => member.id === linWaitressId);
 let linConfrontation = null;
+let linDepartureRegret = false;
 let linKindness = null;
 let linKindnessOffered = false;
 let compassionFineCollected = 0;
@@ -244,6 +245,7 @@ const dialogue = createDialogue(baron, {
   hasDjAccess: () => player.djAccess,
   hasSeducedExecutive: () => player.lipstick,
   baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
+  hasLinLeft: () => !staff.includes(lin),
   hasVisitedMilkPool: () => visitedMilkPool,
   getStolenClothing: () => milkPool.stolenClothing,
   hasPlayedMilkBalloon: () => playedMilkBalloon,
@@ -267,7 +269,8 @@ const dialogue = createDialogue(baron, {
     if (['linPrivateSlap', 'linAlienatingSlap', 'linBunniesSlap'].includes(action)) {
       health.change(-0.5, 'Lin’s slap was the last straw.');
     }
-    if (action === 'linDepart') {
+    if (action === 'linDepart' || action === 'linDepartWithRegret') {
+      linDepartureRegret = action === 'linDepartWithRegret';
       lin.serviceDuty = false;
       lin.departing = true;
       lin.rushingOffscreen = true;
@@ -885,6 +888,11 @@ function frame(timestamp) {
     if (staffIndex >= 0) staff.splice(staffIndex, 1);
     const guestIndex = guests.indexOf(lin);
     if (guestIndex >= 0) guests.splice(guestIndex, 1);
+    if (linDepartureRegret && !guestEscort) {
+      linDepartureRegret = false;
+      clearInput();
+      dialogue.open({...lin, linDepartureRegret: true});
+    }
   }
   render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene, partyChatter, guestEscort, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
   requestAnimationFrame(frame);

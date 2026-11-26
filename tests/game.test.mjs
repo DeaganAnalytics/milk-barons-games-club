@@ -2408,3 +2408,64 @@ test('Lin prioritises stolen clothing, preserves flirting progression, and uses 
     return ["Lin. That's a really pretty name.", 'So... is the milk fresh?', "Lovely weather we're having."][stage];
   }
 });
+
+test('Lin’s final insult requires a completed Executive confrontation and allows an irreversible departure', async () => {
+  const {createWaiterConversation, linWaitressId} = await import('../src/waiter-dialogue.mjs');
+  let seduced = false;
+  const open = createWaiterConversation(() => 100, () => false, () => seduced);
+  const visit = () => open(false, linWaitressId);
+  const select = (node, index = 0) => {
+    const {next} = node.replies[index];
+    return typeof next === 'function' ? next() : next;
+  };
+  const reach = (node, predicate) => {
+    for (let step = 0; step < 35 && !predicate(node); step++) node = select(node);
+    assert.ok(predicate(node));
+    return node;
+  };
+  const isMenu = node => node.replies[0]?.label === 'Could I have a glass of milk, please?';
+  for (let stage = 0; stage < 3; stage++) reach(select(visit(), 1), isMenu);
+  seduced = true;
+  const reaction = visit();
+  assert.equal(open.relationship(), 'normal');
+  const menu = reach(reaction, isMenu);
+  assert.equal(open.relationship(), 'alienated');
+  const topic = menu.replies.find(reply => reply.label === 'Are you still upset about Lady Penelope?');
+  const choices = select(topic.next());
+  assert.equal(choices.replies.length, 3);
+  const exit = reach(select(choices, 2), node => node.action === 'linDepartWithRegret');
+  assert.equal(exit.text, 'I quit.');
+  assert.ok(!visit().replies.some(reply => reply.label === topic.label));
+  open.endRelationship('departed');
+  open.endRelationship('alienated');
+  assert.equal(open.relationship(), 'departed');
+  assert.deepEqual(visit().replies, []);
+});
+
+test('Lin departure reactions are independent and the Executive’s deferred offer is free and single-use', async () => {
+  const {createLinDepartureReactions} = await import('../src/lin-departure-dialogue.mjs');
+  const {createExecutiveConversation} = await import('../src/executive-dialogue.mjs');
+  const regular = {text: 'Regular menu'};
+  const option = createLinDepartureReactions();
+  const guardOne = {id: 'guard', guard: {}};
+  const guardTwo = {id: 'guard', guard: {}};
+  option(guardOne, regular).next();
+  assert.equal(option(guardOne, regular), null);
+  assert.equal(option(guardTwo, regular).label, 'Do you know where the waitress went?');
+  assert.equal(option({id: 'milk-mystic'}, regular).next().speaker, 'Oracle');
+
+  let eligible = false;
+  const visit = createExecutiveConversation(() => 0, () => eligible);
+  assert.doesNotMatch(visit().text, /waitress/);
+  eligible = true;
+  let node = visit();
+  while (node.replies.length === 1) node = node.replies[0].next;
+  assert.equal(node.replies.length, 2);
+  const decline = node.replies[1].next.replies[0].next.replies[0].next;
+  const menu = decline.replies[0].next();
+  const offer = menu.replies.find(reply => reply.label.includes('free networking'));
+  const result = offer.next().replies[0].next.fadeTo;
+  assert.equal(result.text, 'Always a pleasure doing business with you.');
+  assert.equal(result.action, undefined);
+  assert.ok(!visit().replies.some(reply => reply.label === offer.label));
+});

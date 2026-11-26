@@ -285,7 +285,7 @@ function drawBartender(ctx, sprite, elapsed) {
   ctx.drawImage(sprite, x, sill - bustHeight, width * 82 / 384, bustHeight);
 }
 
-export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic) {
+export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic, hasLinLeft = () => false) {
   let seenCowGuard = false;
   const danceGuardIndex = dancers.findIndex(dancer => dancer.id === 'guard');
   const ctx = canvas.getContext('2d');
@@ -560,7 +560,7 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic) 
       }
     }
     if (danceVisible) {
-      const speech = dancerSpeech(elapsed, baron, isOnscreen(baron, cameraX, cameraY));
+      const speech = dancerSpeech(elapsed, baron, isOnscreen(baron, cameraX, cameraY), hasLinLeft());
       if (speech && (!speech.dancer || isReady(dancerSprites[dancers.indexOf(speech.dancer)]))
           && speech.x >= cameraX && speech.x <= cameraX + ROOM_WIDTH
           && speech.feetY >= cameraY && speech.headY <= cameraY + ROOM_HEIGHT) {

@@ -1,5 +1,5 @@
 import {linClothingConfrontation, linPoolJealousy} from './lin-pool-dialogue.mjs';
-import {linColdNameLines, linColdTalkLines, linCrushLines, linKindnessLines, linPrivateReaction, linPublicReaction, sterlingResponses, waiterNameLines} from './waiter-name-dialogue.mjs';
+import {linColdNameLines, linColdTalkLines, linCrushLines, linFinalInsultLines, linKindnessLines, linPrivateReaction, linPublicReaction, sterlingResponses, waiterNameLines} from './waiter-name-dialogue.mjs';
 
 export const WAITER_MILK_PRICE = 2;
 
@@ -29,13 +29,13 @@ function exchange(lines, ending, playerMood = 'attentive', completeChat) {
     if (response === undefined) next = ending[0].next;
     else if (typeof response === 'string') next = say(response, replies);
     else {
-      const {text, options, endChat, ...portrait} = response;
+      const {text, options, endChat, endInteraction, ...portrait} = response;
       if (endChat) next = () => {
         completeChat();
         return {...say(text), ...portrait};
       };
       else {
-        const choices = portrait.action ? [] : options?.map(branch => exchange(branch, replies, playerMood, completeChat)) ?? replies;
+        const choices = portrait.action || endInteraction ? [] : options?.map(branch => exchange(branch, replies, playerMood, completeChat)) ?? replies;
         next = {...say(text, choices), ...portrait};
       }
     }
@@ -58,6 +58,8 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
   let linStage = 0;
 
   let relationship = 'normal';
+  let executiveConfronted = false;
+  let finalInsultUsed = false;
   let poolJealousySeen = false;
   let clothingConfrontationSeen = false;
   let alternativeLinName = false;
@@ -107,6 +109,14 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
       if (nameAvailable) personal.push(exchange(isLin && linCold ? linColdNameLines : waiterNameLines[id],
         nameEnding, isLin ? 'worried' : 'thinking'));
       if (isLin && linCold) personal.push(exchange(linColdTalkLines, [back], 'worried'));
+      if (linCold && executiveConfronted && hasSeducedExecutive() && linStage >= 2 && !finalInsultUsed) {
+        const topic = exchange(linFinalInsultLines, [back], 'worried');
+        personal.push({...topic, next: () => {
+          finalInsultUsed = true;
+          currentMenu = undefined;
+          return topic.next;
+        }});
+      }
       if (chatAvailable) {
         if (linStage < linCrushLines.length) {
           const completeChat = () => {
@@ -144,7 +154,7 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
       const last = rest.length - 1;
       rest[last] = {text: rest[last], mood: 'skeptical'};
       const finish = reply('Continue', () => {
-        open.endRelationship('alienated');
+        open.finishExecutiveConfrontation();
         return menu();
       });
       const continuation = [exchange(rest, [finish], 'worried')];
@@ -164,7 +174,11 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
   open.willConfront = () => linStage > 3 && relationship === 'normal';
   open.relationship = () => relationship;
   open.endRelationship = state => {
-    if (relationship === 'normal') relationship = state;
+    if (relationship === 'normal' || (relationship === 'alienated' && state === 'departed')) relationship = state;
+  };
+  open.finishExecutiveConfrontation = () => {
+    executiveConfronted = true;
+    open.endRelationship('alienated');
   };
   return open;
 }

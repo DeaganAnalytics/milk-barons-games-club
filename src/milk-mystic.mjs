@@ -165,7 +165,7 @@ export function createMilkMysticConversation(getDiscoveries = () => ({}), hints 
         used.add(topic);
         return topic.next;
       }}));
-    return {...line, replies: heardHintOffer ? replies : [introduction, ...replies]};
+    return {...line, linDepartureMenu: true, replies: heardHintOffer ? replies : [introduction, ...replies]};
   }
 
   return () => introduced ? (heardHintOffer ? returningVisit() : menu()) : {
