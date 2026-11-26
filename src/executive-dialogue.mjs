@@ -23,12 +23,24 @@ const say = (text, mood = 'stern', replies = [], extras = {}) => ({
 });
 const more = next => [reply('Continue', next)];
 
-export function createExecutiveConversation(getCoins) {
+export function createExecutiveConversation(getCoins, canOfferFreeNetworking = () => false) {
   let greetingIndex = 0;
   let careerComplete = false;
   let fundsComplete = false;
   let seductionComplete = false;
   let redundancyStage = 0;
+  let departureReactionSeen = false;
+  let freeNetworkingUnlocked = false;
+  let freeNetworkingRedeemed = false;
+
+  function freeNetworking(text, afterward, finalReply) {
+    freeNetworkingRedeemed = true;
+    const goodbye = finalReply ? [reply(finalReply, null)] : [];
+    return say(text, 'smug', more(say('', 'smug', [], {
+      mustContinue: true,
+      fadeTo: say(afterward, 'tousled', goodbye)
+    })));
+  }
 
   function wealthOutcome() {
     seductionComplete = true;
@@ -95,6 +107,31 @@ export function createExecutiveConversation(getCoins) {
       return say('I am Lady Penelope Victoria Kensington-Frothingham, MBA, FAICD. Why are you talking to me?', 'skeptical', choices);
     }
 
+    function departureReaction() {
+      const responses = [
+        reply("Well, I suppose a little networking couldn't hurt.", () =>
+          freeNetworking("That's the spirit, darling.", 'Much better. Nothing like a productive networking session.', 'I suppose not.')),
+        reply("I don't really feel like networking right now.", say("Good heavens. You're not still thinking about that waitress, are you?", 'skeptical', [
+          reply('Maybe.', say('How dreadfully sentimental.', 'exasperated', more(
+            say('Well, the offer stands, darling.', 'smug', more(() => {
+              freeNetworkingUnlocked = true;
+              return menu();
+            }))
+          )))
+        ]))
+      ];
+      const lines = [
+        ['Lin?', 'Whatever her name was.'],
+        ['You knew about her?', 'Of course. The little hussy was practically undressing you with her eyes.'],
+        ['She was?!', 'Oh, darling. You really are quite hopeless.'],
+        ['I feel terrible about what happened.', 'Nonsense. She was becoming an unnecessary distraction.'],
+        ["That's a bit harsh.", 'Tell you what, darling. Our next private networking event is on the house.'],
+        ['Really?', 'Consider it a celebration of your renewed professional focus.']
+      ];
+      const exchange = lines.reduceRight((replies, [label, text]) => [reply(label, say(text, 'smug', replies))], responses);
+      return say('Darling! I hear that little waitress has finally gone.', 'smug', exchange);
+    }
+
     function menu() {
       const choices = [reply('Who are you?', identity)];
       if (!fundsComplete) {
@@ -111,10 +148,18 @@ export function createExecutiveConversation(getCoins) {
           return {...opening, disguise};
         }));
       }
+      if (freeNetworkingUnlocked && !freeNetworkingRedeemed) {
+        choices.push(reply('Is that free networking event still available?', () =>
+          freeNetworking('For you, darling? Absolutely.', 'Always a pleasure doing business with you.')));
+      }
       choices.push(reply("I'll leave you to it.", null));
       return say(greetings[index], greetingMoods[index], choices);
     }
 
+    if (!departureReactionSeen && canOfferFreeNetworking()) {
+      departureReactionSeen = true;
+      return departureReaction();
+    }
     return menu();
   };
 }

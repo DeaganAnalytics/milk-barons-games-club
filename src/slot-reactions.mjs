@@ -16,7 +16,7 @@ const speakingDistance = 60;
 const approachSpeed = 104;
 const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
-function approach(actor, participant, player, baron, crowd, dt) {
+export function approachPatron(actor, participant, player, baron, crowd, dt, speed = approachSpeed) {
   actor.walking = false;
   if (!participant.destination || distance(participant.destination, player) >= 28 || !participant.route.length) {
     participant.destination = {x: player.x, y: player.y};
@@ -24,12 +24,16 @@ function approach(actor, participant, player, baron, crowd, dt) {
       .map(([dx, dy]) => ({x: player.x + dx, y: player.y + dy}))
       .filter(spot => !isNpcBlocked(spot.x, spot.y, actor.radius, baron))
       .sort((a, b) => distance(a, actor) - distance(b, actor));
-    participant.route = spots.length ? routeAroundBaron(actor, spots[0], baron) : [];
+    participant.route = [];
+    for (const spot of spots) {
+      participant.route = routeAroundBaron(actor, spot, baron);
+      if (participant.route.length) break;
+    }
   }
   const target = participant.route[0];
   if (!target) return;
   const remaining = distance(actor, target);
-  const step = Math.min(remaining, approachSpeed * dt);
+  const step = Math.min(remaining, speed * dt);
   if (!step) {
     if (!remaining) participant.route.shift();
     return;
@@ -85,7 +89,7 @@ export function createSlotReactions(staff, guards) {
         participant.claimed = true;
         if (participant.waiter) actor.serviceDuty = true;
         else actor.slotReaction = true;
-        if (distance(actor, player) > speakingDistance) approach(actor, participant, player, baron, crowd, dt);
+        if (distance(actor, player) > speakingDistance) approachPatron(actor, participant, player, baron, crowd, dt);
         const gap = distance(actor, player);
         if (gap <= speakingDistance && (!arrival || gap < distance(arrival[0], player))) arrival = [actor, participant];
       }
@@ -95,9 +99,18 @@ export function createSlotReactions(staff, guards) {
       }
       const [actor, participant] = arrival;
       const [text, response, playerMood] = exchanges[event.delivered++];
-      const slotReaction = {text, response, playerMood};
       event.participants.delete(actor);
-      if (!event.participants.size) event = null;
+      const final = !event.participants.size || event.delivered === exchanges.length;
+      const slotReaction = {text, response, playerMood, final};
+      if (final) {
+        for (const [other, waiting] of event.participants) {
+          if (!waiting.claimed) continue;
+          if (waiting.waiter) other.serviceDuty = false;
+          else other.slotReaction = false;
+          other.walking = false;
+        }
+        event = null;
+      }
       actor.walking = false;
       if (participant.waiter) actor.serviceDuty = false;
       else actor.slotReaction = false;

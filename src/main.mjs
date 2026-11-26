@@ -3,12 +3,12 @@ import {DJ_ADMISSION_PRICE} from './baron-dialogue.mjs';
 import {djTarget} from './dj-dialogue.mjs';
 import {dancerTargets} from './dancer-dialogue.mjs';
 import {createTally} from './elias-accounting.mjs';
-import {WAITER_MILK_PRICE} from './waiter-dialogue.mjs';
+import {linWaitressId, WAITER_MILK_PRICE} from './waiter-dialogue.mjs';
 import {nearbyPracticeGuard} from './practice-range-dialogue.mjs';
 import {practiceRangeHit} from './practice-range.mjs';
 import {createPokieProfit} from './pokie-dialogue.mjs';
 import {createSleepingGambler} from './sleeping-gambler.mjs';
-import {createSlotReactions} from './slot-reactions.mjs';
+import {approachPatron, createSlotReactions} from './slot-reactions.mjs';
 import {openSlot, sleepingGamblerTarget, slotPlayers} from './slot-machines.mjs';
 import {clubSightLines} from './club-sight-lines.mjs';
 import {facingIndex} from './directions.mjs';
@@ -24,7 +24,7 @@ import {createMilkPool, lifeguard, poolClothing, takePoolClothing, updateMilkPoo
 import {advanceRopeScene, beginRopeScene, createRopeWarning, updateRopeWarning} from './rope-warning.mjs';
 import {advanceGuestEscort, beginGuestEscort, guestRopesInView} from './guest-escort.mjs';
 import {bartender, createCreameryGuard} from './creamery.mjs';
-import {createMilkService, updateMilkService} from './milk-service.mjs';
+import {createMilkService, runServiceStaff, updateMilkService} from './milk-service.mjs';
 import {advanceBaronApproach, returnBaronToRug, callOutMilo, createBaron, isBaronDancing, isOnscreen, updateBaronIdleSpeech, updateBaronAttention, updateBaronWalk} from './baron.mjs';
 import {createDialogue} from './dialogue.mjs';
 import {createGuards, dispatchGuardToMilo, dispatchRovingGuardsToPool, summonBaronGuard, summonGuard, summonGuardFromOffscreen, updateGuards} from './guards.mjs';
@@ -34,7 +34,7 @@ import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {createPlayer, movePlayer, takeDanceExit, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
-import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, PRACTICE_RANGE, MILK_FOUNTAIN, MILK_POOL, nearGuestGate, nearestInteraction, onDanceFloor, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, PRACTICE_RANGE, MILK_FOUNTAIN, MILK_POOL, nearGuestGate, nearestInteraction, onDanceFloor, routeAroundBaron, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
 import {createStaff, updateStaff} from './staff.mjs';
 
 const player = createPlayer();
@@ -55,12 +55,13 @@ const attendantMilk = createAttendantMilk();
 const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
 let seenCowGuard = false;
-const render = createRenderer(document.getElementById('game'), () => { seenCowGuard = true; }, sleepingGambler, mystic);
+const render = createRenderer(document.getElementById('game'), () => { seenCowGuard = true; }, sleepingGambler, mystic, () => !staff.includes(lin));
 let eliasApproaching = true;
 let eliasScene = null;
 let seenMilo = false;
 let reportedMilo = false;
 let seenPoolAndClothes = false;
+let visitedMilkPool = false;
 let poolClothesReport = null;
 let seenPillory = false;
 let seenDjDairy = false;
@@ -212,6 +213,14 @@ const clothingEvents = {
 let djGiftPending = false;
 const canDeliverDjGift = () => djGiftPending && coinBalance.count >= 60;
 
+const lin = staff.find(member => member.id === linWaitressId);
+let linConfrontation = null;
+let linDepartureRegret = false;
+let linKindness = null;
+let linKindnessOffered = false;
+let receivedLinGift = false;
+let compassionFineCollected = 0;
+
 const dialogue = createDialogue(baron, {
   tallies,
   placePokieWager(stake, rollMultiplier) {
@@ -237,6 +246,9 @@ const dialogue = createDialogue(baron, {
   hasDjAccess: () => player.djAccess,
   hasSeducedExecutive: () => player.lipstick,
   baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
+  hasLinLeft: () => !staff.includes(lin),
+  hasReceivedLinGift: () => receivedLinGift,
+  hasVisitedMilkPool: () => visitedMilkPool,
   getStolenClothing: () => milkPool.stolenClothing,
   hasPlayedMilkBalloon: () => playedMilkBalloon,
   isCommissionerSplattered: () => commissionerSplattered,
@@ -251,6 +263,60 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    if (action === 'linReassuranceLie') clubEvent('Pip lies about why he visited the pool.', () => karma.change(-0.5));
+    if (action === 'linClothingLie') clubEvent('Pip lies to Lin about the clothing theft.', () => karma.change(-1));
+    if (action === 'linApologyKarma') clubEvent('Pip apologises to Lin.', () => karma.change(0.5));
+    if (action === 'linCruelRejection') clubEvent('Pip cruelly rejects Lin.', () => karma.change(-2));
+    if (action === 'linBunniesSlap') karma.change(-1);
+    if (['linPrivateSlap', 'linAlienatingSlap', 'linBunniesSlap'].includes(action)) {
+      health.change(-0.5, 'Lin’s slap was the last straw.');
+    }
+    if (action === 'linDepart' || action === 'linDepartWithRegret') {
+      linDepartureRegret = action === 'linDepartWithRegret';
+      lin.serviceDuty = false;
+      lin.departing = true;
+      lin.rushingOffscreen = true;
+      lin.target = null;
+      lin.route = [];
+      lin.pauseUntil = elapsed;
+      clubEvent('Lin walks out on the club.', () => karma.change(-3));
+    }
+    if (action === 'receiveLinGift' && linKindness?.gift) {
+      const gift = linKindness.gift;
+      linKindness.gift = 0;
+      receivedLinGift = true;
+      clubEvent('Lin gives Pip some of her tips.', () => coinBalance.change(gift, true));
+    }
+    if (action === 'releaseLinFromKindness') {
+      lin.serviceDuty = false;
+      lin.target = null;
+      lin.route = [];
+    }
+    if (action === 'finishLinKindness') {
+      linKindness = null;
+      coinBalance.finishDeferredWin();
+    }
+    if (action === 'finishSlotReactions' && player.lipstick && dialogue.linWillConfront()) {
+      linConfrontation = {phase: 'approach', waiter: true, route: [], stalled: 0};
+      clearInput();
+      player.walking = false;
+    }
+    if (action === 'linWalkAway' && linConfrontation) {
+      const away = Math.atan2(lin.y - player.y, lin.x - player.x);
+      const route = [0, Math.PI / 2, -Math.PI / 2].map(offset => ({
+        x: lin.x + 85 * Math.cos(away + offset), y: lin.y + 85 * Math.sin(away + offset)
+      })).map(spot => routeAroundBaron(lin, spot, baron)).find(path => path.length);
+      linConfrontation = {phase: 'leave', route: route ?? [], time: 0};
+    }
+    if (action === 'finishLinConfrontation') {
+      lin.serviceDuty = false;
+      lin.walking = false;
+      lin.target = null;
+      lin.route = [];
+      linConfrontation = null;
+      clearInput();
+      health.change(-0.5, 'Lin’s slap was the last straw.');
+    }
     if (action === 'buyWaiterMilk') {
       const healed = health.hearts < MAX_HEARTS;
       clubEvent(healed ? 'Pip drinks a glass of milk and regains half a heart.' : 'Pip drinks a glass of milk.', () => {
@@ -376,7 +442,13 @@ const dialogue = createDialogue(baron, {
     });
     if (action === 'baronFreeMilk') clubEvent('The Baron gives Pip a glass of milk. One heart restored.', () => health.change(1));
     if (action === 'baronSlap') health.change(-0.5, 'You have displeased the Baron!');
-    if (action === 'finishBaronPenalty') returnBaronToRug(baron);
+    if (action === 'finishBaronPenalty') {
+      returnBaronToRug(baron);
+      if (compassionFineCollected > 0 && !linKindnessOffered && dialogue.linCanOfferKindness()) {
+        linKindnessOffered = true;
+        linKindness = {gift: compassionFineCollected + 5, waiter: true, route: [], approaching: true};
+      }
+    }
     if (action === 'baronKarmaReward' && !baronRewardPaid) {
       baronRewardPaid = true;
       clubEvent('The Baron awards a performance incentive.', () => coinBalance.change(15, true));
@@ -392,7 +464,9 @@ const dialogue = createDialogue(baron, {
     }
     if (action === 'baronKarmaFine' && !baronCompassionFinePaid) {
       baronCompassionFinePaid = true;
+      const before = coinBalance.count;
       clubEvent('The Baron charges a behavioural compliance levy.', () => coinBalance.change(-15));
+      compassionFineCollected = before - coinBalance.count;
     }
     if (action === 'eliasVampireFine') clubEvent('Elias charges you for bringing up vampires again.', () => coinBalance.change(-1));
     if (action === 'collectTax') clubEvent('Elias takes the Baron’s cut.', () => coinBalance.collectTax());
@@ -519,6 +593,7 @@ const {readMovement, clearInput} = bindControls({
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
     if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || rangeFall) return;
     const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
+      && !(guest === lin && (linConfrontation || dialogue.linRelationship() === 'departed'))
       && !(guestEnclosure.active && insideGuestEnclosure(guest))
       && !(guest === sleepingGamblerTarget && sleepingGambler.pose(elapsed).awake));
     nearbyGuests.push(mystic);
@@ -706,6 +781,7 @@ function frame(timestamp) {
   seenPoolAndClothes ||= inView(MILK_POOL) && inView(poolClothing);
   noteSight('ladies', partyGuests.every(guest => inView({x: guest.x, y: guest.y - 33})));
   seenMilkPool ||= inView(MILK_POOL);
+  visitedMilkPool ||= Math.abs(player.x - MILK_POOL.x) <= 305 && Math.abs(player.y - MILK_POOL.y) <= 165;
   seenMilkFountain ||= inView(MILK_FOUNTAIN);
   noteSight('pool', seenMilkPool);
   noteSight('pillory', pilloryVisible);
@@ -748,17 +824,79 @@ function frame(timestamp) {
     requestAnimationFrame(frame);
     return;
   }
-  const reaction = !guestEscort && slotReactions.update(player, baron, dt);
+  if (linKindness?.approaching && !dialogue.linCanOfferKindness()) {
+    if (linKindness.claimed) lin.serviceDuty = false;
+    linKindness = null;
+  }
+  if (linConfrontation && (!player.lipstick || dialogue.linRelationship() !== 'normal')) {
+    if (linConfrontation.claimed) lin.serviceDuty = false;
+    linConfrontation = null;
+  }
+  if (!guestEscort && linConfrontation && (linConfrontation.phase !== 'approach' || linConfrontation.claimed || !lin.serviceDuty)) {
+    const scene = linConfrontation;
+    lin.serviceDuty = true;
+    scene.claimed = true;
+    if (scene.phase === 'approach') {
+      if (Math.hypot(lin.x - player.x, lin.y - player.y) > 49) {
+        // Let Lin pass a crowd that has blocked her approach.
+        approachPatron(lin, scene, player, baron, scene.stalled >= 0.5 ? [] : [...staff, ...guards], dt, 195);
+        if (!lin.walking || scene.stalled >= 0.5) scene.stalled += dt;
+        else scene.stalled = 0;
+      } else {
+        lin.walking = false;
+        dialogue.open({...lin, linConfrontation: true});
+      }
+    } else {
+      const waypoint = scene.route[0];
+      scene.time += dt;
+      if (waypoint && runServiceStaff(lin, waypoint, baron, [...staff, ...guards], dt) === 'arrived') scene.route.shift();
+      if (!scene.route.length || scene.time > 2) {
+        lin.walking = false;
+        dialogue.open({...lin, linAftermath: true});
+      }
+    }
+    if (dialogue.isOpen()) {
+      clearInput();
+      requestAnimationFrame(frame);
+      return;
+    }
+  }
+  const reaction = !guestEscort && !linConfrontation && slotReactions.update(player, baron, dt);
   if (reaction) {
     clearInput();
     dialogue.open(reaction);
     requestAnimationFrame(frame);
     return;
   }
+  if (!guestEscort && !linConfrontation && linKindness?.approaching
+      && (linKindness.claimed || !lin.serviceDuty)) {
+    linKindness.claimed = true;
+    lin.serviceDuty = true;
+    if (Math.hypot(lin.x - player.x, lin.y - player.y) <= 49) {
+      linKindness.approaching = false;
+      lin.walking = false;
+      clearInput();
+      dialogue.open({...lin, linKindness: true});
+      requestAnimationFrame(frame);
+      return;
+    }
+    approachPatron(lin, linKindness, player, baron, [...staff, ...guards], dt, 160);
+  }
   updatePartyChatter(partyChatter, {x: cameraX, y: cameraY}, staff, baron, guards, elapsed, dt);
   updateAttendantMilk(attendantMilk, baron, staff, guards, {x: cameraX, y: cameraY}, dt);
   updateMilkPool(milkPool, elapsed, dt);
   updateStaff(staff, player, baron, guards, elapsed, dt);
+  if (dialogue.linRelationship() === 'departed' && !lin.rushingOffscreen) {
+    const staffIndex = staff.indexOf(lin);
+    if (staffIndex >= 0) staff.splice(staffIndex, 1);
+    const guestIndex = guests.indexOf(lin);
+    if (guestIndex >= 0) guests.splice(guestIndex, 1);
+    if (linDepartureRegret && !guestEscort) {
+      linDepartureRegret = false;
+      clearInput();
+      dialogue.open({...lin, linDepartureRegret: true});
+    }
+  }
   render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene, partyChatter, guestEscort, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
   requestAnimationFrame(frame);
 }

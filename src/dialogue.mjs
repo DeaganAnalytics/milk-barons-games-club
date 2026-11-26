@@ -1,3 +1,4 @@
+import {createLinDepartureReactions} from './lin-departure-dialogue.mjs';
 import {createMilkMysticConversation, milkMysticId, milkMysticMoods} from './milk-mystic.mjs';
 import {createDjConversation, djMoods, djTarget} from './dj-dialogue.mjs';
 import {miloIntroduction, miloMenu} from './milo-dialogue.mjs';
@@ -27,7 +28,7 @@ import {availableReports, injuredMiloReply, lifeguardQualificationReport, poolRe
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
-import {createWaiterConversation} from './waiter-dialogue.mjs';
+import {createWaiterConversation, linKindnessDialogue} from './waiter-dialogue.mjs';
 import {drawPipPortrait} from './pip-art.mjs';
 
 const partyGuestCallsGuard = {
@@ -179,7 +180,8 @@ const extraPortraitMoods = new Map([
   ['plum', ['delighted', 'smug', 'shocked']],
   ['emerald', ['amused', 'skeptical', 'appalled']],
   [sleepingGamblerId, ['drowsy', 'protective', 'dismayed']],
-  ...staffIds.filter(id => id !== skimId).map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']])
+  ...staffIds.filter(id => id !== skimId && id !== 'lin-waitress').map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']]),
+  ['lin-waitress', ['welcoming', 'apologetic', 'hurried', 'pleased', 'angry', 'hurt', 'skeptical', 'blushing']]
 ]);
 
 function extraPortraitUrl(id, mood, withoutMilk) {
@@ -301,7 +303,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeenDjDairy, hasSeducedExecutive, canDeliverDjGift} = {}) {
+export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeenDjDairy, hasSeducedExecutive, hasReceivedLinGift, hasVisitedMilkPool, hasLinLeft, canDeliverDjGift} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -336,13 +338,23 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   let autoClose;
   let disguise;
   let pipLipstick = false;
-  const executiveOpening = createExecutiveConversation(() => baronStanding?.()?.coins ?? 0);
+  const executiveOpening = createExecutiveConversation(() => baronStanding?.()?.coins ?? 0,
+    () => hasLinLeft?.() && hasSeducedExecutive?.());
+  const linDepartureReaction = createLinDepartureReactions();
+  let departureMenu;
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
   let skimSpillFollowupPending = false;
   const skimOpening = createSkimConversation(() => metMilo, () => baronStanding?.() ?? {});
   const askedAboutCowGuards = new Set();
   const mysticOpening = createMilkMysticConversation(() => ({
+    lin: {
+      relationship: waiterOpening.relationship(),
+      normal: waiterOpening.relationship() === 'normal',
+      chats: waiterOpening.completedLinChats(),
+      seduced: hasSeducedExecutive?.(),
+      receivedGift: hasReceivedLinGift?.()
+    },
     seenDj: hasSeenDjDairy?.(),
     canBuyHint: (baronStanding?.()?.coins ?? 0) >= 1,
     askedFourCharacters: askedAboutCowGuards.size >= 4,
@@ -351,7 +363,11 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const djOpening = createDjConversation(() => hasSeducedExecutive?.(),
     () => (baronStanding?.()?.coins ?? 0) >= 5, canDeliverDjGift);
   const dancerOpening = createDancerConversation();
-  const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0, () => askedAboutCowGuards.size > 0);
+  let heardLifeguardBunnies = false;
+  const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0, () => askedAboutCowGuards.size > 0, () => hasSeducedExecutive?.(), () => ({
+    clothing: getStolenClothing?.(), visited: hasVisitedMilkPool?.(), heardBunnies: heardLifeguardBunnies,
+    karma: baronStanding?.()?.karma ?? 0
+  }));
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
@@ -444,6 +460,12 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       usedReplies.add('baronKarmaEncounter');
     }
     if (finishedAction === 'skimFalseSpill') skimSpillFollowupPending = true;
+    if (finishedAction === 'rewardMissingDresses') heardLifeguardBunnies = true;
+    if (['alienateLin', 'linCruelRejection', 'linAlienatingSlap'].includes(finishedAction)) {
+      waiterOpening.endRelationship('alienated');
+    }
+    if (finishedAction === 'finishLinConfrontation') waiterOpening.finishExecutiveConfrontation();
+    if (finishedAction === 'linDepart' || finishedAction === 'linDepartWithRegret') waiterOpening.endRelationship('departed');
     onAction?.(finishedAction, target);
   }
 
@@ -482,7 +504,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       || node === lifeguardDialogue || node.mustContinue
       || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.pokieBan || activeTarget.baronKarma) && !action));
     slappedByBaron ||= node.enterAction === 'baronSlap';
-    panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || node.action === 'politicianHit');
+    panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || ['linSlap', 'linPrivateSlap', 'linAlienatingSlap', 'linBunniesSlap'].includes(node.enterAction) || node.action === 'politicianHit');
+    panel.classList.toggle('lin-milk-throw', node.enterAction === 'linThrowMilk');
     panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
@@ -508,7 +531,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       : currentSpeaker === bartender.id ? bartender.title
       : currentSpeaker === 'guard' ? 'Bull Guard'
       : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
-    setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk);
+    setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)));
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
     const options = character === lifeguard.id
       ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
@@ -518,7 +541,9 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     const replies = eliasMenu ? [...options, ...(vampire ? [vampire] : []), ...accountingReplies(tallies, node)]
       : report ? [report, ...options] : options;
     const seenCowGuard = hasSeenCowGuard?.();
-    const availableReplies = replies.filter(reply => !usedReplies.has(reply.once)
+    const reaction = hasLinLeft?.() && (node === departureMenu || node.linDepartureMenu)
+      ? linDepartureReaction(activeTarget, node) : null;
+    const availableReplies = (reaction ? [...replies, reaction] : replies).filter(reply => !usedReplies.has(reply.once)
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
@@ -655,10 +680,18 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     disguise = target.executiveFraud ? 'woman' : null;
     const firstGuestGreeting = !guestGreetingSeen.has(target.id);
     if (partyGuests.some(guest => guest.id === target.id)) guestGreetingSeen.add(target.id);
-    const opening = target.slotReaction ? {
+    const opening = target.linDepartureRegret ? {
+      text: 'Oh, bloody hell.', speaker: 'Pip', mood: 'hurt', playerMood: 'exasperated'
+    } : target.linKindness ? linKindnessDialogue() : target.linAftermath ? {
+      text: "Oh, I've really messed this up.", speaker: 'Pip', mood: 'attentive', playerMood: 'sad', mustContinue: true,
+      replies: [{label: 'Continue', next: {
+        text: 'Nice!', speaker: 'Male Patron', character: 'male-waiter', mood: 'pleased', mustContinue: true,
+        replies: [{label: 'SHUT UP!', next: {exitAction: 'finishLinConfrontation'}, playerMood: 'exasperated'}]
+      }}]
+    } : target.slotReaction ? {
       text: target.slotReaction.text, mood: staffIds.includes(target.id) ? 'pleased' : 'speaking', mustContinue: true,
       playerMood: target.slotReaction.playerMood,
-      replies: [{label: target.slotReaction.response, next: null}]
+      replies: [{label: target.slotReaction.response, next: target.slotReaction.final ? {exitAction: 'finishSlotReactions'} : null}]
     } : partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening(target.id, !firstGuestGreeting)
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.(), isCommissionerSplattered?.(), baronDiscoveries?.()?.pool)
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
@@ -693,7 +726,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       : target.id === milkMysticId ? mysticOpening()
       : target.id === djTarget.id ? djOpening()
       : target.id.startsWith('dancer-') ? dancerOpening(target.id)
-      : staffIds.includes(target.id) ? waiterOpening(target.withoutMilk, target.id)
+      : staffIds.includes(target.id) ? waiterOpening(target.withoutMilk, target.id, target.linConfrontation)
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
       : target.id === 'guard' && target.guard?.creamery ? creameryGuardDialogue(target.guard)
       : target.id === 'guard' ? {
@@ -703,6 +736,12 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
         }
       : target.id === 'milo' ? openMilo()
         : baronConversation();
+    const scripted = target.slotReaction || target.linDepartureRegret || target.linKindness || target.linAftermath || target.linConfrontation
+      || target.welcome || target.pokieBan || target.pokieRefusal || target.tax || target.danceFee
+      || target.baronKarma || target.executiveFraud || target.poolClothesThanks || target.pilloryThanks
+      || target.postEscort || target.guestGate || target.summoned || target.withoutMilk;
+    departureMenu = !scripted && target.id !== skimId && target.id !== milkMysticId
+      && !(target.id === 'baron' && isBaronDancing(baron)) ? opening : null;
     if (target.id === skimId) skimSpillFollowupPending = false;
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
@@ -710,5 +749,5 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     show(opening, target.id, (target.id === 'milo' && miloWasInjured) || target.summoned || target.guestGate || target.postEscort ? 'worried' : 'attentive', target.withoutMilk);
   }
 
-  return {open, dismiss: () => close(false), isOpen: () => !panel.hidden};
+  return {open, linWillConfront: waiterOpening.willConfront, linRelationship: waiterOpening.relationship, linCanOfferKindness: waiterOpening.canOfferKindness, dismiss: () => close(false), isOpen: () => !panel.hidden};
 }

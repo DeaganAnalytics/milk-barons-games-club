@@ -27,7 +27,7 @@ export function updateAttendantMilk(service, baron, staff, guards, camera, dt) {
   service.remaining = Math.max(0, service.remaining - dt);
   if (!service.scene) {
     if (service.remaining > 1e-6) return;
-    const server = staff.filter(member => !member.sweeps && !member.serviceDuty && !member.guestAccess && !member.withoutMilk)
+    const server = staff.filter(member => !member.sweeps && !member.departing && !member.serviceDuty && !member.guestAccess && !member.withoutMilk)
       .sort(byDistance(PILLORY_ATTENDANT))[0];
     if (!server) return;
     const point = [-1, 1].map(side => ({x: PILLORY_ATTENDANT.x + side * 48, y: PILLORY_ATTENDANT.y + 10}))

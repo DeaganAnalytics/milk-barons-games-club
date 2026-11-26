@@ -73,6 +73,21 @@ const oracleHints = [
   "Beware the man who promises you free milk. Particularly if he owns a dairy."
 ];
 
+const linAdvice = [
+  ["Among those who serve the milk, child, you may find one who warms your heart rather than fills your glass.",
+    ({normal, chats}) => normal && chats === 0],
+  ["The maiden whose eyes so distract you is not nearly as indifferent as you believe, child.",
+    ({normal, chats}) => normal && chats >= 2],
+  ["Two hearts yearn for one another, yet one insists on discussing the weather.",
+    ({normal, chats}) => normal && chats >= 5],
+  ["Beware the temptation of a wealthy woman, child. Some treasures cannot be purchased, but can easily be lost.",
+    ({normal, seduced}) => normal && !seduced],
+  ["The milk of affection has curdled, child. No amount of stirring shall restore it.",
+    ({relationship}) => relationship === 'alienated'],
+  ["She who possesses little, yet gives freely, offers you something far more precious than coin.",
+    ({receivedGift}) => receivedGift]
+];
+
 export function createMilkMysticConversation(getDiscoveries = () => ({}), hints = oracleHints) {
   const say = (text, mood, replies, speaker = 'Oracle', character) =>
     ({text, mood, speaker, character, replies, mustContinue: Boolean(replies)});
@@ -82,7 +97,11 @@ export function createMilkMysticConversation(getDiscoveries = () => ({}), hints 
   const used = new Set();
   let introduced = false;
   let heardHintOffer = false;
-  const remainingHints = [...new Set(hints)];
+  const heardHints = new Set();
+  function availableHints({lin}) {
+    const unlocked = lin ? linAdvice.filter(([, eligible]) => eligible(lin)).map(([text]) => text) : [];
+    return [...new Set([...hints, ...unlocked])].filter(hint => !heardHints.has(hint));
+  }
 
   const exhausted = reply('Do you have any more wisdom to share?',
     say('Even the most sacred cow eventually runs dry, child.', 'serene', [
@@ -92,13 +111,16 @@ export function createMilkMysticConversation(getDiscoveries = () => ({}), hints 
     ]));
 
   function hintChoices(accept, decline) {
-    if (!remainingHints.length) return [exhausted, reply(decline, null)];
+    if (!availableHints(getDiscoveries()).length) return [exhausted, reply(decline, null)];
     return [
       reply(accept, () => {
+        const discoveries = getDiscoveries();
+        const remainingHints = availableHints(discoveries);
         if (!remainingHints.length) return exhausted.next;
-        if (!getDiscoveries().canBuyHint) return say('Return when you have a coin to spare, child.', 'serene', back);
+        if (!discoveries.canBuyHint) return say('Return when you have a coin to spare, child.', 'serene', back);
         const index = Math.floor(Math.random() * remainingHints.length);
-        const [hint] = remainingHints.splice(index, 1);
+        const hint = remainingHints[index];
+        heardHints.add(hint);
         const another = say('There are many branches upon the tree of fate. Do you wish to explore another?',
           'contemplative', hintChoices('Tell me more.', "That's enough for now."));
         return {...say(hint, 'contemplative', [reply('Continue', another)]), enterAction: 'buyOracleHint'};
@@ -165,7 +187,7 @@ export function createMilkMysticConversation(getDiscoveries = () => ({}), hints 
         used.add(topic);
         return topic.next;
       }}));
-    return {...line, replies: heardHintOffer ? replies : [introduction, ...replies]};
+    return {...line, linDepartureMenu: true, replies: heardHintOffer ? replies : [introduction, ...replies]};
   }
 
   return () => introduced ? (heardHintOffer ? returningVisit() : menu()) : {

@@ -1,3 +1,4 @@
+import {linDepartureAnnouncements} from './lin-departure-dialogue.mjs';
 import {isBaronDancing} from './baron.mjs';
 import {TURN} from './directions.mjs';
 import {DANCE_FLOOR} from './room.mjs';
@@ -66,7 +67,7 @@ export function createDancerSpeech(random = Math.random) {
   let lastSlot = 0;
   let speaker;
   let text;
-  return (elapsed, baron, baronVisible = false) => {
+  return (elapsed, baron, baronVisible = false, linDeparted = false) => {
     const slot = Math.floor(elapsed / remarkInterval);
     const age = elapsed % remarkInterval;
     if (slot === 0 || age >= remarkDuration) return null;
@@ -74,7 +75,8 @@ export function createDancerSpeech(random = Math.random) {
       const count = dancers.length + 1 + Number(Boolean(baron && isBaronDancing(baron)));
       speaker = Math.floor(random() * count);
       const id = dancers[speaker]?.id ?? (speaker === dancers.length ? 'dj' : 'baron');
-      const lines = id === 'dj' && baronVisible ? [...remarks.dj, djBaronRemark] : remarks[id];
+      const lines = id === 'dj' ? [...remarks.dj, ...(baronVisible ? [djBaronRemark] : []),
+        ...(linDeparted ? linDepartureAnnouncements : [])] : remarks[id];
       text = lines[Math.floor(random() * lines.length)];
       lastSlot = slot;
     }

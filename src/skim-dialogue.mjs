@@ -122,7 +122,7 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
       followups.push(oneTime('patronisingTip', 'Keep up the good work, janitor.',
         say("I see you're fitting in nicely.", [], {mood: 'exasperated', enterAction: 'tipSkim'})));
     }
-    return say(text, [
+    return {...say(text, [
       exchange([
         ['So your job is to clean up after the Baron?', 'Correct.'],
         ['That must be humiliating.', 'Not at all! It is an extraordinary privilege to serve such a magnificent individual.'],
@@ -159,7 +159,7 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
         ["I'll leave you to it.", 'Thank goodness.'],
         ['Continue', 'Ahem. Thank you, my lord.']
       ])
-    ]);
+    ]), linDepartureMenu: true};
   }
 
   function spillFollowup() {
