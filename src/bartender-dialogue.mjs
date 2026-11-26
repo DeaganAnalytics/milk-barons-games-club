@@ -71,7 +71,7 @@ menu.replies.push(
     ['Of course, sir. Milk beer, milk wine, milk cider and milk champagne.', polite],
     ['Milk whisky, milk vodka, milk gin and aged milk rum.', deadpan],
     ['We also serve cocktails. Milk Martinis, Dairy Daiquiris, Piña Cow-ladas and White Russians.', polite],
-    ["Whatever a Russian is. I'm not Russian to find out.", deadpan]
+    ["Whatever a Russian is. I'm not Russian to find out.", 'amused']
   ])),
   reply('Do you have anything non-milk-related?', say('Non-milk, you say, sir? Surely you jest.', 'offended', back)),
   reply("I'll have a milk, please.", orderDrink),
@@ -89,7 +89,7 @@ menu.replies.push(
     reply("Isn't that a bit... extreme?", say('Milk is an extremely serious matter, sir.', deadpan, [
       reply('But who are you guarding the milk from?', say("Peasants. Dastardly creatures, sir, as I'm sure you're aware.", skeptical, back, {direction: 'Whispers'})),
       reply('So if I tried to steal some milk, he would shoot me?', guard('With pleasure.', [
-        reply('Wow...', say('Seems entirely reasonable to me, sir.', deadpan, back), 'alarmed')
+        reply('Wow...', say('Seems entirely reasonable to me, sir.', 'amused', back), 'alarmed')
       ]))
     ]))
   ])),

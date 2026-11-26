@@ -174,13 +174,14 @@ const npcExpressions = new Map([
 const extraPortraitMoods = new Map([
   ['baron', ['suspicious', 'flustered', 'winded', 'milk-drool', 'sipping']],
   ['milo', ['defiant']],
-  [bartender.id, ['offended']],
+  [bartender.id, ['offended', 'amused']],
   [lifeguard.id, ['sheepish']],
   [skimId, ['exasperated', 'wistful', 'conspiratorial']],
   ['plum', ['delighted', 'smug', 'shocked']],
   ['emerald', ['amused', 'skeptical', 'appalled']],
   [sleepingGamblerId, ['drowsy', 'protective', 'dismayed']],
-  ...staffIds.filter(id => id !== skimId && id !== 'lin-waitress').map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']]),
+  ...staffIds.filter(id => id !== skimId && id !== 'lin-waitress' && id !== 'handlebar-waiter').map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']]),
+  ['handlebar-waiter', ['welcoming', 'apologetic', 'hurried', 'pleased', 'offended']],
   ['lin-waitress', ['welcoming', 'apologetic', 'hurried', 'pleased', 'angry', 'hurt', 'skeptical', 'blushing']]
 ]);
 
@@ -194,8 +195,8 @@ function extraPortraitUrl(id, mood, withoutMilk) {
 const expressionFamilies = [
   ['attentive', 'deadpan', 'formal', 'speaking', 'polite', 'reserved', 'weary'],
   ['thinking', 'skeptical', 'suspicious', 'stern', 'deadpan'],
-  ['happy', 'pleased', 'welcoming', 'amused', 'delighted', 'laughing', 'laugh', 'current-smile', 'exuberant', 'excited', 'big-excited-smile', 'relieved'],
-  ['sad', 'despondent', 'dismayed', 'wistful', 'sorry', 'worried', 'distressed', 'nervous', 'sheepish', 'apologetic'],
+  ['happy', 'pleased', 'welcoming', 'amused', 'delighted', 'laughing', 'laugh', 'current-smile', 'exuberant', 'excited', 'big-excited-smile', 'relieved', 'blushing'],
+  ['sad', 'despondent', 'dismayed', 'wistful', 'sorry', 'worried', 'distressed', 'nervous', 'sheepish', 'apologetic', 'hurt'],
   ['alarmed', 'flustered', 'shocked', 'stressed', 'hurried', 'worried', 'appalled', 'exasperated'],
   ['angry', 'demonic-angry', 'frown', 'frowning', 'displeased', 'irritated', 'annoyed', 'offended', 'insulted', 'defiant', 'appalled'],
   ['smug', 'self-assured', 'self-assured-smirk', 'condescending', 'devious', 'conspiratorial', 'evil-laugh']
@@ -220,7 +221,9 @@ const pipReactions = {
   happy: ['happy', 'attentive'],
   laughing: ['happy', 'thinking'],
   excited: ['happy', 'alarmed'],
-  skeptical: ['thinking', 'attentive']
+  skeptical: ['thinking', 'attentive'],
+  hurt: ['sorry', 'worried'],
+  blushing: ['happy', 'worried']
 };
 
 const cameraPortrait = new URL('../assets/dialogue/security-camera.webp', import.meta.url);
@@ -409,11 +412,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       npcHistory.mood = null;
     }
     const family = expressionFamilies.find(group => group.includes(mood)) ?? [];
-    const alternatives = special || withoutMilk ? [] : [
-      ...family.filter(expression => expressions.includes(expression)),
-      ...['attentive', 'deadpan', 'thinking', 'reserved', 'worried', 'skeptical', 'suspicious', 'polite', 'stern'].filter(expression => expressions.includes(expression)),
-      ...expressions
-    ];
+    // Repeat an intentional expression if this character has no suitable alternate.
+    const alternatives = special || withoutMilk ? [] : family.filter(expression => expressions.includes(expression));
     mood = chooseExpression(mood, alternatives, npcHistory);
     const extraPortrait = extraPortraitUrl(character, mood, withoutMilk);
     const reportPortrait = reportPortraits.get(character + '-' + mood);

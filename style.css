@@ -226,24 +226,13 @@ canvas {
   --portrait-width: 87%;
 }
 
-/* Match the visible bust to the deadpan portrait despite extra transparent padding. */
 .conversation-portrait[data-portrait="creamery-bartender"] {
   --portrait-width: 79%;
 }
 
-.conversation-portrait[data-portrait="creamery-bartender"][data-expression="polite"] {
-  --portrait-width: 109%;
-  --portrait-shift-x: -51.1%;
-}
-
-.conversation-portrait[data-portrait="creamery-bartender"][data-expression="skeptical"] {
-  --portrait-width: 109.4%;
-  --portrait-shift-x: -48.5%;
-}
-
-.conversation-portrait[data-portrait="creamery-bartender"][data-expression="thinking"] {
-  --portrait-width: 105.4%;
-  --portrait-shift-x: -47.6%;
+.conversation-portrait.report-portrait:is([data-portrait="guard"], [data-portrait="milo"])::before {
+  width: var(--portrait-width, 128%);
+  height: auto;
 }
 
 .conversation-portrait.standalone-portrait[data-portrait="professor"]::before {
