@@ -1,3 +1,4 @@
+import {mysticMoneyOutcome} from './mystic-money-dialogue.mjs';
 import {createMilkMystic, updateMilkMystic} from './milk-mystic.mjs';
 import {DJ_ADMISSION_PRICE} from './baron-dialogue.mjs';
 import {djTarget} from './dj-dialogue.mjs';
@@ -112,7 +113,7 @@ const tallies = {coins: createTally(STARTING_COINS), karma: createTally(0), heal
 export const health = createHealth((hearts, deathMessage) => {
   tallies.health.record(hearts);
   if (!gameOver.hidden) return;
-  healthDisplay.src = healthImages[hearts * 2].src;
+  healthDisplay.src = healthImages[Math.ceil(hearts * 2)].src;
   healthDisplay.alt = `${hearts} of ${MAX_HEARTS} hearts`;
   if (hearts === 0) endGame('Game Over', deathMessage ?? 'You ran out of health.');
 });
@@ -135,7 +136,7 @@ export const karma = createKarma((score, position) => {
   }
 });
 
-let placingPokieWager = false;
+let deferCoinOutcome = false;
 let baronRewardPaid = false;
 let baronCompassionFinePaid = false;
 function showCoinOutcome(outcome) {
@@ -148,7 +149,7 @@ export const coinBalance = createCoinBalance((count, outcome, movement) => {
   if (!gameOver.hidden) return;
   coinCount.textContent = pokieCoinCount.textContent = count;
   coinAnnouncement.textContent = `${count} coins`;
-  if (!placingPokieWager) showCoinOutcome(outcome);
+  if (!deferCoinOutcome) showCoinOutcome(outcome);
 });
 
 const firstSightLines = new Map(clubSightLines);
@@ -225,14 +226,33 @@ const dialogue = createDialogue(baron, {
   tallies,
   placePokieWager(stake, rollMultiplier) {
     if (pokieProfit.banned) return null;
-    placingPokieWager = true;
+    deferCoinOutcome = true;
     try {
       const result = coinBalance.wager(stake, rollMultiplier, pokieProfit.maxPayout(stake), true);
       if (result) result.banned = pokieProfit.record(stake, result.payout);
       return result;
     } finally {
-      placingPokieWager = false;
+      deferCoinOutcome = false;
     }
+  },
+  transactMysticMoney() {
+    const coins = coinBalance.count;
+    const hearts = health.hearts;
+    const roll = () => Math.floor(Math.random() * 100) + 1;
+    const outcome = mysticMoneyOutcome(coins, hearts, MAX_HEARTS, roll(), roll());
+    deferCoinOutcome = true;
+    try {
+      coinBalance.change(outcome.coinChange);
+    } finally {
+      deferCoinOutcome = false;
+    }
+    if (!outcome.fatal) health.set(outcome.hearts);
+    return {
+      coinChange: coinBalance.count - coins,
+      healthChange: health.hearts - hearts,
+      fatal: outcome.fatal,
+      broke: coinBalance.count === 0
+    };
   },
   sleepingGambler,
   hasSeenCowGuard: () => seenCowGuard,
@@ -437,6 +457,10 @@ const dialogue = createDialogue(baron, {
     });
     if (action === 'skimEnjoyStatus') clubEvent('Pip insists Skim call him “my lord”.', () => karma.change(-0.5));
     if (action === 'tipSkim') clubEvent('Pip tips Skim ₥3.', () => coinBalance.change(-3));
+    if (action === 'mysticMoneyTheft') karma.change(-0.5);
+    if (action === 'finishMysticMoney') showCoinOutcome(coinBalance.outcome);
+    if (action === 'mysticMoneyDeath') health.change(-MAX_HEARTS,
+      'Pip sought financial assistance and received spiritual liberation.');
     if (action === 'buyOracleHint') clubEvent('Pip buys a fragment of the Oracle’s wisdom.', () => coinBalance.change(-1));
     if (action === 'tipDjDairy' && coinBalance.count >= 5) clubEvent('Pip tips DJ Dairy.', () => {
       karma.change(0.5);

@@ -2690,3 +2690,72 @@ test('both lifeguard routes unlock beauties when the phrase is spoken', async ()
   while (!node.text.includes('aristocratic beauties')) node = node.replies[0].next;
   assert.equal(node.enterAction, 'hearLifeguardBeauties');
 });
+
+test('Mystic transaction rolls match the specified weights and preserve exact nonfatal health', async () => {
+  const {mysticMoneyOutcome} = await import('../src/mystic-money-dialogue.mjs');
+  const {createHealth} = await import('../src/health.mjs');
+  const count = results => results.reduce((counts, result) => counts.set(result, (counts.get(result) ?? 0) + 1), new Map());
+  const rolls = Array.from({length: 100}, (_, index) => index + 1);
+  assert.deepEqual([...count(rolls.map(roll => mysticMoneyOutcome(100, 2.5, 3, roll, 50).coinChange))],
+    [[-20, 5], [-10, 10], [-5, 10], [0, 5], [5, 10], [10, 15], [20, 25], [30, 15], [50, 5]]);
+  assert.deepEqual([...count(rolls.map(roll => mysticMoneyOutcome(100, 2.5, 3, 50, roll).hearts))],
+    [[3, 5], [2.5, 10], [1.875, 20], [1.25, 39], [0.625, 20], [0.5, 5], [0, 1]]);
+  for (const coins of [119, 120, 150]) {
+    assert.equal(mysticMoneyOutcome(coins, 3, 3, 100, 1).coinChange, coins === 119 ? 50 : 30);
+  }
+  assert.equal(mysticMoneyOutcome(3, 3, 3, 1, 1).coinChange, -3);
+  assert.equal(mysticMoneyOutcome(100, 3, 3, 1, 1).hearts, 3);
+  assert.equal(mysticMoneyOutcome(100, 0.125, 3, 1, 99).hearts, 0.125);
+  const health = createHealth();
+  assert.equal(health.set(0.625), 0.625);
+  assert.equal(health.change(0.5), 1.125);
+});
+
+test('Mystic money dialogue remains available after refusal and decline and resolves an acceptance once', async () => {
+  const {createMilkMysticConversation} = await import('../src/milk-mystic.mjs');
+  const menuOption = 'Could you spare some milk tokens?';
+  const askAgain = 'Could I have some more milk tokens?';
+  const choose = (node, label) => {
+    const next = (label ? node.replies.find(reply => reply.label === label) : node.replies[0]).next;
+    return typeof next === 'function' ? next() : next;
+  };
+  function advance(node) {
+    const lines = [];
+    while (node.replies?.length === 1 && node.replies[0].label === 'Continue') {
+      lines.push(node.text);
+      node = choose(node);
+    }
+    return {node, lines};
+  }
+  for (const fatal of [false, true]) {
+    let coins = 151;
+    let transactions = 0;
+    const open = createMilkMysticConversation(() => ({coins}), undefined, () => {
+      transactions++;
+      return {coinChange: -5, healthChange: -0.75, fatal, broke: false};
+    });
+    let menu = choose(choose(open()));
+    assert.equal(choose(menu, menuOption).text, 'You already have plenty, child.');
+    menu = advance(choose(menu, menuOption)).node;
+    coins = 150;
+    const offer = advance(choose(menu, menuOption)).node;
+    assert.equal(offer.text, 'Do you accept, child?');
+    menu = advance(choose(offer, "On second thought, I don't like the sound of this.")).node;
+    assert.equal(transactions, 0);
+    const accepted = advance(choose(advance(choose(menu, menuOption)).node));
+    assert.equal(transactions, 1);
+    assert.ok(open().replies.some(reply => reply.label === askAgain));
+    if (fatal) {
+      assert.equal(accepted.node.action, 'mysticMoneyDeath');
+      assert.equal(accepted.node.pipCollapsed, true);
+      assert.ok(!accepted.lines.includes("WAIT! I'VE LOST MONEY!"));
+    } else {
+      assert.ok(accepted.lines.indexOf('AARGH! WHAT THE HELL?!') < accepted.lines.indexOf("WAIT! I'VE LOST MONEY!"));
+      assert.equal(accepted.node.replies.length, 3);
+      let theft = choose(accepted.node, "Fine. I'll take it back myself.");
+      while (!theft.enterAction) theft = choose(theft);
+      assert.equal(theft.enterAction, 'mysticMoneyTheft');
+      assert.ok(choose(theft).replies.some(reply => reply.label === askAgain));
+    }
+  }
+});

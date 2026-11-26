@@ -308,7 +308,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeenDjDairy, hasSeducedExecutive, hasReceivedLinGift, hasVisitedMilkPool, hasLinLeft, canDeliverDjGift} = {}) {
+export function createDialogue(baron, {onAction, tallies, placePokieWager, transactMysticMoney, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeenDjDairy, hasSeducedExecutive, hasReceivedLinGift, hasVisitedMilkPool, hasLinLeft, canDeliverDjGift} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -362,10 +362,11 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       receivedGift: hasReceivedLinGift?.()
     },
     seenDj: hasSeenDjDairy?.(),
+    coins: baronStanding?.()?.coins ?? 0,
     canBuyHint: (baronStanding?.()?.coins ?? 0) >= 1,
     askedFourCharacters: askedAboutCowGuards.size >= 4,
     askedAboutVampires: askedEliasAboutVampires
-  }));
+  }), undefined, transactMysticMoney);
   const djOpening = createDjConversation(() => hasSeducedExecutive?.(),
     () => (baronStanding?.()?.coins ?? 0) >= 5, canDeliverDjGift);
   const dancerOpening = createDancerConversation();
@@ -522,6 +523,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.pokieBan || activeTarget.baronKarma) && !action));
     slappedByBaron ||= node.enterAction === 'baronSlap';
     panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || ['linSlap', 'linPrivateSlap', 'linAlienatingSlap', 'linBunniesSlap'].includes(node.enterAction) || node.action === 'politicianHit');
+    panel.classList.toggle('mystic-collapse', Boolean(node.pipCollapsed));
     panel.classList.toggle('lin-milk-throw', node.enterAction === 'linThrowMilk');
     panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
