@@ -72,9 +72,27 @@ export const linCrushLines = [
   ],
   [
     "Lovely weather we're having.", 'Is it, sir?',
-    'Absolutely lovely.', 'Have you been outside recently?',
-    'No.', 'Neither have I.',
-    "Well, statistically, it's probably quite nice.", 'If you say so, sir.'
+    'Absolutely lovely.', {text: 'Have you been outside recently?', options: [
+      ['No.', 'Neither have I.', "Well, statistically, it's probably quite nice.", 'If you say so, sir.'],
+      [
+        '[Lie] Yes! Just a little while ago.', 'Oh, wonderful. Has the rain stopped?',
+        'Yes! Completely.', 'And has that dreadful wind died down?',
+        'Absolutely.', "That's strange. Sterling told me it was sunny and perfectly still this morning.",
+        'Continue', {text: 'Ah...', speaker: 'Pip', playerMood: 'worried', options: [
+          [
+            "Alright, I haven't actually been outside.", 'Then why did you say you had?',
+            'I wanted to talk to you.', 'You could have just said hello, sir.',
+            'In hindsight, yes.'
+          ],
+          [
+            '[Lie] Very localised weather conditions.', 'Really?',
+            'Extremely localised. Practically confined to the entrance.', 'How extraordinary.',
+            'Meteorologically unprecedented, actually.', "I'll be sure to look out for it when I finish my shift.",
+            "Please don't."
+          ]
+        ]}
+      ]
+    ]}
   ],
   [
     "Excuse me, where's the milk fountain?", 'Directly behind you, sir.',
@@ -91,8 +109,15 @@ export const linCrushLines = [
   [
     'Do you wash these glasses yourself?', 'Sometimes, sir.',
     "You're very good at it.", 'At washing glasses?',
-    'Exceptionally good.', 'We have a dishwasher, sir.',
-    "Well, you've clearly trained it very well.", 'Thank you, sir.'
+    'Exceptionally good.', {text: 'We have a dishwasher, sir.', options: [
+      ["Well, you've clearly trained it very well.", 'Thank you, sir.'],
+      ["And I'm sure you're an exceptionally talented dishwasher operator.", 'Thank you, sir.'],
+      [
+        'You do?!', 'Yes, sir. The Baron is exceedingly wealthy. Sometimes he even lets us wash our own dishes in it.',
+        'You have your own dishes?', 'I can only dream, sir.',
+        'Oh...'
+      ]
+    ]}
   ],
   [
     'Are you working tomorrow?', 'Yes, sir.',
@@ -105,8 +130,17 @@ export const linCrushLines = [
     'Excuse me, Lin?', 'Yes, sir?',
     'I had something very important to ask you.', 'Go ahead, sir.',
     '...', 'Sir?',
-    'Sorry. I got distracted.', 'By what?',
-    'Nothing! Absolutely nothing!'
+    'Sorry. I got distracted.', {text: 'By what?', options: [
+      ['Nothing! Absolutely nothing!', 'Very well, sir.'],
+      [
+        'Your eyes.', 'My eyes?',
+        'Yes. I was looking into them and forgot what I was going to say.', 'Oh.',
+        "They're very distracting.", 'Would you prefer it if I looked elsewhere, sir?',
+        'NO!', '...',
+        'Sorry. That came out a little louder than intended.', 'Quite, sir.',
+        "I'm going to go now.", {text: 'Enjoy your evening, sir.', endChat: true}
+      ]
+    ]}
   ],
   [
     "You're much better at serving milk than the other waiters.", "That's very kind of you, sir.",
@@ -134,4 +168,69 @@ export const linCrushLines = [
     '...', 'Are you alright?',
     'Never better.'
   ]
+];
+
+export const linColdNameLines = [
+  "Lin. That's a really pretty name.", 'Thank you, sir.',
+  'Is it short for anything?', 'No.',
+  "You've got really nice eyes, too.", 'Will you be ordering anything, sir?',
+  'I was just trying to get to know you.', "I'm sure Lady Penelope would appreciate your company.",
+  'Oh...'
+];
+
+export const linPrivateReaction = {
+  beforeFlirting: [
+    'I hear congratulations are in order, sir.',
+    'Oh, not you too.', 'Lady Penelope, was it?',
+    'Look, it was mostly a financial transaction.', 'How very entrepreneurial of you, sir.',
+    'Thank you?', {text: "That wasn't a compliment.", direction: 'Lin slaps Pip.', enterAction: 'linSlap'},
+    'OW! What was that for?!', 'Lady Penelope is married, sir.',
+    'Yes, but—', 'Will you be ordering any milk, sir?'
+  ],
+  afterFlirting: [
+    {text: 'Hello, Lin!', speaker: 'Pip', playerMood: 'happy'},
+    'Continue', "I hear you've been doing some private networking, sir.",
+    'Oh, God. You know too?', 'The entire club knows, sir.',
+    "It wasn't what you think!", 'No?',
+    'It was a financial transaction!', {text: 'Well, I hope it was profitable.', direction: 'Lin slaps Pip.', enterAction: 'linSlap'},
+    'OW!', 'Will you be ordering anything, sir?',
+    'Lin, please...', 'Milk is ₥2 a glass, sir.',
+    'But I really like you!', 'How unfortunate.'
+  ]
+};
+
+export const linPublicReaction = [
+  'Continue', {text: 'Lin! Lovely to see you!', speaker: 'Pip', playerMood: 'happy'},
+  'Continue', "Oh, is it? I'm surprised you have time for me.",
+  'What do you mean?', "Shouldn't you be upstairs entertaining married women?",
+  "Oh... You've heard.", "Yes. Apparently you're considerably more charming when there's money involved.",
+  'Lin, please. It was a financial transaction!', 'How romantic. And here I was thinking you were just an adorably awkward idiot.',
+  'You thought I was adorable?!', 'Past tense, Pip.',
+  'But—', {text: 'OW!', speaker: 'Pip', playerMood: 'alarmed', direction: 'Lin slaps Pip.', enterAction: 'linSlap'},
+  'Continue', 'Perhaps Lady Penelope can kiss it better.',
+  'Lin...', {text: 'And to think I actually looked forward to your stupid little questions.', action: 'linWalkAway'}
+];
+
+export const linColdTalkLines = [
+  'Can we talk?', 'About your order, sir?',
+  'No, about us.', 'There is no us, sir.',
+  'Oh...'
+];
+
+export const linKindnessLines = [
+  "Oh, hello, Lin. Sorry, I'm not having the best evening.", 'I saw what happened. That was terribly unfair.',
+  'Apparently being a decent person is a punishable offence around here.', {
+    text: 'Here. Take this.', direction: 'Lin hands Pip a small collection of milk tokens.', enterAction: 'receiveLinGift', mood: 'pleased'
+  },
+  "What's this?", "Some tips I've collected.",
+  "Lin! I can't take your money!", 'Yes, you can.',
+  "But you've worked for this!", "And you've been punished for being a good person. There aren't enough of those around here.",
+  "I don't know what to say.", "That's a first. Usually you have some ridiculous question for me.",
+  'You remember those?', 'Every single one.',
+  'Oh...', "Don't ever let this place change you, Pip.",
+  "I won't.", {
+    text: "Good. Now, I've got work to do.", direction: 'Lin smiles and returns to her normal duties.',
+    enterAction: 'releaseLinFromKindness', mood: 'pleased'
+  },
+  'Continue', {text: "I think I'm in love.", speaker: 'Pip', playerMood: 'happy', action: 'finishLinKindness'}
 ];
