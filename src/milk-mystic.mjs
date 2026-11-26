@@ -1,57 +1,37 @@
-import {HALL_CENTER, isNpcBlocked, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron, sameSquare} from './room.mjs';
+import {TURN} from './directions.mjs';
+import {HALL_CENTER, isNpcBlocked} from './room.mjs';
 
 export const milkMysticId = 'milk-mystic';
 export const milkMysticMoods = ['serene', 'skeptical', 'contemplative', 'warning', 'wry-smile'];
 
-const center = {...HALL_CENTER};
-const stops = [
-  {...center, y: center.y - ROOM_HEIGHT * 0.65},
-  {...center, x: center.x + ROOM_WIDTH * 0.65},
-  {...center, y: center.y + ROOM_HEIGHT * 0.65},
-  {...center, x: center.x - ROOM_WIDTH * 0.65}
-];
+const patrolWidth = 125;
+const patrolHeight = 155;
+const patrolSpeed = 54;
 
-export function createMilkMystic() {
-  return {...center, id: milkMysticId, title: 'The Milk Mystic', x: center.x - 105, radius: 12, route: [], pauseUntil: 3,
-    nextStop: 0, walking: false, facingRight: false, stride: 0};
+function patrolPosition(angle) {
+  return {
+    x: HALL_CENTER.x + patrolWidth * Math.cos(angle),
+    y: HALL_CENTER.y + patrolHeight * Math.sin(angle)
+  };
 }
 
-export function updateMilkMystic(mystic, baron, elapsed, dt) {
-  mystic.walking = false;
-  if (elapsed < mystic.pauseUntil) return;
-  if (!mystic.route.length) {
-    const leavingCenter = sameSquare(mystic, center);
-    const destination = leavingCenter ? stops[mystic.nextStop] : center;
-    mystic.route = routeAroundBaron(mystic, destination, baron);
-    if (!mystic.route.length) {
-      mystic.pauseUntil = elapsed + 1;
-      return;
-    }
-    if (leavingCenter) mystic.nextStop = (mystic.nextStop + 1) % stops.length;
-  }
-  const target = mystic.route[0];
-  const dx = target.x - mystic.x;
-  const dy = target.y - mystic.y;
-  const distance = Math.hypot(dx, dy);
-  const step = Math.min(54 * dt, distance);
-  const fraction = distance ? step / distance : 0;
-  const x = mystic.x + dx * fraction;
-  const y = mystic.y + dy * fraction;
-  const inTerritory = sameSquare({x, y}, center) || stops.some(stop => sameSquare({x, y}, stop));
-  if (!inTerritory || isNpcBlocked(x, y, mystic.radius, baron, mystic)) {
-    mystic.route = [];
-    mystic.pauseUntil = elapsed + 1;
-    return;
-  }
-  mystic.x = x;
-  mystic.y = y;
-  if (Math.abs(dx) > 1) mystic.facingRight = dx > 0;
-  mystic.walking = step > 0;
-  mystic.stride = (mystic.stride + step * 0.33) % (Math.PI * 2);
-  if (step === distance) {
-    mystic.route.shift();
-    if (!mystic.route.length) mystic.pauseUntil = elapsed + 2.5;
-  }
+export function createMilkMystic() {
+  const angle = Math.PI / 2;
+  return {
+    ...patrolPosition(angle), id: milkMysticId, title: 'The Milk Mystic',
+    angle, radius: 12, walking: false, facingRight: false, stride: 0
+  };
+}
+
+export function updateMilkMystic(mystic, baron, dt) {
+  const tangent = Math.hypot(patrolWidth * Math.sin(mystic.angle), patrolHeight * Math.cos(mystic.angle));
+  const angle = (mystic.angle + patrolSpeed * dt / tangent) % TURN;
+  const {x, y} = patrolPosition(angle);
+  mystic.walking = dt > 0 && !isNpcBlocked(x, y, mystic.radius, baron, mystic);
+  if (!mystic.walking) return;
+  if (Math.abs(x - mystic.x) > 0.01) mystic.facingRight = x > mystic.x;
+  mystic.stride = (mystic.stride + Math.hypot(x - mystic.x, y - mystic.y) * 0.33) % TURN;
+  Object.assign(mystic, {x, y, angle});
 }
 
 const oracleHints = [

@@ -705,7 +705,7 @@ function frame(timestamp) {
   }
   const baronLocked = serviceWasActive || Boolean(milkService.scene);
   if (!baronLocked) updateBaronAttention(baron, player, elapsed, dt);
-  updateMilkMystic(mystic, baron, elapsed, dt);
+  updateMilkMystic(mystic, baron, dt);
   if (updateMilo(milo, baron, elapsed, dt, guards) && !baronLocked) callOutMilo(baron, milo, elapsed);
   if (!baronLocked) updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed);
   if (guestEscort?.executive && !guestEscort.guard) {
