@@ -352,6 +352,22 @@ const dialogue = createDialogue(baron, {
         coinBalance.change(-60);
       });
     }
+    if (action === 'skimFalseSpill') {
+      const skim = staff.find(member => member.sweeps);
+      skim.rushingOffscreen = true;
+      skim.target = null;
+      skim.route = [];
+      skim.pauseUntil = elapsed;
+      clubEvent('Pip sends Skim after an imaginary milk spill.', () => karma.change(-1));
+    }
+    if (action === 'skimSpillApology') clubEvent('Pip apologises to Skim.', () => karma.change(0.5));
+    if (action === 'skimSpillLaughter') clubEvent('Pip laughs at Skim.', () => karma.change(-0.5));
+    if (action === 'skimSpillInsult') clubEvent('Pip mocks Skim for falling for the lie.', () => karma.change(-1));
+    if (action === 'skimSpillCompensation') clubEvent('Pip gives Skim ₥10 for his trouble.', () => {
+      karma.change(1);
+      coinBalance.change(-10);
+    });
+    if (action === 'tipSkim') clubEvent('Pip tips Skim ₥3.', () => coinBalance.change(-3));
     if (action === 'buyOracleHint') clubEvent('Pip buys a fragment of the Oracle’s wisdom.', () => coinBalance.change(-1));
     if (action === 'tipDjDairy' && coinBalance.count >= 5) clubEvent('Pip tips DJ Dairy.', () => {
       karma.change(0.5);

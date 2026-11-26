@@ -95,7 +95,7 @@ export function updateMilkService(service, baron, staff, guards, camera, elapsed
     if (traveling || baron.route.length || isBaronDancing(baron)) return;
     service.remaining = Math.max(0, service.remaining - dt);
     if (service.remaining > 1e-6) return;
-    const cleaner = staff.find(member => member.sweeps && !member.guestAccess);
+    const cleaner = staff.find(member => member.sweeps && !member.guestAccess && !member.rushingOffscreen);
     const server = staff.filter(member => !member.sweeps && !member.withoutMilk && !member.serviceDuty && !member.guestAccess)
       .reduce((closest, member) => !closest || distance(member, baron) < distance(closest, baron) ? member : closest, null);
     if (!server || !cleaner) return;

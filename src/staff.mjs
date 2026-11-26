@@ -1,5 +1,5 @@
 import {guardBlocks} from './guards.mjs';
-import {crossesScenery, EAST_EDGE, guestEnclosure, guestGateInside, guestGateOutside, insideGuestEnclosure, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {cameraLeft, cameraTop, ROOM_HEIGHT, ROOM_WIDTH, crossesScenery, EAST_EDGE, guestEnclosure, guestGateInside, guestGateOutside, insideGuestEnclosure, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const uniforms = [
   {id: 'male-waiter', title: 'Waiter'},
@@ -51,17 +51,38 @@ export function faceStaffMovement(member, dx, dy) {
   if (Math.abs(dx) > 0.1) member.facing = Math.sign(dx);
 }
 
+function offscreenRoute(member, player, baron) {
+  const left = cameraLeft(player.x);
+  const top = cameraTop(player.y);
+  const margin = 80;
+  const exits = [
+    {x: left - margin, y: member.y},
+    {x: left + ROOM_WIDTH + margin, y: member.y},
+    {x: member.x, y: top - margin},
+    {x: member.x, y: top + ROOM_HEIGHT + margin}
+  ];
+  const distance = point => Math.hypot(point.x - member.x, point.y - member.y);
+  for (const exit of exits.sort((a, b) => distance(a) - distance(b))) {
+    if (isNpcBlocked(exit.x, exit.y, member.radius, baron)) continue;
+    const route = routeAroundBaron(member, exit, baron);
+    if (route.length) return {target: exit, route};
+  }
+  return {target: null, route: []};
+}
+
 export function updateStaff(staff, player, baron, guards, elapsed, dt, random = Math.random) {
   for (const member of staff) {
     if (member.serviceDuty) continue;
     member.walking = false;
-    if (dt <= 0 || elapsed < member.pauseUntil || Math.hypot(member.x - player.x, member.y - player.y) < 44) continue;
+    if (dt <= 0 || elapsed < member.pauseUntil || (!member.rushingOffscreen && Math.hypot(member.x - player.x, member.y - player.y) < 44)) continue;
     if (guestEnclosure.active && !member.guestAccess && insideGuestEnclosure(member)) {
       member.guestAccess = true;
       member.target = guestGateOutside;
       member.route = [guestGateInside, guestGateOutside];
     }
-    if (!member.target) {
+    if (!member.target && member.rushingOffscreen) {
+      Object.assign(member, offscreenRoute(member, player, baron));
+    } else if (!member.target) {
       member.target = chooseTarget(member, baron, random);
       member.route = member.target && crossesScenery(member, member.target)
         ? routeAroundBaron(member, member.target, baron) : [];
@@ -74,7 +95,8 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
     const dx = targetX - member.x;
     const dy = targetY - member.y;
     const distance = Math.hypot(dx, dy);
-    const step = Math.min(SPEED * dt, distance);
+    const speed = member.rushingOffscreen ? 180 : SPEED;
+    const step = Math.min(speed * dt, distance);
     const arrived = step === distance;
     const x = arrived ? targetX : member.x + dx * step / distance;
     const y = arrived ? targetY : member.y + dy * step / distance;
@@ -92,6 +114,12 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
     if (arrived) {
       member.route?.shift();
       if (member.route?.length) continue;
+      if (member.rushingOffscreen) {
+        const left = cameraLeft(player.x);
+        const top = cameraTop(player.y);
+        member.rushingOffscreen = member.x >= left - 35 && member.x <= left + ROOM_WIDTH + 35
+          && member.y >= top - 35 && member.y <= top + ROOM_HEIGHT + 70;
+      }
       member.guestAccess = false;
       member.target = null;
       member.pauseUntil = elapsed + (member.sweeps ? 1.8 : 0.75) + random() * 1.5;
