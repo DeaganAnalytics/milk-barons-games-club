@@ -2069,8 +2069,11 @@ test('milk service dialogue cycles across staff and checks funds on every repeat
 test('Skim remembers whether Pip confirmed his identity on the first meeting', async () => {
   const {createSkimConversation} = await import('../src/skim-dialogue.mjs');
   const unknown = createSkimConversation();
-  assert.equal(unknown().replies[0].next.replies[0].next.text, 'That you are, my lord.');
-  assert.equal(unknown().text, 'Just a humble janitor, my lord.');
+  assert.equal(unknown().replies[0].next.replies[0].next().text, 'That you are, my lord.');
+  const greeting = unknown();
+  assert.equal(greeting.text, 'Just a humble janitor, my lord.');
+  assert.deepEqual(greeting.replies, []);
+  assert.deepEqual(unknown().replies, []);
   const recognised = createSkimConversation();
   const uncertain = recognised().replies[0].next.replies[1].next;
   assert.equal(uncertain.mood, 'distressed');

@@ -29,6 +29,7 @@ const whisper = {...distressed, direction: 'Whispers.'};
 export function createSkimConversation() {
   let met = false;
   let confirmed = false;
+  let dismissedRecognition = false;
   let unknownIndex = 0;
   let confirmedIndex = 0;
 
@@ -77,7 +78,7 @@ export function createSkimConversation() {
     if (met) {
       const greeting = confirmed ? confirmedGreetings[confirmedIndex++ % confirmedGreetings.length]
         : unknownGreetings[unknownIndex++ % unknownGreetings.length];
-      return menu(greeting);
+      return dismissedRecognition ? say(greeting) : menu(greeting);
     }
 
     met = true;
@@ -102,7 +103,10 @@ export function createSkimConversation() {
       ['What?', 'Nothing, my lord. A pleasure serving you.']
     ])]);
     return say('Hey, I recognise you!', more(say("No, no. I'm just a janitor.", [
-      reply("Maybe I'm mistaken.", say('That you are, my lord.')),
+      reply("Maybe I'm mistaken.", () => {
+        dismissedRecognition = true;
+        return say('That you are, my lord.');
+      }),
       lookalike
     ])), {speaker: 'Pip'});
   };
