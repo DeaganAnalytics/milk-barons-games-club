@@ -168,7 +168,7 @@ const npcExpressions = new Map([
   [bartender.id, bartenderMoods],
   [elias.id, eliasPortraits],
   [lifeguard.id, lifeguardMoods],
-  [professor.id, professorMoods],
+  [professor.id, [...professorMoods, 'notebook']],
   [pilloryAttendant.id, attendantMoods],
   [pilloryCommissioner.id, commissionerMoods],
   [executiveId, executiveMoods.filter(mood => mood !== 'tousled')],
@@ -287,7 +287,7 @@ function warmPortraits() {
   }
   for (const mood of attendantMoods) urls.push(standalonePortraitUrl(pilloryAttendant.id, false, mood));
   for (const mood of eliasPortraits) urls.push(standalonePortraitUrl(elias.id, false, mood));
-  for (const mood of professorMoods) urls.push(standalonePortraitUrl(professor.id, false, mood));
+  for (const mood of npcExpressions.get(professor.id)) urls.push(standalonePortraitUrl(professor.id, false, mood));
   for (const mood of lifeguardMoods) urls.push(standalonePortraitUrl(lifeguard.id, false, mood));
   for (const mood of gamblerPortraits) urls.push(standalonePortraitUrl(sleepingGamblerId, false, mood));
   for (const mood of pokiePortraits) urls.push(standalonePortraitUrl(pokieId, false, mood));

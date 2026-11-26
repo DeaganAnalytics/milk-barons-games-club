@@ -2,20 +2,28 @@ import {applyCurdistChoice, createCurdistAssessment, curdistAssessmentLines, gen
 
 const nextReply = next => ({label: 'Continue', next});
 const professor = (text, mood = 'thinking', extras) => ({text, mood, ...extras});
-const pip = (text, playerMood = 'thinking') => professor(text, 'thinking', {speaker: 'Pip', playerMood});
+const pip = (label, playerMood = 'thinking') => ({label, playerMood});
 const guard = (text, mood = 'formal') => ({text, character: 'guard', mood});
 const direction = text => professor('', 'thinking', {direction: text});
-const note = direction('The Professor makes a note.');
-const anotherNote = direction('The Professor makes another note.');
-const closeNotebook = direction('The Professor closes his notebook.');
+const notebook = direction => professor('', 'notebook', {direction});
+const note = notebook('The Professor makes a note.');
+const anotherNote = notebook('The Professor makes another note.');
+const closeNotebook = notebook('The Professor closes his notebook.');
 const gesture = direction('The Professor gestures towards Pip.');
 
 function say(lines, next) {
-  let replies = Array.isArray(next) ? next : [nextReply(next)];
+  let replies = Array.isArray(next) ? next : next.responsePrompt ? next.replies : [nextReply(next)];
   let node;
   for (const line of [...lines].reverse()) {
-    node = {...(typeof line === 'string' ? professor(line) : line), replies, mustContinue: true};
-    replies = [nextReply(node)];
+    if (typeof line === 'object' && line.label) {
+      const response = replies.length === 1 && replies[0].label === 'Continue'
+        ? replies[0].next : {...professor(''), replies, mustContinue: true};
+      replies = [{...line, next: response}];
+      node = {...professor(''), replies, responsePrompt: true, mustContinue: true};
+    } else {
+      node = {...(typeof line === 'string' ? professor(line) : line), replies, mustContinue: true};
+      replies = [nextReply(node)];
+    }
   }
   return node;
 }
@@ -36,15 +44,15 @@ function conclusion(assessment) {
     {label: 'That research was completely unscientific!', next: ending([professor('And yet I am the scientist, and you are the peasant.', 'deadpan'), "Curious, isn't it?"])},
     {label: "Well, I'm still a Curdist.", next: ending(['How unfortunate.', 'I suppose every academic study has its limitations.'])},
     {label: 'Hmm. Maybe you have a point.', next: ending(['Good heavens!', professor('Have I discovered a cure? Could it be?!', 'self-assured-smirk'),
-      direction('The Professor hurriedly reopens his notebook.'), 'I must contact the Royal Academy immediately!'])},
+      notebook('The Professor hurriedly reopens his notebook.'), 'I must contact the Royal Academy immediately!'])},
     {label: 'DEATH TO THE DAIRY ARISTOCRACY! LIBERATE THE MILK! LONG LIVE THE REVOLUTION!',
-      next: ending([direction('The Professor reopens his notebook.'), professor('Persistent vocal symptoms.', 'deadpan'),
-        direction('The Professor makes one final note.'), professor('Further research required.', 'deadpan')])}
+      next: ending([notebook('The Professor reopens his notebook.'), professor('Persistent vocal symptoms.', 'deadpan'),
+        notebook('The Professor makes one final note.'), professor('Further research required.', 'deadpan')])}
   ];
   return say([closeNotebook, 'Well, that concludes my research.',
     'You have been extraordinarily helpful, my dear peasant. Far more so than I had anticipated.'], [
     {label: 'How did I do?', next: say(['One moment. Let me examine my findings.',
-      direction('The Professor consults his notebook.'), 'I have assessed your condition across four distinct academic dimensions.',
+      notebook('The Professor consults his notebook.'), 'I have assessed your condition across four distinct academic dimensions.',
       'The results are quite illuminating.', ...curdistAssessmentLines(assessment.results), closeNotebook,
       professor('Yes, yes. This should make for an exceptionally well-received publication.', 'self-assured-smirk')], final)},
     {label: 'Can I go now?', next: say([professor('Oh, certainly. Your continued presence is no longer of academic value.', 'deadpan')], final)}
@@ -97,7 +105,7 @@ function allocation(next) {
       pip("That's not what Curd meant!"), 'Then I suggest Curd should have given greater consideration to the nutritional requirements of the aristocracy.', note], next),
     choice('Q5_D', 'Give it to whoever owns the cow.', [professor('Splendid! An emerging recognition of private property rights.', 'self-assured-smirk'),
       pip('What if the ten peasants collectively own the cow?'), 'Good heavens. You were making such promising progress.', note], next),
-    choice('Q5_E', 'Give it all to the Milk Baron.', [professor('Extraordinary!', 'self-assured-smirk'), direction('The Professor enthusiastically makes several notes.'),
+    choice('Q5_E', 'Give it all to the Milk Baron.', [professor('Extraordinary!', 'self-assured-smirk'), notebook('The Professor enthusiastically makes several notes.'),
       'A complete ideological transformation within a single academic session!', professor('I may have inadvertently developed a cure for Curdism!', 'self-assured-smirk'),
       pip('Can I have some milk now?'), "Oh, let's not undo all our progress."], next),
     choice('Q5_F', 'Has anyone consulted the cow?', [professor('Consulted the cow?!', 'skeptical'), 'My dear boy, it is a cow. What possible economic insight could it offer?',
@@ -258,7 +266,7 @@ function personalFailure(seducedExecutive, next) {
       choice('Q1_COMP_NO_B', "I don't want to be interviewed!", [], coercion)
     ])
   ]);
-  return say([direction('The Professor produces a notebook.'), 'First question. When did you first realise you were a failure in life?'], [
+  return say([notebook('The Professor produces a notebook.'), 'First question. When did you first realise you were a failure in life?'], [
     choice('Q1_1', 'Failure? WHAT?!', [
       'My dear boy, we are in a room full of extraordinarily wealthy and refined individuals, accompanied by several regrettably necessary servants who are nonetheless productive members of society, in a manner of speaking.',
       'None of them exhibit any characteristics whatsoever indicative of an ideological alignment with Curdism.',

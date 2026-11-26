@@ -155,7 +155,7 @@ const scenes = {
     "Nobody else seems to know what I'm talking about!", 'And zis concerns you?',
     'YES!', 'How peculiar.',
     'Exactly!', 'No. I am referring to your concern.',
-    'Oh.', {text: '', speaker: 'Pip', branches: [
+    'Oh.', {text: '', branches: [
       {lines: [
         'Who exactly is she?', 'Ze Milk Mystic.',
         'And?', 'She is mystic. She deals primarily vith milk.',
