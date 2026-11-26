@@ -2069,8 +2069,11 @@ test('milk service dialogue cycles across staff and checks funds on every repeat
 test('Skim remembers whether Pip confirmed his identity on the first meeting', async () => {
   const {createSkimConversation} = await import('../src/skim-dialogue.mjs');
   const unknown = createSkimConversation();
-  assert.equal(unknown().replies[0].next.replies[0].next.text, 'That you are, my lord.');
-  assert.equal(unknown().text, 'Just a humble janitor, my lord.');
+  assert.equal(unknown().replies[0].next.replies[0].next().text, 'That you are, my lord.');
+  const greeting = unknown();
+  assert.equal(greeting.text, 'Just a humble janitor, my lord.');
+  assert.deepEqual(greeting.replies, []);
+  assert.deepEqual(unknown().replies, []);
   const recognised = createSkimConversation();
   const uncertain = recognised().replies[0].next.replies[1].next;
   assert.equal(uncertain.mood, 'distressed');
@@ -2240,7 +2243,7 @@ test('DJ Dairy remembers finished topics and selects the romantic advice branch'
     const open = createDjConversation(() => seduced);
     const follow = option => typeof option.next === 'function' ? option.next() : option.next;
     const opening = open();
-    assert.equal(opening.replies.length, 6);
+    assert.equal(opening.replies.length, 8);
     const advice = follow(opening.replies[4]);
     const response = follow(follow(advice.replies[0]).replies[0]);
     const next = follow(response.replies[0]);
@@ -2251,8 +2254,15 @@ test('DJ Dairy remembers finished topics and selects the romantic advice branch'
     } else {
       assert.match(response.text, /I AM THE MILK!/);
     }
-    assert.equal(follow(next.replies[0]).replies.length, 5);
-    assert.equal(open().replies.length, 5);
+    let finalReply = next.replies[0];
+    if (!seduced) {
+      assert.equal(finalReply.label, 'Can I have some then?');
+      const deflection = follow(finalReply);
+      assert.equal(deflection.text, "Whoa, man. Let's not make this about money.");
+      finalReply = deflection.replies[0];
+    }
+    assert.equal(follow(finalReply).replies.length, 7);
+    assert.equal(open().replies.length, 7);
     assert.equal(open().replies.at(-1).label, 'Enjoy your music.');
   }
 });
@@ -2322,4 +2332,21 @@ test('the Baron’s surveillance scenes advance in order and wait for the Execut
   assert.equal(next(true).label, 'Just how much can you see through those cameras?');
   finish(next(true).next);
   assert.equal(next(true), undefined);
+});
+
+test('DJ Dairy’s financial assistance and musical appreciation topics are separate and one-time', async () => {
+  const {createDjConversation} = await import('../src/dj-dialogue.mjs');
+  for (const canTip of [false, true]) {
+    const open = createDjConversation(() => false, () => canTip);
+    const financial = () => open().replies.find(reply => reply.label.includes('₥200'));
+    const appreciation = () => open().replies.find(reply => reply.label === 'I love your music, man.');
+    const question = financial().next();
+    assert.equal(question.replies[0].next, question.replies[1].next);
+    assert.equal(financial(), undefined);
+    const thanks = appreciation().next();
+    const tip = thanks.replies.find(reply => reply.label.startsWith("Here's a tip"));
+    assert.equal(tip?.next.enterAction, canTip ? 'tipDjDairy' : undefined);
+    assert.equal(thanks.replies.at(-1).next.enterAction, undefined);
+    assert.equal(appreciation(), undefined);
+  }
 });

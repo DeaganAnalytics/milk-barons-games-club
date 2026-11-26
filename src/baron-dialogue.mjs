@@ -264,10 +264,10 @@ export function baronAssessment(coins, karma) {
 }
 
 function baronConversationSequence(lines, action, ending) {
-  return lines.reduceRight((replies, [text, mood, character]) => {
+  return lines.reduceRight((replies, [text, mood, character, direction]) => {
     if (character === 'pip') return [reply(text, replies[0].next, mood)];
     const node = say(text, mood, {
-      character, replies, mustContinue: Boolean(replies),
+      character, direction, replies, mustContinue: Boolean(replies),
       ...(character === 'security-camera' ? {speaker: 'Security camera'} : {})
     });
     if (!replies) node.action = action;
@@ -401,11 +401,45 @@ function surveillanceReply(used, seducedExecutive) {
   }
 }
 
-export function additionalBaronReplies({used, standing, discoveries, discussedVampires, askedEliasAboutVampires = discussedVampires, spokeToMilo, seducedExecutive, returnToMenu}) {
+function djDairyFollowup() {
+  const singing = [
+    reply('Milk, milk, milk her now!', baronConversationSequence([
+      ['Hey! You know it too?', 'pleased'],
+      ['Even ze peasants know it. I cannot escape zis song.', 'insulted', 'elias', 'Mumbling']
+    ])),
+    reply("Isn't that a child's song?", baronConversationSequence([
+      ['Child? Zat is a song fit for a magnificent man!', 'insulted', 'elias'],
+      ['He means me!', 'laughing']
+    ])),
+    reply("I'll leave you to it.", say('Milk, milk, milk her now!', 'pleased', {direction: 'Singing'}))
+  ];
+  const gift = baronConversationSequence([
+    ['Oh my MILK!', 'laughing'],
+    ['Here, give him this gift.', 'pleased'],
+    ['Elias!', 'displeased'],
+    ['My lord?', 'current-smile', 'elias'],
+    ['Give young Pip here ₥60 to tip the DJ.', 'pleased'],
+    ['Baron, I really must protes—', 'insulted', 'elias'],
+    ['Nonsense, nonsense. The man is an artist! A man of culture.', 'displeased'],
+    ['Second only to myself.', 'pleased'],
+    ['I guess ve can spare the expense. Damned peasant.', 'thinking', 'elias', 'Checking notebook']
+  ], 'awardDjDairyGift');
+  return reply('I spoke to DJ Dairy.', say('Did he mention me?!', 'pleased', {mustContinue: true, replies: [
+    reply("[Lie] Yes, he wouldn't stop raving about you.", gift),
+    reply('Not really. He spoke poetically about milk.', say('My favourite subject. Hmmm. Milk.', 'pleased')),
+    reply("I can't remember. I was overwhelmed by his musical might.",
+      say('Milk, milk, milk my cow!', 'laughing', {direction: 'Singing', mustContinue: true, replies: singing}))
+  ]}));
+}
+
+export function additionalBaronReplies({used, standing, discoveries, discussedVampires, askedEliasAboutVampires = discussedVampires, spokeToMilo, seducedExecutive, spokeToDjDairy, returnToMenu}) {
   const back = more(returnToMenu);
   const once = (key, option) => ({...option, once: key, consumeOnSelect: true});
   const elias = (text, replies, direction) => say(text, 'self-assured-smirk', {character: 'elias', replies, direction});
   const replies = [];
+  if (spokeToDjDairy && !used.has('baronDjDairyFollowup')) {
+    replies.push(once('baronDjDairyFollowup', djDairyFollowup()));
+  }
   if (used.has('baronKarmaEncounter') && !used.has('finishPoliticalConversion')) {
     replies.push(politicalConversionReply(spokeToMilo));
   }

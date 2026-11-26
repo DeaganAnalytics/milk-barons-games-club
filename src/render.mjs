@@ -1,3 +1,4 @@
+import {createMilkMysticSpeech} from './milk-mystic.mjs';
 import {createRangeSpeech} from './practice-range-speech.mjs';
 import {drawRangeBoundary, drawRangeLane} from './practice-range-art.mjs';
 import {createSlotSpeech} from './slot-speech.mjs';
@@ -284,7 +285,7 @@ function drawBartender(ctx, sprite, elapsed) {
   ctx.drawImage(sprite, x, sill - bustHeight, width * 82 / 384, bustHeight);
 }
 
-export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
+export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic) {
   let seenCowGuard = false;
   const danceGuardIndex = dancers.findIndex(dancer => dancer.id === 'guard');
   const ctx = canvas.getContext('2d');
@@ -334,6 +335,7 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
     .map(id => [id, loadSprite('waiters/' + id + '-empty', 'webp')]));
   const skimVertical = loadSprite('waiters/edmund-vale-vertical-walk', 'webp');
   const partySprites = partyGuests.map(guest => loadSprite('guests/' + guest.id, 'webp'));
+  const mysticSprite = loadSprite('milk-mystic', 'webp');
   const miloSprite = loadSprite('milo', 'webp');
   const fallback = loadSprite('baron');
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
@@ -343,6 +345,7 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
     '1': loadSprite('baron-milk-right', 'webp')
   };
 
+  const mysticSpeech = createMilkMysticSpeech();
   const professorSpeech = createProfessorSpeech();
   let world;
   return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool, milkBalloon = null, attendantMilk = null, rangeFall = null) => {
@@ -402,6 +405,20 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
       }},
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
+    if (mystic && isReady(mysticSprite)) {
+      actors.push({depth: mystic.y + 20, draw: () => {
+        const lift = mystic.walking ? Math.abs(Math.sin(mystic.stride)) * 1.7 : 0;
+        ctx.save();
+        ctx.translate(mystic.x, mystic.y + 20);
+        ctx.fillStyle = '#25202a80';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 13, 3, 0, 0, TURN);
+        ctx.fill();
+        ctx.scale(mystic.facingRight ? -1 : 1, 1);
+        ctx.drawImage(mysticSprite, -20, -68 - lift, 40, 69);
+        ctx.restore();
+      }});
+    }
     if (rangeVisible) PRACTICE_RANGE.lanes.forEach((y, index) => {
       actors.push({depth: y, draw: () => drawRangeLane(ctx, rangeArt, y, elapsed, index)});
     });
@@ -608,6 +625,13 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
         drawSpeech(ctx, rangeRemark.text, rangeRemark.opacity, PRACTICE_RANGE.guardX,
           y - 66, y, cameraX, cameraY);
       }
+    }
+    const mysticRemark = mysticSpeech(elapsed, mystic && isReady(mysticSprite) && !ropeScene
+      && mystic.x >= cameraX && mystic.x <= cameraX + ROOM_WIDTH
+      && mystic.y + 20 >= cameraY && mystic.y - 48 <= cameraY + ROOM_HEIGHT);
+    if (mysticRemark) {
+      drawSpeech(ctx, mysticRemark.text, mysticRemark.opacity, mystic.x,
+        mystic.y - 50, mystic.y + 20, cameraX, cameraY);
     }
     const professorRemark = professorSpeech(elapsed, professorVisible && !ropeScene);
     if (professorRemark) {

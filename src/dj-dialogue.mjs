@@ -3,12 +3,49 @@ import {DANCE_FLOOR} from './room.mjs';
 export const djTarget = {id: 'dj', title: 'DJ Dairy', x: DANCE_FLOOR.x, y: DANCE_FLOOR.y - 315, radius: 16};
 export const djMoods = ['smirk', 'excited', 'skeptical', 'laughing', 'thinking', 'deadpan'];
 
-export function createDjConversation(hasSeducedExecutive) {
+export function createDjConversation(hasSeducedExecutive, canTip = () => true, canDeliverGift = () => false) {
   const used = new Set();
   const say = (text, mood, replies) => ({text, mood, replies, mustContinue: true});
   const reply = (label, next, playerMood = 'attentive') => ({label, next, playerMood});
   const more = next => [reply('Continue', next)];
   const finish = (text, mood) => say(text, mood, more(() => menu()));
+
+  const milky = {text: 'Milky!', mood: 'excited'};
+  const eliasAppears = {
+    ...say('No.', 'current-smile', [
+      reply("How'd you get here?", say('How did who get here?', 'skeptical', [
+        reply("Wait, where'd he go?", milky, 'alarmed')
+      ]), 'alarmed')
+    ]),
+    character: 'elias'
+  };
+  const paidToSpeak = reply('But I paid ₥60 to speak to you.',
+    say("That's like, your choice, man. You could've just walked past the fence. It's just rope.", 'deadpan', [
+      reply('Oh MILK!', null, 'alarmed'),
+      reply('I could do that?', eliasAppears, 'thinking')
+    ]), 'exasperated');
+
+  const dream = say('I dream of a world where everyone has milk.', 'thinking', [
+    reply('So do I. The economic inequality of milk distribution in this society is—',
+      say("Like, each person is their own bottle of milk, and we pour it into each other's cereal.", 'smirk', [
+        reply('Wait, what? The inequality—',
+          say("Yes, unequal milk. Cow, goat. It's like the same, but it's like different, man.", 'thinking', more(
+            say('What were you saying?', 'skeptical', [paidToSpeak])
+          )), 'alarmed')
+      ]), 'thinking'),
+    reply('So can I have some money to achieve that dream?',
+      say('You gotta milk your own cow in life, man.', 'deadpan', [
+        reply('But the Baron owns all the cows!',
+          say('Milk it like life milks you. Spiritual awakening of the pasteurised soul. Beautiful.', 'smirk', more(
+            say('Good chat, man.', 'smirk', [paidToSpeak])
+          )), 'exasperated')
+      ]))
+  ]);
+  const milkIsSoul = say("Money's like, not that important, dawg. It's all about the soul, the sweet, sweet taste of pure milk.", 'thinking', more(
+    say('Milk is soul. Soul is milk. You dig?', 'excited', [
+      reply("If money's not importan—", dream, 'thinking')
+    ])
+  ));
 
   const topics = [
     reply('Is this song about milk?', say('Superficially, yes.', 'thinking', [
@@ -41,18 +78,47 @@ export function createDjConversation(hasSeducedExecutive) {
               }, 'worried')
             ])
           : say("It's all about the scent, man. I bathe in milk. I spray on milk for perfume! I AM THE MILK!", 'excited', [
-              reply('I can barely afford to buy milk for drinking.', finish('Money, man. Like, what does it even mean, you dig?', 'thinking'))
+              reply('I can barely afford to buy milk for drinking.', say('Money, man. Like, what does it even mean, you dig?', 'thinking', [
+                reply('Can I have some then?', finish("Whoa, man. Let's not make this about money.", 'skeptical'))
+              ]))
             ]))
-      ]))))
+      ])))),
+    reply("I need to earn ₥200 or I'm off to the dairy. Can I have some money?",
+      say("Heavy, man. That's not a good vibe.", 'skeptical', [
+        reply('Is that a yes?', milkIsSoul),
+        reply('Is that a no?', milkIsSoul)
+      ]), 'worried'),
+    reply('I love your music, man.', () => say("Really?! It's straight from my heart.", 'excited', [
+      ...(canTip() ? [reply("Here's a tip. Keep it up!", {
+        text: 'Far out, man! May your glass never run dry!', mood: 'excited', enterAction: 'tipDjDairy'
+      })] : []),
+      reply('Just wanted to say thanks.', {
+        text: "That's beautiful, man. Music is like milk for the ears.", mood: 'smirk'
+      })
+    ]))
   ];
+
+  const gift = reply('The Baron sent me to give you this.', {
+    ...say('Milky.', 'smirk', more(say('THIS NEXT SONG IS FOR THE BARON!', 'microphone', more({
+      ...say("Vow. I didn't think you vould do zat.", 'thinking', [
+        reply('So do you approve or disapprove?', {
+          text: 'I am happy you followed orders. I am not happy you are being selfless.',
+          mood: 'current-smile', character: 'elias'
+        }, 'thinking')
+      ]),
+      character: 'elias'
+    })))),
+    enterAction: 'deliverDjDairyGift'
+  });
 
   function menu() {
     return {
       text: '', mood: 'smirk', mustContinue: true,
       replies: [
+        ...(canDeliverGift() ? [gift] : []),
         ...topics.filter(topic => !used.has(topic)).map(topic => ({...topic, next: () => {
           used.add(topic);
-          return topic.next;
+          return typeof topic.next === 'function' ? topic.next() : topic.next;
         }})),
         reply('Enjoy your music.', {text: 'Stay fresh, stay pasteurised!', mood: 'laughing'})
       ]
