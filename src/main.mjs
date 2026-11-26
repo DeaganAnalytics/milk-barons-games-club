@@ -403,6 +403,24 @@ const dialogue = createDialogue(baron, {
     }
     if (action === 'bartenderTip') clubEvent('The bartender collects his tip.', () => coinBalance.change(-2));
     if (action === 'bartenderDoubleTip') clubEvent('The bartender and the guard collect their tips.', () => coinBalance.change(-5));
+    if (action === 'curdistCompensation') coinBalance.change(5, true);
+    if (action === 'curdistCoercedCompensation') coinBalance.change(3, true);
+    if (action === 'curdistWorkerReward') {
+      karma.change(-0.5);
+      coinBalance.change(10, true);
+    }
+    if (action === 'curdistMilk') health.change(0.5);
+    if (action === 'completeCurdistInterview') coinBalance.finishDeferredWin();
+    if (action === 'curdistInterviewDeath') {
+      clearInput();
+      const distance = guard => Math.hypot(guard.x - player.x, guard.y - player.y);
+      const guard = guards.reduce((closest, candidate) => distance(candidate) < distance(closest) ? candidate : closest);
+      beginRopeScene(ropeWarning, guard, player, baron, {
+        deathMessage: "Pip's revolutionary career ended before he had successfully liberated a single peasant.\n\n"
+          + 'His death did, however, contribute to the advancement of aristocratic academic research.',
+        celebrate: false
+      });
+    }
     if (action === 'bartenderRefusal') {
       clearInput();
       beginRopeScene(ropeWarning, creameryGuard, player, baron, {

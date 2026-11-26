@@ -1,3 +1,4 @@
+import {createProfessorInterview} from './professor-interview.mjs';
 import {baronCurdReply} from './baron-curd-dialogue.mjs';
 import {createMysticVisibilityDialogue} from './mystic-visibility-dialogue.mjs';
 import {createLinDepartureReactions} from './lin-departure-dialogue.mjs';
@@ -383,6 +384,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
   const professorOpening = createProfessorConversation();
+  const professorInterview = createProfessorInterview();
   const guestGreetingSeen = new Set();
   const miloGreeting = createMiloGreeting();
   let metMilo = false;
@@ -441,6 +443,9 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function finishAction(finishedAction, target) {
+    if (finishedAction === 'completeCurdistInterview') professorInterview.complete();
+    if (['curdistCompensation', 'curdistCoercedCompensation', 'curdistWorkerReward', 'curdistMilk'].includes(finishedAction)
+        && !professorInterview.applyEffect(finishedAction)) return;
     if (finishedAction === 'finishBaronKarlCurd') {
       usedReplies.add('baronKarlCurd');
       return;
@@ -546,9 +551,10 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     const reactions = pipReactions[node.mood] ?? ['attentive', 'thinking'];
     const preferred = node.playerMood ?? playerMood ?? reactions[0];
     const playerExpression = chooseExpression(preferred, [...reactions, 'thinking', 'attentive'], pipHistory);
-    const portraitKey = playerExpression + ':' + (disguise ?? '') + ':' + pipLipstick;
+    const milkMoustache = Boolean(node.milkMoustache);
+    const portraitKey = playerExpression + ':' + (disguise ?? '') + ':' + pipLipstick + (milkMoustache ? ':milk' : '');
     if (playerPortrait.dataset.expression !== portraitKey) {
-      drawPipPortrait(playerArt, playerExpression, disguise, pipLipstick);
+      drawPipPortrait(playerArt, playerExpression, disguise, pipLipstick, milkMoustache);
       playerPortrait.dataset.expression = portraitKey;
     }
     const currentSpeaker = node.character ?? character;
@@ -573,7 +579,12 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       ? mysticVisibility.option(character, node, {
         linChats: waiterOpening.completedLinChats(), linRelationship: waiterOpening.relationship()
       }) : null;
-    const availableReplies = [...replies, ...[reaction, visibility].filter(Boolean)].filter(reply => !usedReplies.has(reply.once)
+    const interview = character === professor.id && node.mysticVisibilityMenu
+      ? professorInterview.option({
+        curdist: politicalDispositions.communist, seducedExecutive: hasSeducedExecutive?.(),
+        seenDj: hasSeenDjDairy?.() || spokeToDjDairy, spokeToMilo: metMilo
+      }) : null;
+    const availableReplies = [...replies, ...[reaction, visibility, interview].filter(Boolean)].filter(reply => !usedReplies.has(reply.once)
       && (!reply.requiresDisposition || politicalDispositions[reply.requiresDisposition])
       && (!reply.requiresUnusedReplies || reply.requiresUnusedReplies.some(key => !usedReplies.has(key)))
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
@@ -593,6 +604,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         if (character === elias.id && ['Are you a vampire?', 'Are you actually a vampire?'].includes(reply.label)) {
           askedEliasAboutVampires = true;
         }
+        if (reply.curdistChoice) professorInterview.score(reply.curdistChoice);
         if (reply.expressesDisposition) politicalDispositions[reply.expressesDisposition] = true;
         if (reply.consumeOnSelect || reply.once === 'bartenderMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;

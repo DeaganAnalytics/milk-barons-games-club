@@ -229,7 +229,7 @@ function drawLipstickMark(ctx, x, y, angle, scale) {
   ctx.restore();
 }
 
-export function drawPipPortrait(canvas, expression, disguise, lipstick = false) {
+export function drawPipPortrait(canvas, expression, disguise, lipstick = false, milkMoustache = false) {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -302,6 +302,13 @@ export function drawPipPortrait(canvas, expression, disguise, lipstick = false) 
   if (lipstick) {
     drawLipstickMark(ctx, -5, 3, -0.48, 1);
     drawLipstickMark(ctx, -2, -6.4, 0.29, 0.8);
+  }
+  if (milkMoustache) {
+    stroke(ctx, 1.45, '#fff8e8', c => {
+      c.moveTo(0.5, 2.6);
+      c.quadraticCurveTo(2.5, 1.3, 4, 2.2);
+      c.quadraticCurveTo(5.7, 1.3, 8.4, 2.9);
+    });
   }
   if (disguise === 'moustache' || disguise === 'eyePatch') {
     stroke(ctx, 2.2, '#2d211e', c => {

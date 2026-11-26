@@ -368,6 +368,7 @@ canvas {
 
 .game-over p {
   color: #f5dfb3;
+  white-space: pre-line;
 }
 
 .game-hud {
