@@ -90,7 +90,7 @@ const linAdvice = [
 ];
 
 export function createMilkMysticConversation(getDiscoveries = () => ({}), hints = oracleHints, transact) {
-  const say = (text, mood, replies, speaker = 'Oracle', character) =>
+  const say = (text, mood, replies, speaker = 'Milk Mystic', character) =>
     ({text, mood, speaker, character, replies, mustContinue: Boolean(replies)});
   const reply = (label, next) => ({label, next});
   const greeting = say('Come closer, child. The milk has spoken of your arrival.', 'serene');

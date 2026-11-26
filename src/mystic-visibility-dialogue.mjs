@@ -236,7 +236,7 @@ export function createMysticVisibilityDialogue() {
         const {branches, alternateReply, ...portrait} = typeof response === 'string' ? {text: response} : response;
         const next = {
           mood: expressions[(index / 2) % expressions.length],
-          ...(id === 'milk-mystic' ? {speaker: 'Oracle'} : {}),
+          ...(id === 'milk-mystic' ? {speaker: 'Milk Mystic'} : {}),
           ...portrait,
           mustContinue: true,
           replies: branches ? branches.map(branch => build(branch.lines, branch.ends)) : replies
