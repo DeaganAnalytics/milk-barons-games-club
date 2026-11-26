@@ -205,7 +205,7 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
     if (confrontClothing || confrontPool) {
       if (confrontClothing) clothingConfrontationSeen = true;
       else poolJealousySeen = true;
-      const lines = confrontClothing ? linClothingConfrontation(pool) : linPoolJealousy(pool.heardBunnies);
+      const lines = confrontClothing ? linClothingConfrontation(pool) : linPoolJealousy(pool.heardBeauties);
       return {...say(lines[0], [exchange(['Continue', ...lines.slice(1)], [back], 'worried')]),
         speaker: 'Pip', playerMood: 'happy'};
     }

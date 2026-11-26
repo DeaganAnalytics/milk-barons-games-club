@@ -370,8 +370,10 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     () => (baronStanding?.()?.coins ?? 0) >= 5, canDeliverDjGift);
   const dancerOpening = createDancerConversation();
   let heardLifeguardBunnies = false;
+  let heardLifeguardBeauties = false;
   const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0, () => askedAboutCowGuards.size > 0, () => hasSeducedExecutive?.(), () => ({
-    clothing: getStolenClothing?.(), visited: hasVisitedMilkPool?.(), heardBunnies: heardLifeguardBunnies,
+    clothing: getStolenClothing?.(), visited: hasVisitedMilkPool?.(),
+    heardBunnies: heardLifeguardBunnies, heardBeauties: heardLifeguardBeauties,
     karma: baronStanding?.()?.karma ?? 0
   }));
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
@@ -471,6 +473,10 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       return;
     }
     if (finishedAction === 'skimFalseSpill') skimSpillFollowupPending = true;
+    if (finishedAction === 'hearLifeguardBeauties') {
+      heardLifeguardBeauties = true;
+      return;
+    }
     if (finishedAction === 'rewardMissingDresses') heardLifeguardBunnies = true;
     if (['alienateLin', 'linCruelRejection', 'linAlienatingSlap'].includes(finishedAction)) {
       waiterOpening.endRelationship('alienated');

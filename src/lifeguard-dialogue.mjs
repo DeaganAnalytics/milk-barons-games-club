@@ -122,6 +122,16 @@ lifeguardDialogue.replies.push(
       "I wouldn't order the complimentary milkshake if I were you.", thinking, back
     ))
   ]))),
+  once(reply("What's it like working here?", 'thinking', say('Best job in the club, mate!', grin, [
+    reply('Really?', 'curious', {
+      ...say('I get paid to keep my eyes on these aristocratic beauties all day!', grin, [
+        reply("Isn't your job to prevent people from drowning?", 'thinking', say("That's what I said, mate.", deadpan, [
+          reply('Right...', 'attentive', lifeguardDialogue)
+        ]))
+      ]),
+      enterAction: 'hearLifeguardBeauties'
+    })
+  ]))),
   requestMoney,
   reply("I'll leave you to it.", 'attentive', say("Excellent. You're obstructing my view.", deadpan))
 );

@@ -2655,3 +2655,35 @@ test('all Elias introduction branches converge and the final questions have inde
   }
   assert.equal(exit.next.action, 'finishEliasWelcome');
 });
+
+test('Lin uses the lifeguard phrases according to the confrontation and what Pip heard', async () => {
+  const {linPoolJealousy, linClothingConfrontation} = await import('../src/lin-pool-dialogue.mjs');
+  const phraseOptions = scene => scene.at(-1).options.map(([label]) => label)
+    .filter(label => label.includes('aristocratic'));
+  const beauties = 'I wanted to see some aristocratic beauties.';
+  const bunnies = 'I wanted to see some aristocratic bunnies.';
+  for (const heardBeauties of [false, true]) {
+    for (const heardBunnies of [false, true]) {
+      assert.deepEqual(phraseOptions(linPoolJealousy(heardBeauties)), heardBeauties ? [beauties] : []);
+      const clothing = linClothingConfrontation({clothing: 'women', karma: 0, heardBeauties, heardBunnies});
+      assert.deepEqual(phraseOptions(clothing), heardBunnies ? [bunnies] : heardBeauties ? [beauties] : []);
+    }
+  }
+});
+
+test('both lifeguard routes unlock beauties when the phrase is spoken', async () => {
+  const {lifeguardDialogue} = await import('../src/lifeguard-dialogue.mjs');
+  const {createMysticVisibilityDialogue} = await import('../src/mystic-visibility-dialogue.mjs');
+  const work = lifeguardDialogue.replies.find(reply => reply.label === "What's it like working here?");
+  assert.equal(work.consumeOnSelect, true);
+  const phrase = work.next.replies[0].next;
+  assert.match(phrase.text, /aristocratic beauties/);
+  assert.equal(phrase.enterAction, 'hearLifeguardBeauties');
+  assert.equal(phrase.replies[0].next.replies[0].next, lifeguardDialogue);
+
+  const visibility = createMysticVisibilityDialogue();
+  visibility.meetMystic();
+  let node = visibility.option('lifeguard', lifeguardDialogue).next;
+  while (!node.text.includes('aristocratic beauties')) node = node.replies[0].next;
+  assert.equal(node.enterAction, 'hearLifeguardBeauties');
+});

@@ -102,7 +102,7 @@ const scenes = {
     'No.', 'Wearing a bikini?',
     'No.', "Then I probably haven't noticed her.",
     "Don't you ever look anywhere other than the pool?", "Mate, I'm a highly trained professional.",
-    'Of course.', 'These aristocratic beauties depend upon my unwavering vigilance.',
+    'Of course.', line('These aristocratic beauties depend upon my unwavering vigilance.', 'big-excited-smile', {enterAction: 'hearLifeguardBeauties'}),
     'And the male swimmers?', 'What about them?',
     'Never mind.'
   ],
