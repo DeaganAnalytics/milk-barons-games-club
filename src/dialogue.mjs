@@ -339,7 +339,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const executiveOpening = createExecutiveConversation(() => baronStanding?.()?.coins ?? 0);
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
-  const skimOpening = createSkimConversation();
+  let skimSpillFollowupPending = false;
+  const skimOpening = createSkimConversation(() => metMilo, () => baronStanding?.() ?? {});
   const askedAboutCowGuards = new Set();
   const mysticOpening = createMilkMysticConversation(() => ({
     seenDj: hasSeenDjDairy?.(),
@@ -442,6 +443,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     if (['finishBaronPenalty', 'finishBaronReward', 'finishBaronRewardWithGuard'].includes(finishedAction)) {
       usedReplies.add('baronKarmaEncounter');
     }
+    if (finishedAction === 'skimFalseSpill') skimSpillFollowupPending = true;
     onAction?.(finishedAction, target);
   }
 
@@ -687,7 +689,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
           text: target.repeat ? 'Sir, please stop bothering the ladies.' : 'Sir I have to ask you to leave.',
           mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
         }
-      : target.id === skimId ? skimOpening()
+      : target.id === skimId ? skimOpening(skimSpillFollowupPending)
       : target.id === milkMysticId ? mysticOpening()
       : target.id === djTarget.id ? djOpening()
       : target.id.startsWith('dancer-') ? dancerOpening(target.id)
@@ -701,6 +703,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
         }
       : target.id === 'milo' ? openMilo()
         : baronConversation();
+    if (target.id === skimId) skimSpillFollowupPending = false;
     speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;
