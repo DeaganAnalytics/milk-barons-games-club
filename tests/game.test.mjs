@@ -2627,3 +2627,31 @@ test('every Mystic visibility branch reaches its declared ending', async () => {
     }
   }
 });
+
+test('all Elias introduction branches converge and the final questions have independent one-time keys', async () => {
+  const {eliasWelcome} = await import('../src/elias.mjs');
+  const follow = node => {
+    while (node.replies?.length === 1) {
+      assert.equal(node.action, undefined);
+      node = node.replies[0].next;
+    }
+    return node;
+  };
+  let section = eliasWelcome;
+  for (let index = 0; index < 6; index++) {
+    assert.equal(section.replies.length, 4);
+    const endings = section.replies.map(option => follow(option.next));
+    assert.ok(endings.every(node => node === endings[0]));
+    section = endings[0];
+  }
+  assert.equal(section.text, 'Now, Master Pip, do you have any questions?');
+  const [exit] = section.replies.slice(-1);
+  const questions = section.replies.slice(0, -1);
+  assert.equal(questions.length, 8);
+  assert.equal(new Set(questions.map(question => question.once)).size, 8);
+  for (const question of questions) {
+    assert.equal(question.consumeOnSelect, true);
+    assert.equal(follow(question.next), section);
+  }
+  assert.equal(exit.next.action, 'finishEliasWelcome');
+});

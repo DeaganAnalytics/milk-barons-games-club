@@ -73,6 +73,7 @@ const guestGateWarning = {
 
 const guardOpening = 'Do you have a problem to report? Otherwise, get out of my way.';
 const cowGuardQuestions = new Set([
+  'Are those guards cows?',
   'Are you a cow?',
   'Why are all the guards cows?',
   'Why is the guard a cow?',
@@ -573,7 +574,9 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
         if (cowGuardQuestions.has(reply.label)) {
           askedAboutCowGuards.add(activeTarget?.guard ?? (activeTarget?.practiceGuard ? activeTarget.x + ',' + activeTarget.y : character));
         }
-        if (character === elias.id && reply.label === 'Are you a vampire?') askedEliasAboutVampires = true;
+        if (character === elias.id && ['Are you a vampire?', 'Are you actually a vampire?'].includes(reply.label)) {
+          askedEliasAboutVampires = true;
+        }
         if (reply.consumeOnSelect || reply.once === 'bartenderMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;
         if (next?.exitAction) {
