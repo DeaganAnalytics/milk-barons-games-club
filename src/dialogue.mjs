@@ -28,7 +28,7 @@ import {availableReports, injuredMiloReply, lifeguardQualificationReport, poolRe
 import {bartender} from './creamery.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {staffIds} from './staff.mjs';
-import {createWaiterConversation, linKindnessDialogue} from './waiter-dialogue.mjs';
+import {createWaiterConversation, linKindnessDialogue, waiterTippingIntervention} from './waiter-dialogue.mjs';
 import {drawPipPortrait} from './pip-art.mjs';
 
 const partyGuestCallsGuard = {
@@ -459,6 +459,14 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     if (['finishBaronPenalty', 'finishBaronReward', 'finishBaronRewardWithGuard'].includes(finishedAction)) {
       usedReplies.add('baronKarmaEncounter');
     }
+    if (finishedAction === 'beginWaiterTipBan') {
+      open({...elias, waiterTipBan: true});
+      return;
+    }
+    if (finishedAction === 'finishWaiterTipBan') {
+      waiterOpening.finishTipBan();
+      return;
+    }
     if (finishedAction === 'skimFalseSpill') skimSpillFollowupPending = true;
     if (finishedAction === 'rewardMissingDresses') heardLifeguardBunnies = true;
     if (['alienateLin', 'linCruelRejection', 'linAlienatingSlap'].includes(finishedAction)) {
@@ -680,7 +688,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     disguise = target.executiveFraud ? 'woman' : null;
     const firstGuestGreeting = !guestGreetingSeen.has(target.id);
     if (partyGuests.some(guest => guest.id === target.id)) guestGreetingSeen.add(target.id);
-    const opening = target.linDepartureRegret ? {
+    const opening = target.waiterTipBan ? waiterTippingIntervention() : target.linDepartureRegret ? {
       text: 'Oh, bloody hell.', speaker: 'Pip', mood: 'hurt', playerMood: 'exasperated'
     } : target.linKindness ? linKindnessDialogue() : target.linAftermath ? {
       text: "Oh, I've really messed this up.", speaker: 'Pip', mood: 'attentive', playerMood: 'sad', mustContinue: true,
@@ -736,7 +744,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
         }
       : target.id === 'milo' ? openMilo()
         : baronConversation();
-    const scripted = target.slotReaction || target.linDepartureRegret || target.linKindness || target.linAftermath || target.linConfrontation
+    const scripted = target.waiterTipBan || target.slotReaction || target.linDepartureRegret || target.linKindness || target.linAftermath || target.linConfrontation
       || target.welcome || target.pokieBan || target.pokieRefusal || target.tax || target.danceFee
       || target.baronKarma || target.executiveFraud || target.poolClothesThanks || target.pilloryThanks
       || target.postEscort || target.guestGate || target.summoned || target.withoutMilk;

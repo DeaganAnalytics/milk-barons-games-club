@@ -2503,3 +2503,66 @@ test('Lin can recover from pool jealousy, then confront Pip about theft without 
   advance(choose(options), isMenu);
   assert.equal(visit().replies[1].label, nextChat);
 });
+
+test('server tipping checks funds and stock, limits tips, and unlocks post-ban dialogue after Elias', async () => {
+  const {createWaiterConversation, waiterTippingIntervention, TIPPED_MILK_PRICE} = await import('../src/waiter-dialogue.mjs');
+  const ids = ['male-waiter', 'handlebar-waiter', 'martini-waiter', 'female-waiter', 'blonde-waitress', 'lin-waitress'];
+  const thanks = ['A gratuity', 'A gentleman', 'How exceptionally', 'Oh! Thank you', 'Awww', 'Oh. Thank you'];
+  const tipLabel = 'Yes, please. And a coin for you.';
+  const policy = "Apparently I'm not allowed to tip anymore.";
+  const choose = ({next}) => typeof next === 'function' ? next() : next;
+  const tip = node => node.replies.find(reply => reply.label === tipLabel);
+  const order = (open, id) => open(false, id).replies[0].next;
+  const finish = node => {
+    for (let line = 0; line < 25 && node?.replies?.length; line++) node = choose(node.replies[0]);
+    return node;
+  };
+  for (const [index, id] of ids.entries()) {
+    const open = createWaiterConversation(() => 100);
+    const result = choose(tip(order(open, id)));
+    assert.ok(result.text.startsWith(thanks[index]));
+    assert.equal(result.enterAction, 'buyTippedWaiterMilk');
+    assert.equal(finish(result), null);
+    assert.equal(tip(order(open, id)), undefined);
+  }
+  let balance = 2;
+  const open = createWaiterConversation(() => balance);
+  assert.equal(TIPPED_MILK_PRICE, 3);
+  assert.equal(tip(order(open, ids[0])), undefined);
+  balance = 3;
+  assert.equal(open(true, ids[0]).text, 'Not now! Busy, busy, busy!');
+  const cancelled = choose(order(open, ids[0]).replies.at(-1));
+  assert.equal(cancelled.text, 'Very well, sir.');
+  const staleOffer = tip(order(open, ids[0]));
+  balance = 2;
+  assert.equal(choose(staleOffer).enterAction, undefined);
+  balance = 100;
+  assert.equal(finish(choose(tip(order(open, ids[0])))), null);
+  const second = choose(tip(order(open, ids[5])));
+  assert.equal(second.enterAction, 'buyTippedWaiterMilk');
+  assert.equal(tip(order(open, ids[2])), undefined);
+  assert.deepEqual(finish(second), {exitAction: 'beginWaiterTipBan'});
+  assert.ok(!open(false, ids[0]).replies.some(reply => reply.label === policy));
+  assert.equal(finish(waiterTippingIntervention()).action, 'finishWaiterTipBan');
+  open.finishTipBan();
+  for (const id of ids) {
+    const topic = open(false, id).replies.find(reply => reply.label === policy);
+    assert.ok(topic);
+    assert.equal(choose(topic).enterAction, undefined);
+    assert.ok(!open(false, id).replies.some(reply => reply.label === policy));
+    assert.equal(tip(order(open, id)), undefined);
+  }
+});
+
+test('Lin tip variants use completed flirting milestones and prioritise relationship state', async () => {
+  const {waiterTipLines} = await import('../src/waiter-tipping-dialogue.mjs');
+  const first = (state, chats) => {
+    const line = waiterTipLines('lin-waitress', state, chats)?.[0];
+    return typeof line === 'string' ? line : line?.text;
+  };
+  for (const [chats, text] of [[0, 'Oh.'], [1, 'Oh.'], [2, 'Pip,'], [4, 'Pip,'], [5, 'Aww,'], [7, 'Aww,'], [8, 'PIP!'], [10, 'PIP!']]) {
+    assert.ok(first('normal', chats).startsWith(text));
+  }
+  assert.equal(first('alienated', 10), 'Thank you, sir.');
+  assert.equal(first('departed', 10), undefined);
+});
