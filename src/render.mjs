@@ -1,3 +1,4 @@
+import {createMilkMysticSpeech} from './milk-mystic.mjs';
 import {createRangeSpeech} from './practice-range-speech.mjs';
 import {drawRangeBoundary, drawRangeLane} from './practice-range-art.mjs';
 import {createSlotSpeech} from './slot-speech.mjs';
@@ -344,6 +345,7 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic) 
     '1': loadSprite('baron-milk-right', 'webp')
   };
 
+  const mysticSpeech = createMilkMysticSpeech();
   const professorSpeech = createProfessorSpeech();
   let world;
   return (player, baron, milo, guards, cameraX, cameraY, elapsed, staff = [], milkScene = null, chatter = null, guestEscort = null, ropeWarning = null, gateGuard = null, milkPool = idlePool, milkBalloon = null, attendantMilk = null, rangeFall = null) => {
@@ -623,6 +625,13 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic) 
         drawSpeech(ctx, rangeRemark.text, rangeRemark.opacity, PRACTICE_RANGE.guardX,
           y - 66, y, cameraX, cameraY);
       }
+    }
+    const mysticRemark = mysticSpeech(elapsed, mystic && isReady(mysticSprite) && !ropeScene
+      && mystic.x >= cameraX && mystic.x <= cameraX + ROOM_WIDTH
+      && mystic.y + 20 >= cameraY && mystic.y - 48 <= cameraY + ROOM_HEIGHT);
+    if (mysticRemark) {
+      drawSpeech(ctx, mysticRemark.text, mysticRemark.opacity, mystic.x,
+        mystic.y - 50, mystic.y + 20, cameraX, cameraY);
     }
     const professorRemark = professorSpeech(elapsed, professorVisible && !ropeScene);
     if (professorRemark) {
