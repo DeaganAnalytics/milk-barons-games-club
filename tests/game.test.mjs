@@ -2469,3 +2469,37 @@ test('Lin departure reactions are independent and the Executive’s deferred off
   assert.equal(result.action, undefined);
   assert.ok(!visit().replies.some(reply => reply.label === offer.label));
 });
+
+test('Lin can recover from pool jealousy, then confront Pip about theft without skipping a flirting chat', async () => {
+  const {createWaiterConversation, linWaitressId} = await import('../src/waiter-dialogue.mjs');
+  const pool = {visited: false, karma: 1, heardBunnies: false};
+  const open = createWaiterConversation(() => 100, () => false, () => false, () => pool);
+  const visit = () => open(false, linWaitressId);
+  const choose = (node, index = 0) => {
+    const {next} = node.replies[index];
+    return typeof next === 'function' ? next() : next;
+  };
+  const advance = (node, stop) => {
+    for (let step = 0; step < 30 && !stop(node); step++) node = choose(node);
+    assert.ok(stop(node));
+    return node;
+  };
+  const isMenu = node => node.replies[0]?.label === 'Could I have a glass of milk, please?';
+  for (let stage = 0; stage < 3; stage++) advance(choose(visit(), 1), isMenu);
+  pool.visited = true;
+  const explanation = advance(visit(), node => node.text === "Don't pretend you haven't noticed.");
+  assert.equal(explanation.replies.length, 1);
+  const reassurance = advance(choose(explanation), node => node.text === "So you weren't there for any other reason?");
+  assert.equal(choose(reassurance, 1).enterAction, 'linReassuranceLie');
+  const response = advance(choose(reassurance), node => node.text === 'Sorry. I suppose I thought rather poorly of you.');
+  advance(choose(response, 1), isMenu);
+  assert.equal(open.relationship(), 'normal');
+  const nextChat = visit().replies[1].label;
+  pool.clothing = 'man';
+  const accusation = choose(visit());
+  assert.equal(accusation.text, "I hear you've been stealing clothes from the milk pool.");
+  const options = advance(accusation, node => node.text === 'This should be good.');
+  assert.equal(options.replies.length, 3);
+  advance(choose(options), isMenu);
+  assert.equal(visit().replies[1].label, nextChat);
+});

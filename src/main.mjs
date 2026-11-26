@@ -293,7 +293,7 @@ const dialogue = createDialogue(baron, {
       linKindness = null;
       coinBalance.finishDeferredWin();
     }
-    if (action === 'finishSlotReactions' && dialogue.linWillConfront()) {
+    if (action === 'finishSlotReactions' && player.lipstick && dialogue.linWillConfront()) {
       linConfrontation = {phase: 'approach', waiter: true, route: [], stalled: 0};
       clearInput();
       player.walking = false;
@@ -821,7 +821,11 @@ function frame(timestamp) {
     requestAnimationFrame(frame);
     return;
   }
-  if (linConfrontation && dialogue.linRelationship() !== 'normal') {
+  if (linKindness?.approaching && !dialogue.linCanOfferKindness()) {
+    if (linKindness.claimed) lin.serviceDuty = false;
+    linKindness = null;
+  }
+  if (linConfrontation && (!player.lipstick || dialogue.linRelationship() !== 'normal')) {
     if (linConfrontation.claimed) lin.serviceDuty = false;
     linConfrontation = null;
   }
@@ -860,10 +864,6 @@ function frame(timestamp) {
     dialogue.open(reaction);
     requestAnimationFrame(frame);
     return;
-  }
-  if (linKindness?.approaching && !dialogue.linCanOfferKindness()) {
-    if (linKindness.claimed) lin.serviceDuty = false;
-    linKindness = null;
   }
   if (!guestEscort && !linConfrontation && linKindness?.approaching
       && (linKindness.claimed || !lin.serviceDuty)) {
