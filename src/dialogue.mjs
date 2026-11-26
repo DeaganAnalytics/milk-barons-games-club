@@ -351,7 +351,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const djOpening = createDjConversation(() => hasSeducedExecutive?.(),
     () => (baronStanding?.()?.coins ?? 0) >= 5, canDeliverDjGift);
   const dancerOpening = createDancerConversation();
-  const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0);
+  const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0, () => askedAboutCowGuards.size > 0);
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
@@ -693,7 +693,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       : target.id === milkMysticId ? mysticOpening()
       : target.id === djTarget.id ? djOpening()
       : target.id.startsWith('dancer-') ? dancerOpening(target.id)
-      : staffIds.includes(target.id) ? waiterOpening(target.withoutMilk)
+      : staffIds.includes(target.id) ? waiterOpening(target.withoutMilk, target.id)
       : !portraits[target.id] ? {text: target.message, mood: 'attentive'}
       : target.id === 'guard' && target.guard?.creamery ? creameryGuardDialogue(target.guard)
       : target.id === 'guard' ? {

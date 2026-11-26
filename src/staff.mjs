@@ -2,11 +2,11 @@ import {guardBlocks} from './guards.mjs';
 import {cameraLeft, cameraTop, ROOM_HEIGHT, ROOM_WIDTH, crossesScenery, EAST_EDGE, guestEnclosure, guestGateInside, guestGateOutside, insideGuestEnclosure, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const uniforms = [
-  {id: 'male-waiter', title: 'Waiter'},
-  {id: 'female-waiter', title: 'Waitress'},
-  {id: 'handlebar-waiter', title: 'Waiter'},
-  {id: 'martini-waiter', title: 'Waiter'},
-  {id: 'blonde-waitress', title: 'Waitress'},
+  {id: 'male-waiter', title: 'Waiter Feta'},
+  {id: 'female-waiter', title: 'Waitress Genevieve'},
+  {id: 'handlebar-waiter', title: 'Waiter Bull'},
+  {id: 'martini-waiter', title: 'Waiter Sterling'},
+  {id: 'blonde-waitress', title: 'Waitress Brie'},
   {id: 'lin-waitress', title: 'Waitress Lin'},
   {id: 'edmund-vale', title: 'Edmund Skim', sweeps: true}
 ];

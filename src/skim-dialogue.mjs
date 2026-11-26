@@ -89,6 +89,29 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
       usedTopics.add(id);
       return next;
     });
+    if (returning && !usedTopics.has('myLord')) {
+      const responses = [
+        exchange([
+          ['You can just call me Pip.', 'Thank you, kid. Unfortunately, management insists otherwise.'],
+          ["Even when nobody's listening?", 'There is always somebody listening.', lookingAround]
+        ], back),
+        exchange([
+          ["Actually, I quite like being called 'my lord'.", 'Of course you do.', {mood: 'exasperated'}],
+          ['Say it again.', 'Whatever pleases you, my lord.'],
+          ['Continue', 'Another promising young tyrant.', {...whisper, enterAction: 'skimEnjoyStatus'}]
+        ], back),
+        exchange([
+          ['Who came up with that rule?', 'The Baron believes that every patron should feel like royalty.'],
+          ["That's rather nice of him.", "Particularly when you're paying for the privilege."],
+          ['What about the employees?', 'Well, every aristocracy needs a peasantry.', {mood: 'wistful'}]
+        ], back)
+      ];
+      const topic = exchange([
+        ["Why do you keep calling me 'my lord'?", 'Employees are required to address patrons with the utmost respect.'],
+        ["But I'm not a lord.", "Yes, and I'm not a bloody janitor. Yet here we are.", {mood: 'exasperated'}]
+      ], responses);
+      followups.push(oneTime('myLord', topic.label, topic.next));
+    }
     if (returning && !usedTopics.has('falseSpill')) {
       followups.push(oneTime('falseSpill', "[Lie] Thank God you're here! There's been a milk spillage over there.",
         say('How much milk?!', [
@@ -184,15 +207,16 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
       confirmed = true;
       return menu('Keep your voice down, kid.');
     }));
+    const retry = reply('Actually, I do recognise you.', () => denial);
     const lookalike = exchange([
       ['No, I definitely recognise you.', '...', distressed],
       ['You used to be the opposition leader! My parents voted for you!', 'Me? Must be a lookalike.', distressed]
     ], [recognition, exchange([
       ['Oh yeah, I guess all janitors look alike.', 'Wow. You actually are that stupid, kid.'],
-      ['What?', 'Nothing, my lord. A pleasure serving you.']
-    ])]);
+      ['What?', 'Nothing, my lord. A pleasure serving you.', {mustContinue: false}]
+    ], [retry])]);
     const denial = say("No, no. I'm just a janitor.", [
-      reply("Maybe I'm mistaken.", say('That you are, my lord.')),
+      reply("Maybe I'm mistaken.", say('That you are, my lord.', [retry], {mustContinue: false})),
       lookalike
     ]);
     if (met) {
