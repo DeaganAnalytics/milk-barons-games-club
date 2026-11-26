@@ -1188,7 +1188,10 @@ test('the attendant introduces the stall once before offering the milk balloon g
   const complaint = 'Hey! You said not a penny, not a dime. Yet you took a coin. What gives?';
   assert.equal(menu.replies.some(reply => reply.label === complaint), false);
   const replayMenu = open(true);
-  const response = replayMenu.replies.find(reply => reply.label === complaint).next;
+  const complaintReply = replayMenu.replies.find(reply => reply.label === complaint);
+  assert.equal(complaintReply.once, 'attendantCoinComplaint');
+  assert.equal(complaintReply.consumeOnSelect, true);
+  const response = complaintReply.next;
   assert.equal(response.text, 'The game is free, just as I said! The fee is for the milk you shed!');
   assert.equal(response.replies[0].next, replayMenu);
 });
@@ -2639,21 +2642,31 @@ test('all Elias introduction branches converge and the final questions have inde
   };
   let section = eliasWelcome;
   for (let index = 0; index < 6; index++) {
-    assert.equal(section.replies.length, 4);
+    assert.equal(section.replies.length, 5);
     const endings = section.replies.map(option => follow(option.next));
     assert.ok(endings.every(node => node === endings[0]));
     section = endings[0];
   }
   assert.equal(section.text, 'Now, Master Pip, do you have any questions?');
-  const [exit] = section.replies.slice(-1);
-  const questions = section.replies.slice(0, -1);
-  assert.equal(questions.length, 8);
-  assert.equal(new Set(questions.map(question => question.once)).size, 8);
-  for (const question of questions) {
-    assert.equal(question.consumeOnSelect, true);
-    assert.equal(follow(question.next), section);
+  const exits = section.replies.slice(-2);
+  const questions = section.replies.slice(0, -2);
+  assert.equal(questions.length, 12);
+  assert.equal(new Set(questions.map(question => question.once)).size, questions.length);
+
+  function countPathsToMenu(node) {
+    if (node === section) return 1;
+    assert.equal(node.action, undefined);
+    assert.ok(node.replies?.length);
+    return node.replies.reduce((count, option) => count + countPathsToMenu(option.next), 0);
   }
-  assert.equal(exit.next.action, 'finishEliasWelcome');
+  for (const question of questions) assert.equal(question.consumeOnSelect, true);
+  assert.deepEqual(questions.map(question => countPathsToMenu(question.next)),
+    [1, 1, 1, 1, 1, 1, 1, 1, 12, 1, 1, 6]);
+  for (const exit of exits) {
+    const closing = follow(exit.next);
+    assert.equal(closing.action, 'finishEliasWelcome');
+    assert.ok(!closing.replies?.length);
+  }
 });
 
 test('Lin uses the lifeguard phrases according to the confrontation and what Pip heard', async () => {
@@ -2686,4 +2699,118 @@ test('both lifeguard routes unlock beauties when the phrase is spoken', async ()
   let node = visibility.option('lifeguard', lifeguardDialogue).next;
   while (!node.text.includes('aristocratic beauties')) node = node.replies[0].next;
   assert.equal(node.enterAction, 'hearLifeguardBeauties');
+});
+
+test('Mystic transaction rolls match the specified weights and preserve exact nonfatal health', async () => {
+  const {mysticMoneyOutcome} = await import('../src/mystic-money-dialogue.mjs');
+  const {createHealth} = await import('../src/health.mjs');
+  const count = results => results.reduce((counts, result) => counts.set(result, (counts.get(result) ?? 0) + 1), new Map());
+  const rolls = Array.from({length: 100}, (_, index) => index + 1);
+  assert.deepEqual([...count(rolls.map(roll => mysticMoneyOutcome(100, 2.5, 3, roll, 50).coinChange))],
+    [[-20, 5], [-10, 10], [-5, 10], [0, 5], [5, 10], [10, 15], [20, 25], [30, 15], [50, 5]]);
+  assert.deepEqual([...count(rolls.map(roll => mysticMoneyOutcome(100, 2.5, 3, 50, roll).hearts))],
+    [[3, 5], [2.5, 10], [1.875, 20], [1.25, 39], [0.625, 20], [0.5, 5], [0, 1]]);
+  for (const coins of [119, 120, 150]) {
+    assert.equal(mysticMoneyOutcome(coins, 3, 3, 100, 1).coinChange, coins === 119 ? 50 : 30);
+  }
+  assert.equal(mysticMoneyOutcome(3, 3, 3, 1, 1).coinChange, -3);
+  assert.equal(mysticMoneyOutcome(100, 3, 3, 1, 1).hearts, 3);
+  assert.equal(mysticMoneyOutcome(100, 0.125, 3, 1, 99).hearts, 0.125);
+  const health = createHealth();
+  assert.equal(health.set(0.625), 0.625);
+  assert.equal(health.change(0.5), 1.125);
+});
+
+test('Mystic money dialogue remains available after refusal and decline and resolves an acceptance once', async () => {
+  const {createMilkMysticConversation} = await import('../src/milk-mystic.mjs');
+  const menuOption = 'Could you spare some milk tokens?';
+  const askAgain = 'Could I have some more milk tokens?';
+  const choose = (node, label) => {
+    const next = (label ? node.replies.find(reply => reply.label === label) : node.replies[0]).next;
+    return typeof next === 'function' ? next() : next;
+  };
+  function advance(node) {
+    const lines = [];
+    while (node.replies?.length === 1 && node.replies[0].label === 'Continue') {
+      lines.push(node.text);
+      node = choose(node);
+    }
+    return {node, lines};
+  }
+  for (const fatal of [false, true]) {
+    let coins = 151;
+    let transactions = 0;
+    const open = createMilkMysticConversation(() => ({coins}), undefined, () => {
+      transactions++;
+      return {coinChange: -5, healthChange: -0.75, fatal, broke: false};
+    });
+    let menu = choose(choose(open()));
+    assert.equal(choose(menu, menuOption).text, 'You already have plenty, child.');
+    menu = advance(choose(menu, menuOption)).node;
+    coins = 150;
+    const offer = advance(choose(menu, menuOption)).node;
+    assert.equal(offer.text, 'Do you accept, child?');
+    menu = advance(choose(offer, "On second thought, I don't like the sound of this.")).node;
+    assert.equal(transactions, 0);
+    const accepted = advance(choose(advance(choose(menu, menuOption)).node));
+    assert.equal(transactions, 1);
+    assert.ok(open().replies.some(reply => reply.label === askAgain));
+    if (fatal) {
+      assert.equal(accepted.node.action, 'mysticMoneyDeath');
+      assert.equal(accepted.node.pipCollapsed, true);
+      assert.ok(!accepted.lines.includes("WAIT! I'VE LOST MONEY!"));
+    } else {
+      assert.ok(accepted.lines.indexOf('AARGH! WHAT THE HELL?!') < accepted.lines.indexOf("WAIT! I'VE LOST MONEY!"));
+      assert.equal(accepted.node.replies.length, 3);
+      let theft = choose(accepted.node, "Fine. I'll take it back myself.");
+      while (!theft.enterAction) theft = choose(theft);
+      assert.equal(theft.enterAction, 'mysticMoneyTheft');
+      assert.ok(choose(theft).replies.some(reply => reply.label === askAgain));
+    }
+  }
+});
+
+test('either early Elias answer unlocks the later communist options for the rest of the introduction', async () => {
+  const {eliasWelcome} = await import('../src/elias.mjs');
+  for (const unlockStage of [-1, 0, 1]) {
+    let communist = false;
+    let node = eliasWelcome;
+    for (let stage = 0; stage < 6; stage++) {
+      const choices = node.replies.filter(reply => !reply.requiresDisposition || communist);
+      assert.equal(choices.length, stage < 2 || unlockStage >= 0 ? 5 : 4);
+      const selected = stage === unlockStage ? choices.find(reply => reply.expressesDisposition === 'communist') : choices[0];
+      communist ||= selected.expressesDisposition === 'communist';
+      node = selected.next;
+      while (node.replies.length === 1) node = node.replies[0].next;
+    }
+    assert.equal(node.replies.filter(reply => !reply.requiresDisposition || communist).length, communist ? 14 : 9);
+  }
+});
+
+test('all seven Karl Curd branches conclude once and return to the Baron menu', async () => {
+  const {baronCurdReply} = await import('../src/baron-curd-dialogue.mjs');
+  const menu = () => ({text: 'Baron menu'});
+  const topic = baronCurdReply(menu);
+  assert.equal(topic.requiresDisposition, 'communist');
+  assert.equal(topic.once, 'baronKarlCurd');
+  assert.equal(topic.consumeOnSelect, undefined);
+  let node = topic.next;
+  let appearances = 0;
+  while (node.replies.length === 1) {
+    appearances += Number(node.direction === 'Elias appears.');
+    node = node.replies[0].next;
+  }
+  assert.equal(appearances, 1);
+  assert.equal(node.replies.length, 7);
+  for (const choice of node.replies) {
+    let response = choice.next;
+    let completions = 0;
+    while (response !== menu) {
+      completions += Number(response.enterAction === 'finishBaronKarlCurd');
+      assert.equal(response.action, undefined);
+      assert.equal(response.replies.length, 1);
+      response = response.replies[0].next;
+    }
+    assert.equal(completions, 1);
+  }
 });

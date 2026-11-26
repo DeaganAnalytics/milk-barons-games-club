@@ -1,3 +1,4 @@
+import {createMysticMoneyTopic} from './mystic-money-dialogue.mjs';
 import {TURN} from './directions.mjs';
 import {HALL_CENTER, isNpcBlocked} from './room.mjs';
 
@@ -88,7 +89,7 @@ const linAdvice = [
     ({receivedGift}) => receivedGift]
 ];
 
-export function createMilkMysticConversation(getDiscoveries = () => ({}), hints = oracleHints) {
+export function createMilkMysticConversation(getDiscoveries = () => ({}), hints = oracleHints, transact) {
   const say = (text, mood, replies, speaker = 'Oracle', character) =>
     ({text, mood, speaker, character, replies, mustContinue: Boolean(replies)});
   const reply = (label, next) => ({label, next});
@@ -98,6 +99,7 @@ export function createMilkMysticConversation(getDiscoveries = () => ({}), hints 
   let introduced = false;
   let heardHintOffer = false;
   const heardHints = new Set();
+  const moneyTopic = createMysticMoneyTopic(() => getDiscoveries().coins, transact, menu);
   function availableHints({lin}) {
     const unlocked = lin ? linAdvice.filter(([, eligible]) => eligible(lin)).map(([text]) => text) : [];
     return [...new Set([...hints, ...unlocked])].filter(hint => !heardHints.has(hint));
@@ -187,6 +189,7 @@ export function createMilkMysticConversation(getDiscoveries = () => ({}), hints 
         used.add(topic);
         return topic.next;
       }}));
+    if (transact) replies.push(moneyTopic());
     return {...line, linDepartureMenu: true, replies: heardHintOffer ? replies : [introduction, ...replies]};
   }
 

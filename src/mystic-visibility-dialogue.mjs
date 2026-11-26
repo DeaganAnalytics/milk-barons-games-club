@@ -86,7 +86,9 @@ const scenes = {
   professor: [
     "Professor, what's with the old woman wearing a cow's head?", 'Ah! An excellent opportunity to educate you.',
     'So you know her?', 'Are you familiar with the primitive religious practices that preceded modern dairy theology?',
-    'No.', 'Naturally. I suspected as much.',
+    'No.', line('Naturally. I suspected as much.', 'thinking', {
+      alternateReply: {label: '[Lie] Yes.', text: 'Really?! I find that hard to believe.', mood: 'thinking'}
+    }),
     'Continue', 'Throughout history, intellectually impoverished societies have attributed spiritual significance to all manner of substances.',
     'Continue', 'Water, wine, oil. Even fermented grapes!',
     "Isn't that wine?", 'Please refrain from interrupting.',
@@ -231,7 +233,7 @@ export function createMysticVisibilityDialogue() {
           replies = [{label: lines[index], next: complete, playerMood: 'thinking'}];
           continue;
         }
-        const {branches, ...portrait} = typeof response === 'string' ? {text: response} : response;
+        const {branches, alternateReply, ...portrait} = typeof response === 'string' ? {text: response} : response;
         const next = {
           mood: expressions[(index / 2) % expressions.length],
           ...(id === 'milk-mystic' ? {speaker: 'Oracle'} : {}),
@@ -240,6 +242,10 @@ export function createMysticVisibilityDialogue() {
           replies: branches ? branches.map(branch => build(branch.lines, branch.ends)) : replies
         };
         replies = [{label: lines[index], playerMood: 'thinking', next}];
+        if (alternateReply) {
+          const {label, ...alternatePortrait} = alternateReply;
+          replies.push({label, playerMood: 'thinking', next: {...next, ...alternatePortrait}});
+        }
       }
       return replies[0];
     }

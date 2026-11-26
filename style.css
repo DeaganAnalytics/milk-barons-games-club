@@ -368,6 +368,7 @@ canvas {
 
 .game-over p {
   color: #f5dfb3;
+  white-space: pre-line;
 }
 
 .game-hud {
@@ -642,4 +643,20 @@ canvas {
 
 #conversation-line {
   white-space: pre-line;
+}
+
+.mystic-collapse #conversation-player canvas {
+  transform-origin: 50% 85%;
+  transform: rotate(-75deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mystic-collapse #conversation-player canvas {
+    animation: mystic-collapse 450ms ease-in both;
+  }
+}
+
+@keyframes mystic-collapse {
+  from { transform: rotate(0); }
+  to { transform: rotate(-75deg); }
 }

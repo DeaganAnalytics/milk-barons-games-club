@@ -2,6 +2,9 @@ export const bartenderMoods = ['deadpan', 'polite', 'skeptical', 'thinking'];
 const [deadpan, polite, skeptical, thinking] = bartenderMoods;
 const say = (text, mood = deadpan, replies = [], extras = {}) => ({text, mood, replies, ...extras});
 const reply = (label, next, playerMood = 'thinking') => ({label, next, playerMood});
+const once = (key, label, next) => ({...reply(label, next), once: key, consumeOnSelect: true});
+const guardSecurityTopics = ['bartenderGuardProtection', 'bartenderGuardTheft'];
+const guardTopics = ['bartenderGuardRifle', 'bartenderGuardCow', ...guardSecurityTopics];
 const next = node => [reply('Continue', node, 'attentive')];
 const menu = say('');
 const back = next(menu);
@@ -50,34 +53,38 @@ const orderDrink = say('Certainly, sir. What will it be?', polite, [
 ]);
 
 menu.replies.push(
-  reply('What kind of milk?', say("Whole milk, skim milk, cow's milk, goat's milk.", deadpan, next(
+  once('bartenderMilkSelection', 'What kind of milk?', say("Whole milk, skim milk, cow's milk, goat's milk.", deadpan, next(
     say('Sheep milk, pig milk, camel milk, elephant milk.', polite, [
       ...next(otherMilks),
       reply('Elephant milk?', say('Indeed, sir. Rather difficult to procure.', thinking, next(otherMilks)))
     ])
   ))),
-  reply('Do you have any garlic-flavoured milk?', say('Garlic-flavoured milk, sir?', skeptical, [
-    reply('Or perhaps it was milk-flavoured garlic?', say('Sir, whatever are you on about?', skeptical, [
-      reply("(Whispers) It's for vampires.", say("Vampires? Don't be silly, sir. Vampires don't exist.", deadpan, next(
-        say('Though, if they did exist... an entirely untapped market for a new line of milk products. Potentially quite profitable.', thinking, next(
-          elias('Pip, time is money, and you are in rather desperate need of money.', next(
-            say("I'd listen to your friend, young man. He seems eminently sensible.", polite, back)
+  {
+    ...reply('Do you have any garlic-flavoured milk?', say('Garlic-flavoured milk, sir?', skeptical, [
+      reply('Or perhaps it was milk-flavoured garlic?', say('Sir, whatever are you on about?', skeptical, [
+        reply("(Whispers) It's for vampires.", say("Vampires? Don't be silly, sir. Vampires don't exist.", deadpan, next(
+          say('Though, if they did exist... an entirely untapped market for a new line of milk products. Potentially quite profitable.', thinking, next(
+            elias('Pip, time is money, and you are in rather desperate need of money.', next(
+              say("I'd listen to your friend, young man. He seems eminently sensible.", polite, back)
+            ))
           ))
-        ))
-      )))
-    ]))
-  ])),
-  reply('Do you have anything... alcoholic?', sequence([
+        )))
+      ]))
+    ])),
+    once: 'bartenderGarlicMilk',
+    consumeOnSelect: true
+  },
+  once('bartenderAlcoholicMilk', 'Do you have anything... alcoholic?', sequence([
     ['Of course, sir. Milk beer, milk wine, milk cider and milk champagne.', polite],
     ['Milk whisky, milk vodka, milk gin and aged milk rum.', deadpan],
     ['We also serve cocktails. Milk Martinis, Dairy Daiquiris, Piña Cow-ladas and White Russians.', polite],
     ["Whatever a Russian is. I'm not Russian to find out.", 'amused']
   ])),
-  reply('Do you have anything non-milk-related?', say('Non-milk, you say, sir? Surely you jest.', 'offended', back)),
+  once('bartenderNonMilk', 'Do you have anything non-milk-related?', say('Non-milk, you say, sir? Surely you jest.', 'offended', back)),
   reply("I'll have a milk, please.", orderDrink),
-  reply('Why is there an armed guard?', say('To protect the milk, of course, sir.', deadpan, [
-    reply('But an assault rifle?', say('Bullets are cheaper than milk, sir.', deadpan, back)),
-    reply('Why is the guard a cow?', say("I'm afraid I don't understand the question, sir.", skeptical, [
+  {...reply('Why is there an armed guard?', say('To protect the milk, of course, sir.', deadpan, [
+    once('bartenderGuardRifle', 'But an assault rifle?', say('Bullets are cheaper than milk, sir.', deadpan, back)),
+    once('bartenderGuardCow', 'Why is the guard a cow?', say("I'm afraid I don't understand the question, sir.", skeptical, [
       reply('The guard. Is a cow. Or a bull, or whatever.', say('The guard is a guard, sir.', deadpan, [
         reply("You can't be serious. How could you give a cow a gun?", guard('Oi! Buy some milk or MOOVE it!', [
           reply('See?!', say('See what, sir?', skeptical, [
@@ -86,13 +93,13 @@ menu.replies.push(
         ]))
       ]))
     ])),
-    reply("Isn't that a bit... extreme?", say('Milk is an extremely serious matter, sir.', deadpan, [
-      reply('But who are you guarding the milk from?', say("Peasants. Dastardly creatures, sir, as I'm sure you're aware.", skeptical, back, {direction: 'Whispers'})),
-      reply('So if I tried to steal some milk, he would shoot me?', guard('With pleasure.', [
+    {...reply("Isn't that a bit... extreme?", say('Milk is an extremely serious matter, sir.', deadpan, [
+      once('bartenderGuardProtection', 'But who are you guarding the milk from?', say("Peasants. Dastardly creatures, sir, as I'm sure you're aware.", skeptical, back, {direction: 'Whispers'})),
+      once('bartenderGuardTheft', 'So if I tried to steal some milk, he would shoot me?', guard('With pleasure.', [
         reply('Wow...', say('Seems entirely reasonable to me, sir.', 'amused', back), 'alarmed')
       ]))
-    ]))
-  ])),
+    ])), requiresUnusedReplies: guardSecurityTopics}
+  ])), requiresUnusedReplies: guardTopics},
   {...reply('Can I have some money?', say('Absolutely not, sir. I am not a communist.', skeptical, back)), once: 'bartenderMoneyRequest'}
 );
 
