@@ -2642,21 +2642,31 @@ test('all Elias introduction branches converge and the final questions have inde
   };
   let section = eliasWelcome;
   for (let index = 0; index < 6; index++) {
-    assert.equal(section.replies.length, 4);
+    assert.equal(section.replies.length, 5);
     const endings = section.replies.map(option => follow(option.next));
     assert.ok(endings.every(node => node === endings[0]));
     section = endings[0];
   }
   assert.equal(section.text, 'Now, Master Pip, do you have any questions?');
-  const [exit] = section.replies.slice(-1);
-  const questions = section.replies.slice(0, -1);
-  assert.equal(questions.length, 8);
-  assert.equal(new Set(questions.map(question => question.once)).size, 8);
-  for (const question of questions) {
-    assert.equal(question.consumeOnSelect, true);
-    assert.equal(follow(question.next), section);
+  const exits = section.replies.slice(-2);
+  const questions = section.replies.slice(0, -2);
+  assert.equal(questions.length, 12);
+  assert.equal(new Set(questions.map(question => question.once)).size, questions.length);
+
+  function countPathsToMenu(node) {
+    if (node === section) return 1;
+    assert.equal(node.action, undefined);
+    assert.ok(node.replies?.length);
+    return node.replies.reduce((count, option) => count + countPathsToMenu(option.next), 0);
   }
-  assert.equal(exit.next.action, 'finishEliasWelcome');
+  for (const question of questions) assert.equal(question.consumeOnSelect, true);
+  assert.deepEqual(questions.map(question => countPathsToMenu(question.next)),
+    [1, 1, 1, 1, 1, 1, 1, 1, 12, 1, 1, 6]);
+  for (const exit of exits) {
+    const closing = follow(exit.next);
+    assert.equal(closing.action, 'finishEliasWelcome');
+    assert.ok(!closing.replies?.length);
+  }
 });
 
 test('Lin uses the lifeguard phrases according to the confrontation and what Pip heard', async () => {
@@ -2757,5 +2767,50 @@ test('Mystic money dialogue remains available after refusal and decline and reso
       assert.equal(theft.enterAction, 'mysticMoneyTheft');
       assert.ok(choose(theft).replies.some(reply => reply.label === askAgain));
     }
+  }
+});
+
+test('either early Elias answer unlocks the later communist options for the rest of the introduction', async () => {
+  const {eliasWelcome} = await import('../src/elias.mjs');
+  for (const unlockStage of [-1, 0, 1]) {
+    let communist = false;
+    let node = eliasWelcome;
+    for (let stage = 0; stage < 6; stage++) {
+      const choices = node.replies.filter(reply => !reply.requiresDisposition || communist);
+      assert.equal(choices.length, stage < 2 || unlockStage >= 0 ? 5 : 4);
+      const selected = stage === unlockStage ? choices.find(reply => reply.expressesDisposition === 'communist') : choices[0];
+      communist ||= selected.expressesDisposition === 'communist';
+      node = selected.next;
+      while (node.replies.length === 1) node = node.replies[0].next;
+    }
+    assert.equal(node.replies.filter(reply => !reply.requiresDisposition || communist).length, communist ? 14 : 9);
+  }
+});
+
+test('all seven Karl Curd branches conclude once and return to the Baron menu', async () => {
+  const {baronCurdReply} = await import('../src/baron-curd-dialogue.mjs');
+  const menu = () => ({text: 'Baron menu'});
+  const topic = baronCurdReply(menu);
+  assert.equal(topic.requiresDisposition, 'communist');
+  assert.equal(topic.once, 'baronKarlCurd');
+  assert.equal(topic.consumeOnSelect, undefined);
+  let node = topic.next;
+  let appearances = 0;
+  while (node.replies.length === 1) {
+    appearances += Number(node.direction === 'Elias appears.');
+    node = node.replies[0].next;
+  }
+  assert.equal(appearances, 1);
+  assert.equal(node.replies.length, 7);
+  for (const choice of node.replies) {
+    let response = choice.next;
+    let completions = 0;
+    while (response !== menu) {
+      completions += Number(response.enterAction === 'finishBaronKarlCurd');
+      assert.equal(response.action, undefined);
+      assert.equal(response.replies.length, 1);
+      response = response.replies[0].next;
+    }
+    assert.equal(completions, 1);
   }
 });

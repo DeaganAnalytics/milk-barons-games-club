@@ -48,10 +48,121 @@ const questionLines = [
     ['You can be both.', 'An interesting observation.', 'worried']
   ]
 ];
+const revolutionConclusion = exchange([
+  ['Continue', 'Our security personnel are predominantly of rural origin.', 'current-smile'],
+  ['And they have no interest in revolutionary politics?',
+    'Master Pip, ve have yet to encounter a political grievance zat could not be resolved vith a bucket of oats.', 'self-assured-smirk',
+    'thinking', {replies: [
+      [["What sort of people are you employing?!", 'Exceptionally cost-effective ones.', 'reading-figures', 'alarmed']],
+      [
+        ["You're paying your employees in oats?!", 'Nyet. Ze oats are a performance incentive.', 'insulted', 'alarmed'],
+        ['And their wages?', 'Zey have yet to request any.', 'current-smile'],
+        ["That's exploitation!", 'Zat is an allegation best made by ze employees themselves.', 'self-assured-smirk']
+      ],
+      [
+        ['Even the most ignorant worker can develop class consciousness!', 'Perhaps you vould like to conduct a seminar.', 'thinking'],
+        ['I would!', 'Vonderful. I recommend bringing your own oats.', 'self-assured-smirk']
+      ],
+      [
+        ["Why do I get the feeling you're leaving something out?", 'Perhaps you are naturally suspicious.', 'devious'],
+        ["I'm a revolutionary.", 'Da. A rather expensive form of paranoia.', 'self-assured-smirk']
+      ]
+    ].map(lines => exchange(lines, questions))}]
+], questions).next;
+
+const revolution = [
+  ['Are you not afraid of the inevitable proletarian revolution?', 'Nyet. Ze Dairy Aristocracy has largely resolved zat particular problem.',
+    'current-smile', 'thinking', {replies: [
+      [
+        ['You cannot suppress class consciousness forever!', 'Ve have found it considerably easier to recruit employees vithout it.', 'thinking'],
+        ['How?', 'A rather innovative agricultural recruitment programme.', 'self-assured-smirk']
+      ],
+      [
+        ['Through the violent suppression of the working class, no doubt!', 'Ve prefer preventative measures.', 'current-smile'],
+        ['Propaganda?', 'Selective breeding.', 'thinking'],
+        ['WHAT?!', 'Of loyalty, Master Pip. Loyalty.', 'worried', 'alarmed']
+      ],
+      [
+        ['How exactly does one prevent a revolution?', 'Ze secret lies in recruitment, Master Pip.', 'devious'],
+        ['Recruiting loyal workers?', 'Preferably before zey develop political opinions.', 'self-assured-smirk']
+      ]
+    ].map(lines => exchange(lines, revolutionConclusion))}]
+];
+
+const revolutionaryLiterature = [
+  ["Perhaps they should read Karl Curd's The Means of Milk Production!", 'Ve actually experimented vith an employee literacy programme.', 'thinking'],
+  ['And?', 'Ze reading material proved considerably more popular as a dietary supplement.', 'current-smile'],
+  ['THEY ATE THE BOOKS?!', 'Da. Ze hardcover editions proved particularly unpopular.', 'self-assured-smirk', 'alarmed', {replies: [
+    [
+      ['They consumed one of the greatest works of political philosophy ever written?!',
+        'Da. Although consumption declined considerably during ze chapter on agricultural collectivisation.', 'thinking', 'alarmed'],
+      ['Why?!', 'Ve suspect indigestion.', 'current-smile']
+    ],
+    [
+      ['What the hell is wrong with your employees?', 'Very little, according to our veterinarian.', 'current-smile'],
+      ['YOUR WHAT?!', 'Vas zere anything else, Master Pip?', 'self-assured-smirk', 'alarmed']
+    ],
+    [
+      ["Then I'll read it aloud to them!", 'An excellent idea.', 'current-smile'],
+      ['Really?', 'Da. Zey respond rather vell to soothing voices.', 'thinking'],
+      ["It's revolutionary literature, not a bedtime story!", 'I vould recommend keeping your movements slow and deliberate.', 'self-assured-smirk']
+    ]
+  ].map(lines => exchange(lines, questions))}]
+];
+
+const revolutionaryThreat = [
+  ['One day, the workers will seize everything the Baron owns!', 'Ve have taken considerable precautions against such an eventuality.', 'current-smile'],
+  ['Even your own employees will turn against you!', 'Our security personnel have demonstrated remarkably little revolutionary sentiment.',
+    'thinking', 'thinking', {replies: [
+      revolutionaryLiterature,
+      [
+        ["What's stopping your employees from forming a union?", 'Zey already congregate in large groups.', 'current-smile'],
+        ["That's not the same thing!", 'Da. Zere is considerably less paperwork.', 'self-assured-smirk'],
+        ['Have they ever collectively demanded better working conditions?', 'Once.', 'thinking'],
+        ['HA! CLASS CONSCIOUSNESS!', 'Ve opened a window.', 'current-smile', 'alarmed'],
+        ['Oh.', 'Industrial harmony vas immediately restored.', 'self-assured-smirk']
+      ],
+      [
+        ['Perhaps I should recruit your security personnel into the revolutionary movement!', 'I vould be fascinated to observe your efforts.', 'devious'],
+        ['Workers of the world, unite!', 'You have nothing to lose but your—', 'thinking'],
+        ['CHAINS!', 'Da. Although I believe ve removed those several years ago.', 'current-smile', 'alarmed'],
+        ['Excuse me?', 'A modernisation of our employee management practices.', 'thinking'],
+        ['WHAT KIND OF ESTABLISHMENT IS THIS?!', 'A highly profitable one.', 'self-assured-smirk', 'alarmed']
+      ],
+      [
+        ['Your employees and I have more in common than you realise.', 'An intriguing assertion.', 'thinking'],
+        ['We are all victims of capitalist exploitation!', 'Da. Although most of our security personnel appear considerably happier than you.', 'current-smile'],
+        ['Because they lack political education!', 'Perhaps. Or perhaps zey simply enjoy ze grass.', 'thinking'],
+        ['What?', 'Ze grounds are exceptionally vell maintained.', 'self-assured-smirk']
+      ]
+    ].map(lines => exchange(lines, questions))}]
+];
+
+questionLines.push(
+  revolution,
+  [
+    ['Elias, you are a worker too! Why do you serve the capitalist class?', 'Ze capitalist class provides me vith an exceptionally generous salary.', 'reading-figures'],
+    ['Where is your class solidarity?!', 'Included in my annual performance bonus.', 'self-assured-smirk']
+  ],
+  [
+    ["Why shouldn't this establishment belong to the people?", 'Because ze people did not purchase it.', 'current-smile'],
+    ['It was built upon the exploitation of their labour!', 'Da. An exceedingly profitable arrangement.', 'self-assured-smirk']
+  ],
+  revolutionaryThreat
+);
+
+const revolutionaryFarewell = exchange([
+  ['LONG LIVE THE REVOLUTION!', 'And may it generate considerable taxable revenue.', 'self-assured-smirk', 'alarmed'],
+  ['Continue', 'I vish you a most profitable evening, Master Pip.', 'current-smile', 'attentive',
+    {action: 'finishEliasWelcome', replies: []}]
+], questions);
+
 questions.replies = [
   ...questionLines.map((lines, index) => ({
-    ...exchange(lines, questions), once: 'eliasWelcome:' + index, consumeOnSelect: true
+    ...exchange(lines, questions), once: 'eliasWelcome:' + index, consumeOnSelect: true,
+    ...(index >= 8 ? {requiresDisposition: 'communist'} : {})
   })),
+  {...revolutionaryFarewell, requiresDisposition: 'communist'},
   welcomeEnd
 ];
 
@@ -62,7 +173,9 @@ const welcomeSections = [
       [['Where am I?', "Ze Milk Baron's Games Club. I believe I just established zis.", 'self-assured-smirk']],
       [['How do you know my name?', 'Ve make it our business to know such things.', 'devious', 'worried']],
       [['BAH! A VAMPIRE!', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed']],
-      [['Lovely establishment.', 'Ah! A young man of discerning taste!', 'laugh']]
+      [['Lovely establishment.', 'Ah! A young man of discerning taste!', 'laugh']],
+      [['I refuse to recognise the legitimacy of this bourgeois establishment!',
+        'Fortunately, Master Pip, ze legitimacy of zis establishment is not dependent upon your recognition.', 'self-assured-smirk']]
     ]
   },
   {
@@ -71,7 +184,8 @@ const welcomeSections = [
       [['Someone has to stand up for the working class!', 'Ah, ze enthusiasm of youth.', 'self-assured-smirk']],
       [['I was exercising my democratic rights!', 'Da. Rather expensively, as it turns out.', 'devious']],
       [['Has he? Is there a job opportunity?', 'In a manner of speaking.', 'self-assured-smirk']],
-      [['Oh God. Am I in trouble?', 'Let us not get ahead of ourselves.', 'current-smile', 'worried']]
+      [['Oh God. Am I in trouble?', 'Let us not get ahead of ourselves.', 'current-smile', 'worried']],
+      [['The means of milk production belong to the workers!', 'An interesting theory. Ze ownership documents suggest otherwise.', 'self-assured-smirk']]
     ]
   },
   {text: 'You are a most intriguing young stickman. Ambitious, resourceful, and, if I may be so bold... delightfully impressionable.', mood: 'devious', playerMood: 'worried'},
@@ -81,7 +195,8 @@ const welcomeSections = [
       [['A HUNDRED MILK TOKENS?!', 'Da. Your numeracy is most encouraging.', 'self-assured-smirk', 'alarmed']],
       [["I didn't do it!", 'An assertion of remarkably little financial significance.', 'insulted']],
       [["I can't afford that!", 'Ve are acutely avare of your financial circumstances.', 'reading-figures', 'worried']],
-      [['The Baron is rich! He can afford it!', 'How do you suppose he remains rich, Master Pip?', 'devious']]
+      [['The Baron is rich! He can afford it!', 'How do you suppose he remains rich, Master Pip?', 'devious']],
+      [['The proletariat owes nothing to its capitalist oppressors!', 'Ze proletariat currently owes precisely one hundred milk tokens.', 'reading-figures']]
     ]
   },
   {
@@ -90,7 +205,9 @@ const welcomeSections = [
       [['What sort of game?', 'One of considerable educational value.', 'thinking']],
       [["I don't like the sound of this.", 'Your enthusiasm is not a prerequisite.', 'insulted', 'worried']],
       [['I like games!', 'Excellent! Zis should be a most productive evening.', 'laugh', 'happy']],
-      [['Can I refuse?', 'Nyet.', 'insulted']]
+      [['Can I refuse?', 'Nyet.', 'insulted']],
+      [['I refuse to participate in the games of the bourgeoisie!',
+        'An admirable commitment to principle, Master Pip. Unfortunately, participation is compulsory.', 'self-assured-smirk']]
     ]
   },
   {
@@ -99,7 +216,11 @@ const welcomeSections = [
       [["Wait. You're giving me money because I owe you money?", 'Da. Capital investment.', 'current-smile']],
       [["Can't I just give you this money back?", 'Vhere is ze profit in zat?', 'thinking']],
       [['What if I make more than ₥200?', 'Ah! You are already beginning to think like a capitalist!', 'laugh']],
-      [['That sounds easy enough.', 'I admire your optimism.', 'self-assured-smirk']]
+      [['That sounds easy enough.', 'I admire your optimism.', 'self-assured-smirk']],
+      [
+        ['I shall redistribute this capital amongst the working class!', 'You are free to redistribute it as you vish, provided you return twice ze amount.', 'current-smile'],
+        ["That's not how communism works!", 'Da. Zat is precisely vhy ve do not practise it.', 'self-assured-smirk']
+      ]
     ]
   },
   {
@@ -111,14 +232,21 @@ const welcomeSections = [
         ['What sort of work?', 'Considerable quantities of it.', 'self-assured-smirk']
       ],
       [["Surely that's illegal?", 'His Excellency maintains an excellent relationship vith ze legislature.', 'devious']],
-      [['I suppose there are worse things.', 'Da. Although relatively few.', 'self-assured-smirk', 'worried']]
+      [['I suppose there are worse things.', 'Da. Although relatively few.', 'self-assured-smirk', 'worried']],
+      [['YOU CANNOT ENSLAVE THE PROLETARIAT! THE WORKERS WILL RISE!',
+        'At approximately five every morning, Master Pip. Ze cows require milking.', 'current-smile', 'alarmed']]
     ]
   },
   {text: 'Consider it a most generous opportunity for professional development, Master Pip.', mood: 'self-assured-smirk', playerMood: 'worried'}
 ];
 
-export const eliasWelcome = welcomeSections.reduceRight((next, {choices, ...line}) => ({
-  ...line, replies: choices ? choices.map(lines => exchange(lines, next)) : [continueTo(next)]
+export const eliasWelcome = welcomeSections.reduceRight((next, {choices, ...line}, section) => ({
+  ...line, replies: choices ? choices.map((lines, index) => {
+    const option = exchange(lines, next);
+    if (index !== choices.length - 1) return option;
+    return section < 2 ? {...option, expressesDisposition: 'communist'}
+      : {...option, requiresDisposition: 'communist'};
+  }) : [continueTo(next)]
 }), questions);
 
 function exchange(lines, menu) {

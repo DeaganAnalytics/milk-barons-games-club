@@ -1,3 +1,4 @@
+import {baronCurdReply} from './baron-curd-dialogue.mjs';
 import {createMysticVisibilityDialogue} from './mystic-visibility-dialogue.mjs';
 import {createLinDepartureReactions} from './lin-departure-dialogue.mjs';
 import {createMilkMysticConversation, milkMysticId, milkMysticMoods} from './milk-mystic.mjs';
@@ -333,6 +334,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   let vampireStage = 0;
   let askedBaronForMoney = false;
   const usedReplies = new Set();
+  const politicalDispositions = {communist: false};
   let reportedBaronFollowing = false;
   let heardLifeguardCannotSwim = false;
   let askedPoolEntry = false;
@@ -439,6 +441,10 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function finishAction(finishedAction, target) {
+    if (finishedAction === 'finishBaronKarlCurd') {
+      usedReplies.add('baronKarlCurd');
+      return;
+    }
     if (finishedAction === 'finishBaronCowEncounter') {
       completedBaronCowEncounters++;
       return;
@@ -568,6 +574,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         linChats: waiterOpening.completedLinChats(), linRelationship: waiterOpening.relationship()
       }) : null;
     const availableReplies = [...replies, ...[reaction, visibility].filter(Boolean)].filter(reply => !usedReplies.has(reply.once)
+      && (!reply.requiresDisposition || politicalDispositions[reply.requiresDisposition])
       && (!reply.requiresUnusedReplies || reply.requiresUnusedReplies.some(key => !usedReplies.has(key)))
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())
@@ -586,6 +593,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         if (character === elias.id && ['Are you a vampire?', 'Are you actually a vampire?'].includes(reply.label)) {
           askedEliasAboutVampires = true;
         }
+        if (reply.expressesDisposition) politicalDispositions[reply.expressesDisposition] = true;
         if (reply.consumeOnSelect || reply.once === 'bartenderMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;
         if (next?.exitAction) {
@@ -651,7 +659,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     const opening = greetings[greetingIndex++ % greetings.length];
     const menu = () => ({
       ...opening,
-      replies: [...replies, ...additionalBaronReplies({
+      replies: [...replies, baronCurdReply(menu), ...additionalBaronReplies({
         used: usedReplies,
         standing: baronStanding,
         discoveries: baronDiscoveries?.() ?? {},
