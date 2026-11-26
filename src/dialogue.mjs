@@ -179,7 +179,8 @@ const extraPortraitMoods = new Map([
   ['plum', ['delighted', 'smug', 'shocked']],
   ['emerald', ['amused', 'skeptical', 'appalled']],
   [sleepingGamblerId, ['drowsy', 'protective', 'dismayed']],
-  ...staffIds.filter(id => id !== skimId).map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']])
+  ...staffIds.filter(id => id !== skimId && id !== 'lin-waitress').map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']]),
+  ['lin-waitress', ['welcoming', 'apologetic', 'hurried', 'pleased', 'angry', 'hurt', 'skeptical', 'blushing']]
 ]);
 
 function extraPortraitUrl(id, mood, withoutMilk) {
@@ -301,7 +302,7 @@ function warmPortraits() {
   }
 }
 
-export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeenDjDairy, hasSeducedExecutive, canDeliverDjGift} = {}) {
+export function createDialogue(baron, {onAction, tallies, placePokieWager, sleepingGambler, baronStanding, baronDiscoveries, hasSeenCowGuard, hasKarmaChanged, hasPlayedMilkBalloon, isCommissionerSplattered, getStolenClothing, canReportMilo, canReportPillory, canReportPool, canReportPoolClothes, takeMiloInjury, hasDjAccess, hasSeenDjDairy, hasSeducedExecutive, hasVisitedMilkPool, canDeliverDjGift} = {}) {
   warmPortraits();
   const panel = document.getElementById('conversation');
   const map = document.getElementById('game').closest('.viewport');
@@ -351,7 +352,11 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
   const djOpening = createDjConversation(() => hasSeducedExecutive?.(),
     () => (baronStanding?.()?.coins ?? 0) >= 5, canDeliverDjGift);
   const dancerOpening = createDancerConversation();
-  const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0, () => askedAboutCowGuards.size > 0, () => hasSeducedExecutive?.());
+  let heardLifeguardBunnies = false;
+  const waiterOpening = createWaiterConversation(() => baronStanding?.()?.coins ?? 0, () => askedAboutCowGuards.size > 0, () => hasSeducedExecutive?.(), () => ({
+    clothing: getStolenClothing?.(), visited: hasVisitedMilkPool?.(), heardBunnies: heardLifeguardBunnies,
+    karma: baronStanding?.()?.karma ?? 0
+  }));
   const politicianOpening = createPoliticianConversation(() => baronStanding?.()?.karma ?? 0);
   const commissionerOpening = createCommissionerConversation();
   const attendantOpening = createAttendantConversation();
@@ -444,6 +449,11 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       usedReplies.add('baronKarmaEncounter');
     }
     if (finishedAction === 'skimFalseSpill') skimSpillFollowupPending = true;
+    if (finishedAction === 'rewardMissingDresses') heardLifeguardBunnies = true;
+    if (['alienateLin', 'linCruelRejection', 'linAlienatingSlap', 'finishLinConfrontation'].includes(finishedAction)) {
+      waiterOpening.endRelationship('alienated');
+    }
+    if (finishedAction === 'linDepart') waiterOpening.endRelationship('departed');
     onAction?.(finishedAction, target);
   }
 
@@ -482,7 +492,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       || node === lifeguardDialogue || node.mustContinue
       || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.pokieBan || activeTarget.baronKarma) && !action));
     slappedByBaron ||= node.enterAction === 'baronSlap';
-    panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || node.enterAction === 'linSlap' || node.action === 'politicianHit');
+    panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || ['linSlap', 'linPrivateSlap', 'linAlienatingSlap', 'linBunniesSlap'].includes(node.enterAction) || node.action === 'politicianHit');
+    panel.classList.toggle('lin-milk-throw', node.enterAction === 'linThrowMilk');
     panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
     closeButton.textContent = action === 'finishEliasWelcome' ? 'Begin'
       : action === 'startMilkBalloon' ? 'Play'
@@ -508,7 +519,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
       : currentSpeaker === bartender.id ? bartender.title
       : currentSpeaker === 'guard' ? 'Bull Guard'
       : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
-    setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk);
+    setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)));
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
     const options = character === lifeguard.id
       ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
@@ -716,5 +727,5 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, sleep
     show(opening, target.id, (target.id === 'milo' && miloWasInjured) || target.summoned || target.guestGate || target.postEscort ? 'worried' : 'attentive', target.withoutMilk);
   }
 
-  return {open, linWillConfront: waiterOpening.willConfront, linCanOfferKindness: waiterOpening.canOfferKindness, dismiss: () => close(false), isOpen: () => !panel.hidden};
+  return {open, linWillConfront: waiterOpening.willConfront, linRelationship: waiterOpening.relationship, linCanOfferKindness: waiterOpening.canOfferKindness, dismiss: () => close(false), isOpen: () => !panel.hidden};
 }

@@ -61,6 +61,7 @@ let eliasScene = null;
 let seenMilo = false;
 let reportedMilo = false;
 let seenPoolAndClothes = false;
+let visitedMilkPool = false;
 let poolClothesReport = null;
 let seenPillory = false;
 let seenDjDairy = false;
@@ -243,6 +244,7 @@ const dialogue = createDialogue(baron, {
   hasDjAccess: () => player.djAccess,
   hasSeducedExecutive: () => player.lipstick,
   baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
+  hasVisitedMilkPool: () => visitedMilkPool,
   getStolenClothing: () => milkPool.stolenClothing,
   hasPlayedMilkBalloon: () => playedMilkBalloon,
   isCommissionerSplattered: () => commissionerSplattered,
@@ -257,6 +259,23 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    if (action === 'linReassuranceLie') clubEvent('Pip lies about why he visited the pool.', () => karma.change(-0.5));
+    if (action === 'linClothingLie') clubEvent('Pip lies to Lin about the clothing theft.', () => karma.change(-1));
+    if (action === 'linApologyKarma') clubEvent('Pip apologises to Lin.', () => karma.change(0.5));
+    if (action === 'linCruelRejection') clubEvent('Pip cruelly rejects Lin.', () => karma.change(-2));
+    if (action === 'linBunniesSlap') karma.change(-1);
+    if (['linPrivateSlap', 'linAlienatingSlap', 'linBunniesSlap'].includes(action)) {
+      health.change(-0.5, 'Lin’s slap was the last straw.');
+    }
+    if (action === 'linDepart') {
+      lin.serviceDuty = false;
+      lin.departing = true;
+      lin.rushingOffscreen = true;
+      lin.target = null;
+      lin.route = [];
+      lin.pauseUntil = elapsed;
+      clubEvent('Lin walks out on the club.', () => karma.change(-3));
+    }
     if (action === 'receiveLinGift' && linKindness?.gift) {
       const gift = linKindness.gift;
       linKindness.gift = 0;
@@ -554,9 +573,9 @@ function warnAtGuestGate() {
 }
 
 const {readMovement, clearInput} = bindControls({
-  isPaused: () => eliasApproaching || Boolean(eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene || rangeFall || linConfrontation),
+  isPaused: () => eliasApproaching || Boolean(eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene || rangeFall),
   nudge: (dx, dy) => {
-    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || rangeFall || linConfrontation) return;
+    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || rangeFall) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else {
       const previous = {x: player.x, y: player.y};
@@ -566,8 +585,9 @@ const {readMovement, clearInput} = bindControls({
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
-    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || rangeFall || linConfrontation) return;
+    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || rangeFall) return;
     const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
+      && !(guest === lin && (linConfrontation || dialogue.linRelationship() === 'departed'))
       && !(guestEnclosure.active && insideGuestEnclosure(guest))
       && !(guest === sleepingGamblerTarget && sleepingGambler.pose(elapsed).awake));
     nearbyGuests.push(mystic);
@@ -618,34 +638,6 @@ function frame(timestamp) {
     return;
   }
   if (dialogue.isOpen()) {
-    requestAnimationFrame(frame);
-    return;
-  }
-  if (linConfrontation && (linConfrontation.phase !== 'approach' || linConfrontation.claimed || !lin.serviceDuty)) {
-    const scene = linConfrontation;
-    lin.serviceDuty = true;
-    scene.claimed = true;
-    if (scene.phase === 'approach') {
-      if (Math.hypot(lin.x - player.x, lin.y - player.y) > 49) {
-        // The other actors are paused during the scene, so let Lin pass a stalled crowd.
-        approachPatron(lin, scene, player, baron, scene.stalled >= 0.5 ? [] : [...staff, ...guards], dt, 195);
-        if (!lin.walking || scene.stalled >= 0.5) scene.stalled += dt;
-        else scene.stalled = 0;
-      } else {
-        lin.walking = false;
-        dialogue.open({...lin, linConfrontation: true});
-      }
-    } else {
-      const waypoint = scene.route[0];
-      scene.time += dt;
-      if (waypoint && runServiceStaff(lin, waypoint, baron, [...staff, ...guards], dt) === 'arrived') scene.route.shift();
-      if (!scene.route.length || scene.time > 2) {
-        lin.walking = false;
-        dialogue.open({...lin, linAftermath: true});
-      }
-    }
-    render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
-      staff, milkService.scene, partyChatter, guestEscort, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
     requestAnimationFrame(frame);
     return;
   }
@@ -747,7 +739,7 @@ function frame(timestamp) {
       }
     }
   } else {
-    const movement = guestEscort || linConfrontation ? {dx: 0, dy: 0} : readMovement();
+    const movement = guestEscort ? {dx: 0, dy: 0} : readMovement();
     const atGate = nearGuestGate(player);
     if (!atGate) gateWarned = false;
     if (atGate && movement.dx < 0 && !gateWarned && ropeWarning.talks < 2) {
@@ -783,6 +775,7 @@ function frame(timestamp) {
   seenPoolAndClothes ||= inView(MILK_POOL) && inView(poolClothing);
   noteSight('ladies', partyGuests.every(guest => inView({x: guest.x, y: guest.y - 33})));
   seenMilkPool ||= inView(MILK_POOL);
+  visitedMilkPool ||= Math.abs(player.x - MILK_POOL.x) <= 305 && Math.abs(player.y - MILK_POOL.y) <= 165;
   seenMilkFountain ||= inView(MILK_FOUNTAIN);
   noteSight('pool', seenMilkPool);
   noteSight('pillory', pilloryVisible);
@@ -825,6 +818,39 @@ function frame(timestamp) {
     requestAnimationFrame(frame);
     return;
   }
+  if (linConfrontation && dialogue.linRelationship() !== 'normal') {
+    if (linConfrontation.claimed) lin.serviceDuty = false;
+    linConfrontation = null;
+  }
+  if (!guestEscort && linConfrontation && (linConfrontation.phase !== 'approach' || linConfrontation.claimed || !lin.serviceDuty)) {
+    const scene = linConfrontation;
+    lin.serviceDuty = true;
+    scene.claimed = true;
+    if (scene.phase === 'approach') {
+      if (Math.hypot(lin.x - player.x, lin.y - player.y) > 49) {
+        // Let Lin pass a crowd that has blocked her approach.
+        approachPatron(lin, scene, player, baron, scene.stalled >= 0.5 ? [] : [...staff, ...guards], dt, 195);
+        if (!lin.walking || scene.stalled >= 0.5) scene.stalled += dt;
+        else scene.stalled = 0;
+      } else {
+        lin.walking = false;
+        dialogue.open({...lin, linConfrontation: true});
+      }
+    } else {
+      const waypoint = scene.route[0];
+      scene.time += dt;
+      if (waypoint && runServiceStaff(lin, waypoint, baron, [...staff, ...guards], dt) === 'arrived') scene.route.shift();
+      if (!scene.route.length || scene.time > 2) {
+        lin.walking = false;
+        dialogue.open({...lin, linAftermath: true});
+      }
+    }
+    if (dialogue.isOpen()) {
+      clearInput();
+      requestAnimationFrame(frame);
+      return;
+    }
+  }
   const reaction = !guestEscort && !linConfrontation && slotReactions.update(player, baron, dt);
   if (reaction) {
     clearInput();
@@ -832,7 +858,7 @@ function frame(timestamp) {
     requestAnimationFrame(frame);
     return;
   }
-  if (linKindness?.approaching && player.lipstick) {
+  if (linKindness?.approaching && !dialogue.linCanOfferKindness()) {
     if (linKindness.claimed) lin.serviceDuty = false;
     linKindness = null;
   }
@@ -854,6 +880,12 @@ function frame(timestamp) {
   updateAttendantMilk(attendantMilk, baron, staff, guards, {x: cameraX, y: cameraY}, dt);
   updateMilkPool(milkPool, elapsed, dt);
   updateStaff(staff, player, baron, guards, elapsed, dt);
+  if (dialogue.linRelationship() === 'departed' && !lin.rushingOffscreen) {
+    const staffIndex = staff.indexOf(lin);
+    if (staffIndex >= 0) staff.splice(staffIndex, 1);
+    const guestIndex = guests.indexOf(lin);
+    if (guestIndex >= 0) guests.splice(guestIndex, 1);
+  }
   render(player, baron, milo, guards, cameraX, cameraY, elapsed, staff, milkService.scene, partyChatter, guestEscort, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
   requestAnimationFrame(frame);
 }

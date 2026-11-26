@@ -87,7 +87,7 @@ function routeOutOfGuests(server) {
 function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
   if (!chatter.refill) {
     const distance = member => Math.hypot(member.x - serviceSpot.x, member.y - serviceSpot.y);
-    const server = staff.filter(member => !member.sweeps && !member.serviceDuty && !member.withoutMilk)
+    const server = staff.filter(member => !member.sweeps && !member.departing && !member.serviceDuty && !member.withoutMilk)
       .reduce((closest, member) => !closest || distance(member) < distance(closest) ? member : closest, null);
     if (!server) return;
     server.serviceDuty = true;

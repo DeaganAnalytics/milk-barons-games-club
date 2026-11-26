@@ -183,7 +183,7 @@ export const linPrivateReaction = {
     'I hear congratulations are in order, sir.',
     'Oh, not you too.', 'Lady Penelope, was it?',
     'Look, it was mostly a financial transaction.', 'How very entrepreneurial of you, sir.',
-    'Thank you?', {text: "That wasn't a compliment.", direction: 'Lin slaps Pip.', enterAction: 'linSlap'},
+    'Thank you?', {text: "That wasn't a compliment.", direction: 'Lin slaps Pip.', enterAction: 'linPrivateSlap', mood: 'angry'},
     'OW! What was that for?!', 'Lady Penelope is married, sir.',
     'Yes, but—', 'Will you be ordering any milk, sir?'
   ],
@@ -192,7 +192,7 @@ export const linPrivateReaction = {
     'Continue', "I hear you've been doing some private networking, sir.",
     'Oh, God. You know too?', 'The entire club knows, sir.',
     "It wasn't what you think!", 'No?',
-    'It was a financial transaction!', {text: 'Well, I hope it was profitable.', direction: 'Lin slaps Pip.', enterAction: 'linSlap'},
+    'It was a financial transaction!', {text: 'Well, I hope it was profitable.', direction: 'Lin slaps Pip.', enterAction: 'linPrivateSlap', mood: 'angry'},
     'OW!', 'Will you be ordering anything, sir?',
     'Lin, please...', 'Milk is ₥2 a glass, sir.',
     'But I really like you!', 'How unfortunate.'

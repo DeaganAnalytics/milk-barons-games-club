@@ -1,3 +1,4 @@
+import {linClothingConfrontation, linPoolJealousy} from './lin-pool-dialogue.mjs';
 import {linColdNameLines, linColdTalkLines, linCrushLines, linKindnessLines, linPrivateReaction, linPublicReaction, sterlingResponses, waiterNameLines} from './waiter-name-dialogue.mjs';
 
 export const WAITER_MILK_PRICE = 2;
@@ -34,7 +35,7 @@ function exchange(lines, ending, playerMood = 'attentive', completeChat) {
         return {...say(text), ...portrait};
       };
       else {
-        const choices = options?.map(branch => exchange(branch, replies, playerMood, completeChat)) ?? replies;
+        const choices = portrait.action ? [] : options?.map(branch => exchange(branch, replies, playerMood, completeChat)) ?? replies;
         next = {...say(text, choices), ...portrait};
       }
     }
@@ -50,37 +51,41 @@ export function linKindnessDialogue() {
 export const linWaitressId = 'lin-waitress';
 
 export function createWaiterConversation(getCoins, askedAboutCowGuards = () => false,
-  hasSeducedExecutive = () => false) {
+  hasSeducedExecutive = () => false, poolState = () => ({})) {
   let greetingIndex = 0;
   const spokenTo = new Set();
   const askedName = new Set();
   let linStage = 0;
 
-  let linCold = false;
+  let relationship = 'normal';
+  let poolJealousySeen = false;
+  let clothingConfrontationSeen = false;
   let alternativeLinName = false;
   const open = function (withoutMilk, id, publicConfrontation = false) {
     const isLin = id === linWaitressId;
-    if (publicConfrontation) {
-      linCold = true;
+    if (publicConfrontation && relationship === 'normal') {
       return exchange(linPublicReaction, [], 'worried').next;
     }
-    const reacts = isLin && hasSeducedExecutive() && !linCold && !open.willConfront();
+    if (isLin && relationship === 'departed') return say('');
+    const reacts = isLin && hasSeducedExecutive() && relationship === 'normal' && !open.willConfront();
     if (reacts) {
-      linCold = true;
       alternativeLinName = !askedName.has(id);
     }
     const knowsOtherServer = ['handlebar-waiter', 'male-waiter', 'martini-waiter', 'blonde-waitress']
       .some(server => spokenTo.has(server));
     spokenTo.add(id);
-    if (withoutMilk && !reacts) return say('Not now! Busy, busy, busy!');
+    const pool = isLin && open.canOfferKindness() ? poolState() : {};
+    const confrontClothing = pool.clothing && !clothingConfrontationSeen;
+    const confrontPool = !confrontClothing && !clothingConfrontationSeen && !poolJealousySeen && pool.visited;
+    if (withoutMilk && !reacts && !confrontClothing && !confrontPool) return say('Not now! Busy, busy, busy!');
 
     const index = greetingIndex++ % greetings.length;
-    const greeting = isLin && linCold ? "Will you be ordering any milk, sir?" : greetings[index];
+    const greeting = greetings[index];
     const canAskName = waiterNameLines[id] && !askedName.has(id)
       && (id !== 'handlebar-waiter' || askedAboutCowGuards())
       && (id !== 'female-waiter' || knowsOtherServer)
-      && (!isLin || !hasSeducedExecutive() || alternativeLinName);
-    const canChatWithLin = isLin && askedName.has(id) && !hasSeducedExecutive();
+      && (!isLin || (relationship === 'normal' && !hasSeducedExecutive()) || alternativeLinName);
+    const canChatWithLin = isLin && askedName.has(id) && relationship === 'normal' && !hasSeducedExecutive() && !confrontClothing && !confrontPool;
     let currentMenu;
     let nameAvailable = canAskName;
     let chatAvailable = canChatWithLin;
@@ -97,6 +102,7 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
 
     function menu() {
       if (currentMenu) return currentMenu;
+      const linCold = isLin && relationship === 'alienated';
       const personal = [];
       if (nameAvailable) personal.push(exchange(isLin && linCold ? linColdNameLines : waiterNameLines[id],
         nameEnding, isLin ? 'worried' : 'thinking'));
@@ -121,7 +127,7 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
         }
       }
 
-      currentMenu = say(greeting, [
+      currentMenu = say(linCold ? "Will you be ordering any milk, sir?" : greeting, [
         reply('Could I have a glass of milk, please?', say(isLin && linCold ? '₥2.' : "Certainly, sir. That'll be ₥2.", [
           reply('Yes, please.', () => !withoutMilk && getCoins() >= WAITER_MILK_PRICE
             ? {...say('Here you are, sir. Enjoy!', [], 'buyWaiterMilk', 'pleased'), autoCloseMs: 1600}
@@ -135,12 +141,30 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
     }
     if (reacts) {
       const [first, ...rest] = alternativeLinName ? linPrivateReaction.beforeFlirting : linPrivateReaction.afterFlirting;
-      return typeof first === 'string' ? say(first, [exchange(rest, [back], 'worried')])
-        : {...say(first.text, [exchange(rest, [back], 'worried')]), ...first};
+      const last = rest.length - 1;
+      rest[last] = {text: rest[last], mood: 'skeptical'};
+      const finish = reply('Continue', () => {
+        open.endRelationship('alienated');
+        return menu();
+      });
+      const continuation = [exchange(rest, [finish], 'worried')];
+      return typeof first === 'string' ? say(first, continuation)
+        : {...say(first.text, continuation), ...first};
+    }
+    if (confrontClothing || confrontPool) {
+      if (confrontClothing) clothingConfrontationSeen = true;
+      else poolJealousySeen = true;
+      const lines = confrontClothing ? linClothingConfrontation(pool) : linPoolJealousy(pool.heardBunnies);
+      return {...say(lines[0], [exchange(['Continue', ...lines.slice(1)], [back], 'worried')]),
+        speaker: 'Pip', playerMood: 'happy'};
     }
     return menu();
   };
-  open.canOfferKindness = () => linStage >= 2 && !hasSeducedExecutive();
-  open.willConfront = () => linStage > 3 && !linCold;
+  open.canOfferKindness = () => linStage >= 2 && relationship === 'normal' && !hasSeducedExecutive();
+  open.willConfront = () => linStage > 3 && relationship === 'normal';
+  open.relationship = () => relationship;
+  open.endRelationship = state => {
+    if (relationship === 'normal') relationship = state;
+  };
   return open;
 }

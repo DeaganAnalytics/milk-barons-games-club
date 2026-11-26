@@ -2359,3 +2359,52 @@ test('DJ Dairy’s financial assistance and musical appreciation topics are sepa
     assert.equal(appreciation(), undefined);
   }
 });
+
+test('Lin prioritises stolen clothing, preserves flirting progression, and uses pre-penalty karma', async () => {
+  const {createWaiterConversation, linWaitressId} = await import('../src/waiter-dialogue.mjs');
+  const choose = (node, label) => {
+    const option = label ? node.replies.find(reply => reply.label === label) : node.replies[0];
+    assert.ok(option, label);
+    return typeof option.next === 'function' ? option.next() : option.next;
+  };
+  const advance = (node, stop) => {
+    for (let step = 0; step < 30 && !stop(node); step++) node = choose(node);
+    assert.ok(stop(node));
+    return node;
+  };
+  const reachedMenu = node => node.replies[0]?.label === 'Could I have a glass of milk, please?';
+  for (const karma of [0, 0.5, 5, 5.5]) {
+    const pool = {visited: false, karma, heardBunnies: true};
+    const open = createWaiterConversation(() => 100, () => false, () => false, () => pool);
+    const visit = () => open(false, linWaitressId);
+    for (let stage = 0; stage < 3; stage++) {
+      advance(choose(visit(), visitTopic(stage)), reachedMenu);
+    }
+    pool.visited = true;
+    pool.clothing = 'all';
+    const choices = advance(visit(), node => node.text === 'This should be good.');
+    assert.ok(choices.replies.some(reply => reply.label === "To be fair, I took everyone's clothes."));
+    const denial = choose(choose(choices, "[Lie] I didn't steal anyone's clothes."));
+    assert.equal(denial.enterAction, 'linClothingLie');
+    assert.equal(denial.text.startsWith('Well, you don’t') || denial.text.startsWith("Well, you don't"), karma > 0);
+    if (karma >= 5) {
+      const slap = choose(choose(choices, 'I wanted to see some aristocratic bunnies.'));
+      assert.equal(slap.enterAction, 'linBunniesSlap');
+      const apology = choose(slap);
+      assert.equal(apology.enterAction, 'linApologyKarma');
+      assert.equal(apology.text.startsWith('You know'), karma > 5);
+      const departure = advance(choose(slap, "At least they're not prudes like you."), node => node.action === 'linDepart');
+      assert.equal(departure.enterAction, 'linThrowMilk');
+      assert.equal(departure.replies.length, 0);
+    }
+    assert.ok(visit().replies.some(reply => reply.label.startsWith("Excuse me, where's the milk fountain")));
+    open.endRelationship('alienated');
+    assert.equal(open.canOfferKindness(), false);
+    assert.equal(open.willConfront(), false);
+    assert.equal(visit().replies[0].next.text, '₥2.');
+  }
+
+  function visitTopic(stage) {
+    return ["Lin. That's a really pretty name.", 'So... is the milk fresh?', "Lovely weather we're having."][stage];
+  }
+});
