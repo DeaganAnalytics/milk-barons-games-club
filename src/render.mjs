@@ -284,7 +284,7 @@ function drawBartender(ctx, sprite, elapsed) {
   ctx.drawImage(sprite, x, sill - bustHeight, width * 82 / 384, bustHeight);
 }
 
-export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
+export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic) {
   let seenCowGuard = false;
   const danceGuardIndex = dancers.findIndex(dancer => dancer.id === 'guard');
   const ctx = canvas.getContext('2d');
@@ -334,6 +334,7 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
     .map(id => [id, loadSprite('waiters/' + id + '-empty', 'webp')]));
   const skimVertical = loadSprite('waiters/edmund-vale-vertical-walk', 'webp');
   const partySprites = partyGuests.map(guest => loadSprite('guests/' + guest.id, 'webp'));
+  const mysticSprite = loadSprite('milk-mystic', 'webp');
   const miloSprite = loadSprite('milo', 'webp');
   const fallback = loadSprite('baron');
   const baronFrames = Array.from({length: 8}, (_, index) => loadSprite('baron-' + index));
@@ -402,6 +403,20 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler) {
       }},
       {depth: milo.y + 20, draw: () => drawMilo(ctx, miloSprite, milo, elapsed)}
     ];
+    if (mystic && isReady(mysticSprite)) {
+      actors.push({depth: mystic.y + 20, draw: () => {
+        const lift = mystic.walking ? Math.abs(Math.sin(mystic.stride)) * 1.7 : 0;
+        ctx.save();
+        ctx.translate(mystic.x, mystic.y + 20);
+        ctx.fillStyle = '#25202a80';
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 13, 3, 0, 0, TURN);
+        ctx.fill();
+        ctx.scale(mystic.facingRight ? -1 : 1, 1);
+        ctx.drawImage(mysticSprite, -20, -68 - lift, 40, 69);
+        ctx.restore();
+      }});
+    }
     if (rangeVisible) PRACTICE_RANGE.lanes.forEach((y, index) => {
       actors.push({depth: y, draw: () => drawRangeLane(ctx, rangeArt, y, elapsed, index)});
     });

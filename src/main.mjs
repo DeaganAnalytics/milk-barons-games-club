@@ -1,3 +1,4 @@
+import {createMilkMystic, updateMilkMystic} from './milk-mystic.mjs';
 import {DJ_ADMISSION_PRICE} from './baron-dialogue.mjs';
 import {djTarget} from './dj-dialogue.mjs';
 import {dancerTargets} from './dancer-dialogue.mjs';
@@ -39,6 +40,7 @@ import {createStaff, updateStaff} from './staff.mjs';
 const player = createPlayer();
 const baron = createBaron();
 const milo = createMilo();
+const mystic = createMilkMystic();
 const guards = createGuards(player, baron, milo);
 const creameryGuard = createCreameryGuard();
 guards.push(creameryGuard);
@@ -53,7 +55,7 @@ const attendantMilk = createAttendantMilk();
 const partyChatter = createPartyChatter();
 const milkPool = createMilkPool();
 let seenCowGuard = false;
-const render = createRenderer(document.getElementById('game'), () => { seenCowGuard = true; }, sleepingGambler);
+const render = createRenderer(document.getElementById('game'), () => { seenCowGuard = true; }, sleepingGambler, mystic);
 let eliasApproaching = true;
 let eliasScene = null;
 let seenMilo = false;
@@ -61,6 +63,7 @@ let reportedMilo = false;
 let seenPoolAndClothes = false;
 let poolClothesReport = null;
 let seenPillory = false;
+let seenDjDairy = false;
 let boughtCreameryMilk = false;
 let seenMilkPool = false;
 let seenMilkFountain = false;
@@ -230,6 +233,7 @@ const dialogue = createDialogue(baron, {
     canAskForFreeMilk: boughtCreameryMilk && MAX_HEARTS - health.hearts >= 1
   }),
   canDeliverDjGift,
+  hasSeenDjDairy: () => seenDjDairy,
   hasDjAccess: () => player.djAccess,
   hasSeducedExecutive: () => player.lipstick,
   baronStanding: () => ({karma: karma.score, coins: coinBalance.count}),
@@ -348,6 +352,7 @@ const dialogue = createDialogue(baron, {
         coinBalance.change(-60);
       });
     }
+    if (action === 'buyOracleHint') clubEvent('Pip buys a fragment of the Oracle’s wisdom.', () => coinBalance.change(-1));
     if (action === 'tipDjDairy' && coinBalance.count >= 5) clubEvent('Pip tips DJ Dairy.', () => {
       karma.change(0.5);
       coinBalance.change(-5);
@@ -499,6 +504,7 @@ const {readMovement, clearInput} = bindControls({
     const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
       && !(guestEnclosure.active && insideGuestEnclosure(guest))
       && !(guest === sleepingGamblerTarget && sleepingGambler.pose(elapsed).awake));
+    nearbyGuests.push(mystic);
     if (player.djAccess) nearbyGuests.push(djTarget);
     if (!milkPool.stolenClothing) nearbyGuests.push(poolClothing);
     const target = nearbyPracticeGuard(player) ?? nearestInteraction(player, baron, milo, guards, nearbyGuests);
@@ -677,6 +683,7 @@ function frame(timestamp) {
   updateEliasFollow(elias, player, baron, cameraX, cameraY, dt);
   const inView = ({x, y}) => x >= cameraX && x <= cameraX + ROOM_WIDTH
     && y >= cameraY && y <= cameraY + ROOM_HEIGHT;
+  seenDjDairy ||= inView(djTarget);
   const pilloryVisible = pilloryInView(cameraX, cameraY);
   seenPillory ||= pilloryVisible;
   seenPoolAndClothes ||= inView(MILK_POOL) && inView(poolClothing);
@@ -698,6 +705,7 @@ function frame(timestamp) {
   }
   const baronLocked = serviceWasActive || Boolean(milkService.scene);
   if (!baronLocked) updateBaronAttention(baron, player, elapsed, dt);
+  updateMilkMystic(mystic, baron, elapsed, dt);
   if (updateMilo(milo, baron, elapsed, dt, guards) && !baronLocked) callOutMilo(baron, milo, elapsed);
   if (!baronLocked) updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed);
   if (guestEscort?.executive && !guestEscort.guard) {
