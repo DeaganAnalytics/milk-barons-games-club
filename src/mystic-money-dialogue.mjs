@@ -20,21 +20,34 @@ const reply = (label, next) => ({label, next});
 const withReplies = (line, replies) => ({...line, mustContinue: true, replies});
 
 function sequence(lines, next) {
-  return lines.reduceRight((tail, line) => withReplies(line, [reply('Continue', tail)]), next);
+  return lines.reduceRight((tail, line) => {
+    if (line.speaker === 'Pip') {
+      return {
+        ...withReplies(mystic('', 'contemplative', {direction: line.direction}), [
+          {...reply(line.text, tail), playerMood: line.playerMood}
+        ]),
+        responsePrompt: true
+      };
+    }
+    if (tail?.responsePrompt) {
+      return withReplies({...line, direction: line.direction ?? tail.direction}, tail.replies);
+    }
+    return withReplies(line, [reply('Continue', tail)]);
+  }, next);
 }
 
 export function createMysticMoneyTopic(getCoins, transact, menu) {
   let accepted = false;
   const back = () => menu();
-  const endWith = (line, next = back) => withReplies(line, [reply('Continue', next)]);
+  const endWith = (line, next = back) => sequence([line], next);
 
   function moneyReaction(change, next) {
     if (change === 5) return sequence([
-      pip("Five tokens? That's it?!", 'annoyed'),
+      pip("Five tokens? That's it?!", 'exasperated'),
       mystic('Be grateful for the blessings bestowed upon you.')
     ], endWith(pip("I've had more generous blessings from a pokie machine."), next));
     if (change > 0 && change <= 30) return sequence([
-      pip('Oh! Actual money!', 'pleased'), mystic('Spend it wisely, child.')
+      pip('Oh! Actual money!', 'happy'), mystic('Spend it wisely, child.')
     ], endWith(pip("You do realise we're in a casino?"), next));
     if (change > 30) return sequence([
       pip('FIFTY TOKENS?!', 'alarmed'), mystic('The milk is generous today, child.', 'wry-smile'),
@@ -42,30 +55,30 @@ export function createMysticMoneyTopic(getCoins, transact, menu) {
     ], endWith(mystic('A familiar response to material prosperity.', 'wry-smile'), next));
     if (change === 0) return sequence([
       pip("Where's my money?"), mystic('Where it was before, child.'),
-      pip('What was the point of all that?!', 'annoyed'), mystic('Perhaps there is a lesson in this.')
+      pip('What was the point of all that?!', 'exasperated'), mystic('Perhaps there is a lesson in this.')
     ], endWith(pip("Perhaps there's a lesson in not talking to you."), next));
 
     return sequence([
       pip("WAIT! I'VE LOST MONEY!", 'alarmed'), mystic('The milk giveth, and the milk taketh away.'),
-      pip('I ASKED YOU FOR MONEY!', 'angry'), mystic('And the milk has answered.'),
-      pip('IT ANSWERED THE WRONG BLOODY QUESTION!', 'angry')
-    ], withReplies(mystic('The milk is not mistaken, child.'), [
+      pip('I ASKED YOU FOR MONEY!', 'exasperated'), mystic('And the milk has answered.', 'contemplative'),
+      pip('IT ANSWERED THE WRONG BLOODY QUESTION!', 'exasperated')
+    ], withReplies(mystic('The milk is not mistaken, child.', 'skeptical'), [
       reply('I should have known better.', sequence([
         mystic('Wisdom has found you at last.')
       ], endWith(pip('At considerable expense.'), next))),
       reply('Give me my money back!', sequence([
         mystic('What has been given to the milk cannot be reclaimed.', 'warning'),
-        pip('Well, tell the milk I want to speak to its manager!', 'annoyed'),
+        pip('Well, tell the milk I want to speak to its manager!', 'exasperated'),
         mystic('The milk answers to no earthly authority.')
       ], endWith(pip('How bloody convenient.'), next))),
       reply("Fine. I'll take it back myself.", sequence([
         {...pip('Where is it?'), direction: "Pip searches the Milk Mystic's robes."},
-        mystic('What do you seek, child?'), pip('MY MONEY!', 'angry'),
+        mystic('What do you seek, child?'), pip('MY MONEY!', 'exasperated'),
         {...pip("You haven't got any money on you at all!"), direction: 'Pip continues searching.'},
         mystic('Material possessions are of little consequence to me.'),
-        pip('THEN WHERE DID MY MONEY GO?!', 'angry'), mystic('Where all milk must eventually go, child.'),
-        pip("That doesn't even make sense!"), mystic('Few things do, child.', 'wry-smile')
-      ], endWith({...pip("I'm beginning to hate milk."), enterAction: 'mysticMoneyTheft'}, next)))
+        pip('THEN WHERE DID MY MONEY GO?!', 'exasperated'), mystic('Where all milk must eventually go, child.'),
+        pip("That doesn't even make sense!"), mystic('Few things do, child.', 'wry-smile', {enterAction: 'mysticMoneyTheft'})
+      ], endWith(pip("I'm beginning to hate milk."), next)))
     ]));
   }
 
@@ -85,14 +98,14 @@ export function createMysticMoneyTopic(getCoins, transact, menu) {
     }));
 
     const healthReaction = healthChange < 0 ? [
-      pip('AARGH! WHAT THE HELL?!', 'alarmed'), mystic('The balance has been restored.'),
-      pip('YOU COULD HAVE WARNED ME!', 'angry'), mystic('I did, child.'),
-      pip('You were talking about bloody vessels!', 'annoyed'), mystic('And now you understand.', 'wry-smile')
+      pip('AARGH! WHAT THE HELL?!', 'alarmed'), mystic('The balance has been restored.', 'contemplative'),
+      pip('YOU COULD HAVE WARNED ME!', 'exasperated'), mystic('I did, child.', 'skeptical'),
+      pip('You were talking about bloody vessels!', 'exasperated'), mystic('And now you understand.', 'wry-smile')
     ] : healthChange > 0 ? [
-      pip('Oh! I actually feel a little better.', 'pleased'), mystic('The milk flows favourably through you, child.'),
+      pip('Oh! I actually feel a little better.', 'happy'), mystic('The milk flows favourably through you, child.', 'wry-smile'),
       pip("I don't suppose you could do that again?"), mystic('One must not become greedy with miracles.', 'warning')
     ] : [
-      pip("I don't feel any different."), mystic('Not all sacrifices are felt, child.'),
+      pip("I don't feel any different."), mystic('Not all sacrifices are felt, child.', 'contemplative'),
       pip("That's rather ominous.", 'worried')
     ];
     const next = broke ? {exitAction: 'finishMysticMoney'} : back;

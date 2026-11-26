@@ -155,7 +155,7 @@ const scenes = {
     "Nobody else seems to know what I'm talking about!", 'And zis concerns you?',
     'YES!', 'How peculiar.',
     'Exactly!', 'No. I am referring to your concern.',
-    'Oh.', {text: '', speaker: 'Pip', branches: [
+    'Oh.', {text: '', branches: [
       {lines: [
         'Who exactly is she?', 'Ze Milk Mystic.',
         'And?', 'She is mystic. She deals primarily vith milk.',
@@ -236,7 +236,7 @@ export function createMysticVisibilityDialogue() {
         const {branches, alternateReply, ...portrait} = typeof response === 'string' ? {text: response} : response;
         const next = {
           mood: expressions[(index / 2) % expressions.length],
-          ...(id === 'milk-mystic' ? {speaker: 'Oracle'} : {}),
+          ...(id === 'milk-mystic' ? {speaker: 'Milk Mystic'} : {}),
           ...portrait,
           mustContinue: true,
           replies: branches ? branches.map(branch => build(branch.lines, branch.ends)) : replies

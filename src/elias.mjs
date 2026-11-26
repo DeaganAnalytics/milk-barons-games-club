@@ -175,7 +175,7 @@ const welcomeSections = [
       [['BAH! A VAMPIRE!', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed']],
       [['Lovely establishment.', 'Ah! A young man of discerning taste!', 'laugh']],
       [['I refuse to recognise the legitimacy of this bourgeois establishment!',
-        'Fortunately, Master Pip, ze legitimacy of zis establishment is not dependent upon your recognition.', 'self-assured-smirk']]
+        'Fortunately, Master Pip, ze legitimacy of zis establishment is not dependent upon your recognition.', 'self-assured-smirk', 'exasperated']]
     ]
   },
   {
@@ -185,7 +185,7 @@ const welcomeSections = [
       [['I was exercising my democratic rights!', 'Da. Rather expensively, as it turns out.', 'devious']],
       [['Has he? Is there a job opportunity?', 'In a manner of speaking.', 'self-assured-smirk']],
       [['Oh God. Am I in trouble?', 'Let us not get ahead of ourselves.', 'current-smile', 'worried']],
-      [['The means of milk production belong to the workers!', 'An interesting theory. Ze ownership documents suggest otherwise.', 'self-assured-smirk']]
+      [['The means of milk production belong to the workers!', 'An interesting theory. Ze ownership documents suggest otherwise.', 'reading-figures', 'exasperated']]
     ]
   },
   {text: 'You are a most intriguing young stickman. Ambitious, resourceful, and, if I may be so bold... delightfully impressionable.', mood: 'devious', playerMood: 'worried'},
@@ -196,7 +196,7 @@ const welcomeSections = [
       [["I didn't do it!", 'An assertion of remarkably little financial significance.', 'insulted']],
       [["I can't afford that!", 'Ve are acutely avare of your financial circumstances.', 'reading-figures', 'worried']],
       [['The Baron is rich! He can afford it!', 'How do you suppose he remains rich, Master Pip?', 'devious']],
-      [['The proletariat owes nothing to its capitalist oppressors!', 'Ze proletariat currently owes precisely one hundred milk tokens.', 'reading-figures']]
+      [['The proletariat owes nothing to its capitalist oppressors!', 'Ze proletariat currently owes precisely one hundred milk tokens.', 'reading-figures', 'exasperated']]
     ]
   },
   {
@@ -207,7 +207,7 @@ const welcomeSections = [
       [['I like games!', 'Excellent! Zis should be a most productive evening.', 'laugh', 'happy']],
       [['Can I refuse?', 'Nyet.', 'insulted']],
       [['I refuse to participate in the games of the bourgeoisie!',
-        'An admirable commitment to principle, Master Pip. Unfortunately, participation is compulsory.', 'self-assured-smirk']]
+        'An admirable commitment to principle, Master Pip. Unfortunately, participation is compulsory.', 'devious', 'exasperated']]
     ]
   },
   {
@@ -219,7 +219,7 @@ const welcomeSections = [
       [['That sounds easy enough.', 'I admire your optimism.', 'self-assured-smirk']],
       [
         ['I shall redistribute this capital amongst the working class!', 'You are free to redistribute it as you vish, provided you return twice ze amount.', 'current-smile'],
-        ["That's not how communism works!", 'Da. Zat is precisely vhy ve do not practise it.', 'self-assured-smirk']
+        ["That's not how communism works!", 'Da. Zat is precisely vhy ve do not practise it.', 'self-assured-smirk', 'exasperated']
       ]
     ]
   },

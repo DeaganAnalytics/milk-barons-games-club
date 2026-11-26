@@ -168,7 +168,7 @@ const npcExpressions = new Map([
   [bartender.id, bartenderMoods],
   [elias.id, eliasPortraits],
   [lifeguard.id, lifeguardMoods],
-  [professor.id, professorMoods],
+  [professor.id, [...professorMoods, 'notebook']],
   [pilloryAttendant.id, attendantMoods],
   [pilloryCommissioner.id, commissionerMoods],
   [executiveId, executiveMoods.filter(mood => mood !== 'tousled')],
@@ -287,7 +287,7 @@ function warmPortraits() {
   }
   for (const mood of attendantMoods) urls.push(standalonePortraitUrl(pilloryAttendant.id, false, mood));
   for (const mood of eliasPortraits) urls.push(standalonePortraitUrl(elias.id, false, mood));
-  for (const mood of professorMoods) urls.push(standalonePortraitUrl(professor.id, false, mood));
+  for (const mood of npcExpressions.get(professor.id)) urls.push(standalonePortraitUrl(professor.id, false, mood));
   for (const mood of lifeguardMoods) urls.push(standalonePortraitUrl(lifeguard.id, false, mood));
   for (const mood of gamblerPortraits) urls.push(standalonePortraitUrl(sleepingGamblerId, false, mood));
   for (const mood of pokiePortraits) urls.push(standalonePortraitUrl(pokieId, false, mood));
@@ -541,7 +541,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       : action === 'startMilkBalloon' ? 'Play'
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
     closeButton.classList.toggle('conversation-exit', closeButton.textContent === 'End conversation');
-    line.textContent = node.text;
+    const pipIsSpeaking = node.speaker === 'Pip';
+    line.textContent = pipIsSpeaking && node.text ? 'Pip: ' + node.text : node.text;
     line.hidden = !node.text && !node.direction;
     if (node.direction) {
       const direction = document.createElement('em');
@@ -558,7 +559,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       playerPortrait.dataset.expression = portraitKey;
     }
     const currentSpeaker = node.character ?? character;
-    speaker.textContent = node.speaker ?? (currentSpeaker === elias.id ? elias.title
+    speaker.textContent = (currentSpeaker === milkMysticId ? 'Milk Mystic' : pipIsSpeaking ? null : node.speaker)
+      ?? (currentSpeaker === elias.id ? elias.title
       : currentSpeaker === bartender.id ? bartender.title
       : currentSpeaker === 'guard' ? 'Bull Guard'
       : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);

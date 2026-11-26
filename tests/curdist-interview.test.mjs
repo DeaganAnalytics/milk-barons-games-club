@@ -30,7 +30,7 @@ function choose(interview, node, id) {
 }
 
 function advance(interview, node) {
-  for (let count = 0; count < 200 && node.replies[0]?.label === 'Continue' && !node.action; count++) {
+  for (let count = 0; count < 200 && node.replies.length === 1 && !node.replies[0].curdistChoice && !node.action; count++) {
     node = choose(interview, node);
   }
   return node;
@@ -84,11 +84,15 @@ test('conditional cameos and alternatives follow the existing encounter flags', 
     assert.equal(goat.replies[0].next, goat.replies[1].next);
     let next = choose(interview, goat, 'Q2_GOAT_A');
     const speakers = [];
-    while (next.replies[0].label === 'Continue') {
+    if (!flag) assert.equal(next.replies[0].label, 'Continue');
+    let sawPipResponse = false;
+    while (next.replies.length === 1 && !next.replies[0].curdistChoice) {
+      sawPipResponse ||= next.replies[0].label === 'You mean black people?';
       speakers.push(next.character);
       next = choose(interview, next);
     }
     assert.equal(speakers.includes('dj'), !flag);
+    assert.ok(sawPipResponse);
     assert.equal(next.character, undefined);
     const pretty = walk(interview, next, 'Q3_D');
     assert.equal(pretty.replies.some(reply => reply.curdistChoice === 'Q3_D2'), flag);
@@ -107,6 +111,7 @@ test('curriculum traversal proves every surviving choice advances and identifies
     let reward = 0;
     for (const [index, start] of starts.entries()) {
       assert.ok((sectionNode.direction ?? sectionNode.text).startsWith(start));
+      if (index === 1) assert.equal(sectionNode.mood, 'notebook');
       const paths = [];
       const destinations = new Set();
       const deaths = new Set();
@@ -124,6 +129,7 @@ test('curriculum traversal proves every surviving choice advances and identifies
           assert.equal(assessment.results, null);
           return;
         }
+        assert.notEqual(current.speaker, 'Pip', 'Pip lines should be response buttons');
         assert.ok(current.mustContinue);
         assert.ok(current.replies?.length, 'unexpected dead end');
         const nextActions = current.enterAction ? [...actions, current.enterAction] : actions;

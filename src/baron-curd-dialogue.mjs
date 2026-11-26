@@ -1,5 +1,5 @@
 const baron = (text, mood = 'displeased') => ({text, mood});
-const elias = (text, direction) => ({text, mood: 'current-smile', character: 'elias', direction});
+const elias = (text, direction, mood = 'current-smile') => ({text, mood, character: 'elias', direction});
 const pause = {text: '', mood: 'flustered', direction: 'Pause.'};
 
 function exchange(steps, replies) {
@@ -22,9 +22,9 @@ export function baronCurdReply(menu) {
       ['Continue', elias('I believe His Excellency means zat labour is but one component of production. Capital, infrastructure and financial risk must also be considered.')],
       ['Continue', baron('EXACTLY WHAT I WAS GOING TO SAY!', 'pleased')],
       ['And what financial risk does the Baron personally undertake?', baron('ELIAS HANDLES ALL THAT!')],
-      ['Continue', elias('His Excellency provides ze necessary capital.')],
+      ['Continue', elias('His Excellency provides ze necessary capital.', undefined, 'reading-figures')],
       ['Which he acquired how?', baron('MY FATHER GAVE IT TO ME!')],
-      ['Continue', elias('Through generations of prudent financial management.')],
+      ['Continue', elias('Through generations of prudent financial management.', undefined, 'reading-figures')],
       ['Continue', baron('MY GRANDFATHER GAVE IT TO HIM!')],
       ['Continue', elias('Quite, my Lord.')],
       ['So what exactly do you contribute?', baron('I DRINK THE MILK!', 'pleased')],
@@ -51,7 +51,7 @@ export function baronCurdReply(menu) {
       ['Continue', baron('I OWN THE MARKET!', 'pleased')],
       ['Continue', elias('Figuratively speaking, my Lord.')],
       ['Continue', baron('NO, I BOUGHT IT LAST THURSDAY!')],
-      ['Continue', elias('Ah. I had forgotten about zat acquisition.')],
+      ['Continue', elias('Ah. I had forgotten about zat acquisition.', undefined, 'worried')],
       ['So much for accountability.', baron('I BOUGHT THE ACCOUNTANTS TOO!', 'pleased')],
       ['Continue', elias('Yes, my Lord. I am acutely avare.')]
     ],
@@ -72,9 +72,9 @@ export function baronCurdReply(menu) {
       ['What makes you so certain?', elias('Ve have undertaken considerable investment in revolutionary prevention.')],
       ['Continue', baron('YES! AND MY SECURITY EXPENDITURE HAS HALVED!', 'pleased')],
       ["Because your guards don't understand Curdism?", baron("THEY DON'T UNDERSTAND—")],
-      ['Continue', elias('My Lord!')],
+      ['Continue', elias('My Lord!', undefined, 'worried')],
       ['Continue', baron('WHAT?!')],
-      ['Continue', elias('Perhaps ve should refrain from discussing confidential personnel matters.')],
+      ['Continue', elias('Perhaps ve should refrain from discussing confidential personnel matters.', undefined, 'worried')],
       ['Continue', baron('OH! YES! VERY CONFIDENTIAL!', 'flustered')],
       ['What exactly were you about to say?', baron('ELIAS?', 'flustered')],
       ['Continue', elias('His Excellency vas about to comment upon ze excellent political neutrality of our security personnel.')],

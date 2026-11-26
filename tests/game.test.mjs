@@ -2731,11 +2731,15 @@ test('Mystic money dialogue remains available after refusal and decline and reso
   };
   function advance(node) {
     const lines = [];
-    while (node.replies?.length === 1 && node.replies[0].label === 'Continue') {
+    const actions = [];
+    while (node.replies?.length === 1 && !node.linDepartureMenu) {
+      assert.equal(node.speaker, 'Milk Mystic');
+      if (node.enterAction) actions.push(node.enterAction);
       lines.push(node.text);
+      if (node.replies[0].label !== 'Continue') lines.push(node.replies[0].label);
       node = choose(node);
     }
-    return {node, lines};
+    return {node, lines, actions};
   }
   for (const fatal of [false, true]) {
     let coins = 151;
@@ -2762,10 +2766,10 @@ test('Mystic money dialogue remains available after refusal and decline and reso
     } else {
       assert.ok(accepted.lines.indexOf('AARGH! WHAT THE HELL?!') < accepted.lines.indexOf("WAIT! I'VE LOST MONEY!"));
       assert.equal(accepted.node.replies.length, 3);
-      let theft = choose(accepted.node, "Fine. I'll take it back myself.");
-      while (!theft.enterAction) theft = choose(theft);
-      assert.equal(theft.enterAction, 'mysticMoneyTheft');
-      assert.ok(choose(theft).replies.some(reply => reply.label === askAgain));
+      const theft = advance(choose(accepted.node, "Fine. I'll take it back myself."));
+      assert.ok(theft.lines.includes("I'm beginning to hate milk."));
+      assert.deepEqual(theft.actions, ['mysticMoneyTheft']);
+      assert.ok(theft.node.replies.some(reply => reply.label === askAgain));
     }
   }
 });
