@@ -133,7 +133,7 @@ lifeguardDialogue.replies.push(
     })
   ]))),
   requestMoney,
-  reply("I'll leave you to it.", 'attentive', say("Excellent. You're obstructing my view.", deadpan))
+  {...reply("I'll leave you to it.", 'attentive', say("Excellent. You're obstructing my view.", deadpan)), conversationExit: true}
 );
 
 const reportMissingDresses = reply("Hey, the women's clothing is gone.", 'attentive', {

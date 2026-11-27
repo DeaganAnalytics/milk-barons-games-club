@@ -586,7 +586,10 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         curdist: politicalDispositions.communist, seducedExecutive: hasSeducedExecutive?.(),
         seenDj: hasSeenDjDairy?.() || spokeToDjDairy, spokeToMilo: metMilo
       }) : null;
-    const availableReplies = [...replies, ...[reaction, visibility, interview].filter(Boolean)].filter(reply => !usedReplies.has(reply.once)
+    const extraReplies = [reaction, visibility, interview].filter(Boolean);
+    const exitIndex = replies.findIndex(reply => reply.conversationExit);
+    const insertAt = exitIndex < 0 ? replies.length : exitIndex;
+    const availableReplies = [...replies.slice(0, insertAt), ...extraReplies, ...replies.slice(insertAt)].filter(reply => !usedReplies.has(reply.once)
       && (!reply.requiresDisposition || politicalDispositions[reply.requiresDisposition])
       && (!reply.requiresUnusedReplies || reply.requiresUnusedReplies.some(key => !usedReplies.has(key)))
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
@@ -599,6 +602,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = isContinue ? 'Continue →' : reply.label;
+      if (reply.conversationExit) button.classList.add('conversation-exit');
       button.addEventListener('click', () => {
         if (cowGuardQuestions.has(reply.label)) {
           askedAboutCowGuards.add(activeTarget?.guard ?? (activeTarget?.practiceGuard ? activeTarget.x + ',' + activeTarget.y : character));
