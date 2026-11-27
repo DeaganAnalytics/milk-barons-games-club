@@ -1479,14 +1479,108 @@ test('Elias trails the camera edge and stays put while Pip approaches', async ()
   updateEliasFollow(actor, {x: 300, y: 500}, baron, -45, 200, 0.1);
   assert.ok(actor.x < 666);
   assert.equal(actor.running, true);
+  assert.equal(actor.hasFollowedPip, undefined);
+  assert.equal(actor.followDistance, 666 - actor.x);
+  const distanceBeforePause = actor.followDistance;
+  updateEliasFollow(actor, {x: 300, y: 500}, baron, 0, 200, 0.1);
+  assert.equal(actor.followDistance, distanceBeforePause);
+  actor.followDistance = 2 * ROOM_WIDTH - 2;
+  updateEliasFollow(actor, {x: 300, y: 500}, baron, -45, 200, 1 / 144);
+  assert.equal(actor.hasFollowedPip, undefined);
+  updateEliasFollow(actor, {x: 300, y: 500}, baron, -45, 200, 1 / 144);
+  assert.equal(actor.followDistance, 2 * ROOM_WIDTH);
   assert.equal(actor.hasFollowedPip, true);
   assert.ok(!eliasConversation.replies.some(reply => reply.label === 'Are you following me?'));
   const reply = eliasFollowingConversation.replies.find(reply => reply.label === 'Are you following me?');
-  assert.equal(reply.next.text, 'Da.');
-  assert.equal(reply.next.replies[0].label, 'Wait, what?!');
-  const explanation = reply.next.replies[0].next;
+  const opening = reply.next(0);
+  assert.equal(opening.text, 'Da.');
+  assert.equal(opening.replies[0].label, 'Wait, what?!');
+  const explanation = opening.replies[0].next;
   assert.match(explanation.text, /every single coin you earn or lose/);
   assert.equal(explanation.replies[0].next, eliasFollowingConversation);
+});
+
+test('Elias follows the exact weighted boundaries and each selected branch has a stable ending', async () => {
+  const {eliasFollowingConversation, eliasFollowingTransactions} = await import('../src/elias.mjs');
+  const topic = eliasFollowingConversation.replies.find(reply => reply.label === 'Are you following me?');
+  assert.equal(topic.consumeOnSelect, true);
+  assert.ok(topic.once);
+  assert.equal(topic.playerMood, 'thinking');
+  const cases = [
+    [2075, 'Da.', 'current-smile'], [2075, 'Da!', 'laugh'],
+    [2075, 'Yes!', 'evil-laugh'], [2075, 'Of course, Master Pip!', 'self-assured-smirk'],
+    [100, 'Very astute. Have ten coins.', 'self-assured-smirk'],
+    [500, 'Very astute. Have a coin.', 'current-smile'],
+    [500, 'No.', 'current-smile'],
+    [500, 'No silly questions! A one-coin fine!', 'insulted'],
+    [100, 'Silly question tax. Ten coins!', 'devious']
+  ];
+  let lower = 0;
+  const nodes = cases.map(([weight, text, mood]) => {
+    const upper = lower + weight;
+    for (const roll of [lower / 10000, (upper - 0.001) / 10000]) {
+      const node = topic.next(roll);
+      assert.deepEqual([node.text, node.mood], [text, mood]);
+    }
+    const node = topic.next(lower / 10000);
+    lower = upper;
+    return node;
+  });
+  assert.equal(lower, 10000);
+  for (const node of nodes.slice(0, 4)) {
+    assert.equal(node.replies[0].label, 'Wait, what?!');
+    assert.equal(node.replies[0].next.replies[0].next, eliasFollowingConversation);
+  }
+  for (const [node, amount] of [[nodes[4].replies[0].next, 10], [nodes[5].replies[0].next, 1],
+    [nodes[7], -1], [nodes[8], -10]]) {
+    assert.equal(eliasFollowingTransactions[node.action][0], amount);
+    assert.equal(node.replies, undefined);
+  }
+  const denial = nodes[6].replies;
+  assert.deepEqual(denial.map(reply => reply.label), ['No?', 'Yes you are!']);
+  assert.equal(denial[0].next.enterAction, undefined);
+  assert.equal(denial[0].next.text, 'No!');
+  assert.equal(denial[1].next.enterAction, 'eliasFollowingHypnosis');
+  assert.equal(denial[1].next.replies[0].next.action, 'eliasFollowingGarlic');
+});
+
+test('Elias following actions use actual coin changes and suppress garlic on death', async () => {
+  const {resolveEliasFollowingAction} = await import('../src/elias.mjs');
+  const {createHealth} = await import('../src/health.mjs');
+  for (const [action, start, expected, message] of [
+    ['eliasFollowingTenReward', 100, 110, 'A rare accounting error in your favour. (+₥10)'],
+    ['eliasFollowingOneReward', 100, 101, 'Elias has deemed your observation worth precisely one coin. (+₥1)'],
+    ['eliasFollowingFine', 100, 99, 'Curiosity comes at a price. (−₥1)'],
+    ['eliasFollowingTax', 100, 90, 'Ignorance would have been considerably cheaper. (−₥10)'],
+    ['eliasFollowingTax', 3, 0, 'Ignorance would have been considerably cheaper. (−₥3)'],
+    ['eliasFollowingTenReward', 198, 200, 'A rare accounting error in your favour. (+₥2)']
+  ]) {
+    const coins = createCoinBalance();
+    coins.change(start - coins.count);
+    const health = createHealth();
+    const messages = [];
+    resolveEliasFollowingAction(action, coins, health, message => messages.push(message));
+    assert.equal(coins.count, expected);
+    assert.equal(health.hearts, 3);
+    assert.deepEqual(messages, [message]);
+  }
+  for (const start of [3, 2.5, 2, 1.5, 1, 0.5]) {
+    const coins = createCoinBalance();
+    let death;
+    const health = createHealth((value, message) => { if (!value) death = message; });
+    const messages = [];
+    const announce = message => messages.push(message);
+    health.set(start);
+    resolveEliasFollowingAction('eliasFollowingHypnosis', coins, health, announce);
+    assert.equal(health.hearts, start - 0.5);
+    assert.equal(coins.count, 100);
+    assert.deepEqual(messages, []);
+    assert.equal(death, start > 0.5 ? undefined
+      : 'Your suspicions were correct. Unfortunately, you cannot remember what they were.');
+    resolveEliasFollowingAction('eliasFollowingGarlic', coins, health, announce);
+    assert.equal(health.hearts, start - 0.5);
+    assert.deepEqual(messages, start > 0.5 ? ['You have an inexplicable craving for garlic. (−½ heart)'] : []);
+  }
 });
 
 test('the pool report sends both roving guards to separate cheering spots and leaves posted guards alone', async () => {

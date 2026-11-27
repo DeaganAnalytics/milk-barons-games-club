@@ -324,6 +324,67 @@ const followingExchange = [
   ['Wait, what?!', 'Naturally, Master Pip. I must account for every single coin you earn or lose. I am an accountant, after all.', 'self-assured-smirk', 'alarmed']
 ];
 
+export const eliasFollowingTransactions = {
+  eliasFollowingTenReward: [10, 'A rare accounting error in your favour.'],
+  eliasFollowingOneReward: [1, 'Elias has deemed your observation worth precisely one coin.'],
+  eliasFollowingFine: [-1, 'Curiosity comes at a price.'],
+  eliasFollowingTax: [-10, 'Ignorance would have been considerably cheaper.']
+};
+
+export function resolveEliasFollowingAction(action, coins, health, announce) {
+  if (Object.hasOwn(eliasFollowingTransactions, action)) {
+    const [amount, message] = eliasFollowingTransactions[action];
+    const before = coins.count;
+    coins.change(amount);
+    const actual = coins.count - before;
+    const sign = actual < 0 ? '−' : actual > 0 ? '+' : '';
+    announce(`${message} (${sign}₥${Math.abs(actual)})`);
+  }
+  if (action === 'eliasFollowingHypnosis') {
+    health.change(-0.5, 'Your suspicions were correct. Unfortunately, you cannot remember what they were.');
+  }
+  if (action === 'eliasFollowingGarlic' && health.hearts > 0) {
+    announce('You have an inexplicable craving for garlic. (−½ heart)');
+  }
+}
+
+function followingOutcome(menu, roll = Math.random()) {
+  const explanation = exchange(followingExchange.slice(1), menu);
+  const end = (text, mood, action) => ({text, mood, action});
+  const thanks = (label, playerMood, action) => ({
+    label, playerMood, next: end('Think nothing of it, Master Pip.', 'current-smile', action)
+  });
+  const outcomes = [
+    [2075, 'Da.', 'current-smile'],
+    [2075, 'Da!', 'laugh'],
+    [2075, 'Yes!', 'evil-laugh'],
+    [2075, 'Of course, Master Pip!', 'self-assured-smirk'],
+    [100, 'Very astute. Have ten coins.', 'self-assured-smirk', {
+      replies: [thanks('Thanks!', 'happy', 'eliasFollowingTenReward')]
+    }],
+    [500, 'Very astute. Have a coin.', 'current-smile', {
+      replies: [thanks('Thanks, I guess.', 'thinking', 'eliasFollowingOneReward')]
+    }],
+    [500, 'No.', 'current-smile', {replies: [
+      {label: 'No?', playerMood: 'thinking', next: end('No!', 'insulted')},
+      {label: 'Yes you are!', playerMood: 'exasperated', next: {
+        text: "No. I'm not.", mood: 'demonic-angry', enterAction: 'eliasFollowingHypnosis',
+        mustContinue: true, replies: [{
+          label: "No... you're... not... Where am I?", playerMood: 'worried',
+          next: end('At ze Milk Baron\'s Games Club, of course!', 'current-smile', 'eliasFollowingGarlic')
+        }]
+      }}
+    ]}],
+    [500, 'No silly questions! A one-coin fine!', 'insulted', {action: 'eliasFollowingFine'}],
+    [100, 'Silly question tax. Ten coins!', 'devious', {action: 'eliasFollowingTax'}]
+  ];
+  let upperBound = 0;
+  for (const [weight, text, mood, details = {replies: [explanation]}] of outcomes) {
+    upperBound += weight;
+    if (roll < upperBound / 10000) return {text, mood, ...details};
+  }
+}
+
 const healthExchange = [
   ['Can I die?', 'Da, of course. Everyone can die.', 'current-smile'],
   ['Continue', 'Ahem... almost everyone.', 'worried'],
@@ -382,6 +443,7 @@ function buildConversation(exchanges, curdistEncounters = false) {
   menu.replies = [
     ...exchanges.map(lines => {
       const option = exchange(lines, menu);
+      if (lines === followingExchange) option.next = roll => followingOutcome(menu, roll);
       return {...option, once: 'Elias: ' + option.label, consumeOnSelect: true, requiresKarmaChange: lines === karmaExchange};
     }),
     ...encounterReplies,
@@ -479,6 +541,8 @@ export function advanceEliasRun(actor, destination, dt, stop, speed = 230) {
   return !actor.running;
 }
 
+const followingDialogueDistance = 2 * ROOM_WIDTH;
+
 export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
   const left = cameraX + 24;
   const right = cameraX + ROOM_WIDTH - 24;
@@ -521,9 +585,14 @@ export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
     actor.running = false;
     return;
   }
+  const startX = actor.x;
+  const startY = actor.y;
   const arrived = advanceEliasRun(actor, waypoint, dt, 0, 144);
   actor.running = step > 0;
-  if (outside && !actor.findingEdge && step > 0) actor.hasFollowedPip = true;
+  if (outside && !actor.findingEdge && step > 0 && !actor.hasFollowedPip) {
+    actor.followDistance = (actor.followDistance ?? 0) + Math.hypot(actor.x - startX, actor.y - startY);
+    if (actor.followDistance >= followingDialogueDistance) actor.hasFollowedPip = true;
+  }
   if (arrived) {
     actor.followRoute?.shift();
     if (!actor.followRoute?.length && Math.hypot(target.x - actor.x, target.y - actor.y) < 1) actor.findingEdge = false;
