@@ -103,3 +103,12 @@ When instructions conflict, prioritise:
 3. Minimal, maintainable changes.
 4. Compatibility with the existing project and GitHub Pages deployment.
 5. Efficiency and reduced unnecessary Codex usage.
+
+## Working on develop
+
+- Start routine changes on `develop` or a feature branch targeting `develop`. Never push routine work to `main` or merge production changes without explicit user approval.
+- Read `DEVELOPMENT_GUIDE.md` for the relevant implementation recipe. Follow existing patterns and avoid speculative or unrelated refactoring.
+- Preserve supplied wording, punctuation, portrait identifiers, branching conditions and scripted effects. Report ambiguities and unsupported requirements.
+- Run focused tests while developing, then run the complete Node suite with `npm test`. Add targeted regression tests where appropriate. Investigate failures, explain intentional expectation changes, and never weaken tests just to pass.
+- Review the Git diff before finishing. Report tests passed, failed or skipped and any remaining uncertainty.
+- Regenerate creative exports from source with `npm run creative -- --zip` when dialogue or portraits change. Maintain portrait annotations and identifier consistency. See `creative/README.md`.
