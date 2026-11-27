@@ -603,7 +603,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         if (cowGuardQuestions.has(reply.label)) {
           askedAboutCowGuards.add(activeTarget?.guard ?? (activeTarget?.practiceGuard ? activeTarget.x + ',' + activeTarget.y : character));
         }
-        if (character === elias.id && ['Are you a vampire?', 'Are you actually a vampire?'].includes(reply.label)) {
+        if (character === elias.id && reply.label === 'Are you a vampire?') {
           askedEliasAboutVampires = true;
         }
         if (reply.curdistChoice) professorInterview.score(reply.curdistChoice);

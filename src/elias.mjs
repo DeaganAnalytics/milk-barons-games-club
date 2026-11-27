@@ -42,10 +42,6 @@ const questionLines = [
   [
     ['Does my family know where I am?', 'I cannot comment on ze knowledge of third parties.', 'thinking', 'worried'],
     ["That's not very reassuring.", 'Reassurance is not among my professional responsibilities.', 'insulted', 'worried']
-  ],
-  [
-    ['Are you actually a vampire?', 'Master Pip, I am a qualified accountant.', 'insulted'],
-    ['You can be both.', 'An interesting observation.', 'worried']
   ]
 ];
 const revolutionConclusion = exchange([
@@ -138,6 +134,7 @@ const revolutionaryThreat = [
     ].map(lines => exchange(lines, questions))}]
 ];
 
+const standardQuestionCount = questionLines.length;
 questionLines.push(
   revolution,
   [
@@ -160,7 +157,7 @@ const revolutionaryFarewell = exchange([
 questions.replies = [
   ...questionLines.map((lines, index) => ({
     ...exchange(lines, questions), once: 'eliasWelcome:' + index, consumeOnSelect: true,
-    ...(index >= 8 ? {requiresDisposition: 'communist'} : {})
+    ...(index >= standardQuestionCount ? {requiresDisposition: 'communist'} : {})
   })),
   {...revolutionaryFarewell, requiresDisposition: 'communist'},
   welcomeEnd
