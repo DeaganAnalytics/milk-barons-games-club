@@ -51,7 +51,8 @@ try {
         .some(button => { if (button.textContent !== ${JSON.stringify(label)}) return false; button.click(); return true; })`);
       assert.ok(clicked, 'Missing choice ' + label + ' at ' + url);
     };
-    for (const label of ['Someone has to stand up for the working class!', 'A HUNDRED MILK TOKENS?!',
+    const activism = development ? 'The means of milk production belong to the workers!' : 'Someone has to stand up for the working class!';
+    for (const label of [activism, 'A HUNDRED MILK TOKENS?!',
       'What sort of game?', "Wait. You're giving me money because I owe you money?", "THAT'S SLAVERY!", "I didn't do it!"]) {
       for (let step = 0; step < 4 && await evaluate('Boolean(document.querySelector("#conversation-advance button"))'); step++) {
         await clickChoice('Continue →');
@@ -61,6 +62,25 @@ try {
     await clickChoice('Continue →');
     assert.ok(await evaluate(`[...document.querySelectorAll('#conversation-replies button')]
       .every(button => button.textContent !== "I didn't do it!")`), 'The one-time question should disappear');
+    await clickChoice('What is this place?');
+    await clickChoice('Continue →');
+    await clickChoice('Continue →');
+    const profitabilityChoices = [
+      'I thought the Milk Baron made his money from milk?',
+      'Pleasure, amusement and an abundance of milk? I like the sound of this place.',
+      'All this extravagance while millions are left with empty milk bottles?'
+    ];
+    const communistCriticism = 'Pleasure for the bourgeoisie, misery for the working cow!';
+    if (development) profitabilityChoices.push(communistCriticism);
+    assert.deepEqual(await evaluate('[...document.querySelectorAll("#conversation-replies button")].map(button => button.textContent)'),
+      profitabilityChoices, 'Profitability choices should reflect the active disposition');
+    await clickChoice(development ? communistCriticism : profitabilityChoices[2]);
+    if (development) await clickChoice('Continue →');
+    await clickChoice('Continue →');
+    assert.deepEqual(await evaluate(`[
+      [...document.querySelectorAll('#conversation-replies button')].some(button => button.textContent === 'What is this place?'),
+      [...document.querySelectorAll('#conversation-replies button')].some(button => button.textContent === 'LONG LIVE THE REVOLUTION!')
+    ]`), [false, development], 'The question should be consumed and the disposition should be preserved');
     await clickChoice('I have no more questions.');
     await evaluate('document.getElementById("conversation-close").click()');
     assert.ok(await evaluate(`document.getElementById('conversation').hidden

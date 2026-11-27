@@ -26,8 +26,18 @@ const questionLines = [
   [
     ['What is this place?', 'Ah! I am delighted you asked.', 'laugh'],
     ['Continue', "It is ze Baron's pride and joy. A place vere ze finest members of ze Milk Aristocracy come to mingle, to vheel and deal.", 'current-smile'],
-    ['Continue', 'A house of amusement, of profligate pleasure, of economic efficiency and, above all... profitability.', 'self-assured-smirk'],
-    ['I thought the Milk Baron made his money from milk?', 'Da! But he keeps his fortune by selling pleasure and amusement!', 'laugh']
+    ['Continue', 'A house of amusement, of profligate pleasure, of economic efficiency and, above all... profitability.',
+      'self-assured-smirk', 'thinking', menu => ({replies: [
+        exchange([['I thought the Milk Baron made his money from milk?', 'Da! But he keeps his fortune by selling pleasure and amusement!', 'laugh']], menu),
+        exchange([['Pleasure, amusement and an abundance of milk? I like the sound of this place.',
+          'Excellent! Ze Baron takes great pride in separating his guests from their financial burdens.', 'devious', 'happy']], menu),
+        exchange([['All this extravagance while millions are left with empty milk bottles?',
+          'Da! An unfortunate consequence of insufficient purchasing power.', 'current-smile', 'worried']], menu),
+        {...exchange([
+          ['Pleasure for the bourgeoisie, misery for the working cow!', 'Ah, a communist! How delightful.', 'laugh', 'exasperated'],
+          ['Continue', 'Ze Baron is always happy to redistribute your wealth into his own pockets.', 'devious']
+        ], menu), requiresDisposition: 'communist'}
+      ]})]
   ],
   [['How do I double my money?', 'As an aspiring capitalist, I am sure you vill figure it out. Zis establishment offers many delightful games through vich you may multiply your fortune.', 'self-assured-smirk']],
   [
@@ -169,7 +179,13 @@ const welcomeSections = [
     mood: 'current-smile', playerMood: 'attentive', choices: [
       [['Where am I?', "Ze Milk Baron's Games Club. I believe I just established zis.", 'self-assured-smirk']],
       [['How do you know my name?', 'Ve make it our business to know such things.', 'devious', 'worried']],
-      [['BAH! A VAMPIRE!', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed']],
+      [['BAH! A VAMPIRE!', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed', menu => ({replies: [
+        pipResponse('Even worse!', 'alarmed', menu),
+        pipResponse('Oh, phew.', 'happy', menu),
+        exchange([['Why do you dress like that?',
+          'I find that a suitably ominous appearance encourages prompt repayment of outstanding debts, Master Pip.',
+          'self-assured-smirk']], menu)
+      ]})]],
       [['Lovely establishment.', 'Ah! A young man of discerning taste!', 'laugh']],
       [['I refuse to recognise the legitimacy of this bourgeois establishment!',
         'Fortunately, Master Pip, ze legitimacy of zis establishment is not dependent upon your recognition.', 'self-assured-smirk', 'exasperated']]
@@ -225,8 +241,14 @@ const welcomeSections = [
     mood: 'demonic-angry', playerMood: 'alarmed', choices: [
       [["THAT'S SLAVERY!", 'Indentured servitude, Master Pip. Ze distinction is important to our legal department.', 'insulted', 'alarmed']],
       [
-        ['What happens at the dairy?', 'Vork.', 'current-smile'],
-        ['What sort of work?', 'Considerable quantities of it.', 'self-assured-smirk']
+        ['What happens at the dairy?', 'Vork.', 'current-smile', 'thinking', menu => ({replies: [
+          exchange([['What sort of work?', 'Considerable quantities of it.', 'self-assured-smirk']], menu),
+          exchange([
+            ['Vork?', 'Yes. Vork.', 'current-smile'],
+            ['You mean work?', 'Yes. Dat is what I said.', 'insulted'],
+            ['No, you said vork. With a V.', 'Yes. Vork. With a double-you.', 'insulted', 'exasperated']
+          ], menu)
+        ]})]
       ],
       [["Surely that's illegal?", 'His Excellency maintains an excellent relationship vith ze legislature.', 'devious']],
       [['I suppose there are worse things.', 'Da. Although relatively few.', 'self-assured-smirk', 'worried']],
@@ -246,10 +268,15 @@ export const eliasWelcome = welcomeSections.reduceRight((next, {choices, ...line
   }) : [continueTo(next)]
 }), questions);
 
+function pipResponse(label, playerMood, menu) {
+  return {label, playerMood, next: {text: label, speaker: 'Pip', playerMood, replies: [continueTo(menu)]}};
+}
+
 function exchange(lines, menu) {
   let replies = [continueTo(menu)];
   for (const [label, text, mood, playerMood = 'thinking', extras] of [...lines].reverse()) {
-    replies = [{label, playerMood, next: {text, mood, replies, ...extras}}];
+    const details = typeof extras === 'function' ? extras(menu) : extras;
+    replies = [{label, playerMood, next: {text, mood, replies, ...details}}];
   }
   return replies[0];
 }
