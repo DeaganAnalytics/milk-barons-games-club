@@ -1,0 +1,45 @@
+name: Publish game to Pages
+on:
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+
+concurrency:
+  group: milk-club-pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  pages:
+    if: vars.PAGES_RELEASES_ENABLED == 'true' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/configure-pages@v5
+      - id: revisions
+        run: bash scripts/pages-revisions.sh _site
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deploy
+        uses: actions/deploy-pages@v4
+      - name: Pin published revisions
+        env:
+          PRODUCTION: ${{ steps.revisions.outputs.production }}
+          DEVELOPMENT: ${{ steps.revisions.outputs.development }}
+        run: |
+          git push --atomic origin "+$PRODUCTION:refs/tags/pages-production" "+$DEVELOPMENT:refs/tags/pages-development"

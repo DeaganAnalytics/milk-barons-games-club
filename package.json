@@ -1,0 +1,18 @@
+{
+  "name": "milk-barons-games-club",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "test": "node --test --test-isolation=none tests/*.test.mjs",
+    "test:browser": "bash scripts/browser-tests.sh",
+    "test:all": "npm test && npm run test:pages && npm run test:browser",
+    "creative": "python3 creative/regenerate.py",
+    "test:pages": "bash scripts/pages-browser.sh"
+  },
+  "devDependencies": {
+    "acorn": "8.15.0"
+  }
+}

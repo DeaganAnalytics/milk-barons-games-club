@@ -1,0 +1,43 @@
+name: Game tests
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+permissions:
+  contents: read
+jobs:
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm test
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: CHROMIUM_NO_SANDBOX=1 npm run test:pages
+  creative:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci && python -m pip install -r creative/requirements.txt
+      - run: CHROMIUM_NO_SANDBOX=1 npm run creative -- --zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: milk-club-creative
+          path: creative/output/MILK_CLUB_CREATIVE.zip
+          retention-days: 30

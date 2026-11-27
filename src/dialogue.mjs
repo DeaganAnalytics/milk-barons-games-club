@@ -805,3 +805,38 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
 
   return {open, linWillConfront: waiterOpening.willConfront, linRelationship: waiterOpening.relationship, linCanOfferKindness: waiterOpening.canOfferKindness, dismiss: () => close(false), isOpen: () => !panel.hidden};
 }
+
+// Read-only inventory for the asset checks and creative tools.
+export function dialoguePortraitInventory() {
+  const catalogue = [];
+  const add = (character, mood, url, variant = '', cell = null) => {
+    catalogue.push({character, mood, asset: url.href, variant, cell,
+      default: npcExpressions.get(character)?.[0] === mood && !variant});
+  };
+  const atlas = new URL('../assets/dialogue/portraits.webp', import.meta.url);
+  for (const [id, {row, expressions}] of Object.entries(portraits)) {
+    expressions.forEach((mood, column) => add(id, mood, atlas, '', {row, column}));
+  }
+  for (const [id, moods] of extraPortraitMoods) {
+    for (const mood of moods) add(id, mood, extraPortraitUrl(id, mood));
+  }
+  for (const [id, asset] of reportPortraits.entries()) {
+    const separator = id.indexOf('-');
+    add(id.slice(0, separator), id.slice(separator + 1), asset);
+  }
+  for (const [id, moods] of npcExpressions.entries()) {
+    if (portraits[id]) continue;
+    for (const mood of moods) {
+      add(id, mood, standalonePortraitUrl(id, false, mood));
+      if (id === pilloryCommissioner.id) add(id, mood, standalonePortraitUrl(id, false, mood, true), 'milk splattered');
+      if (id === executiveId) add(id, mood, standalonePortraitUrl(id, false, mood, false, true), 'tousled');
+    }
+  }
+  for (const id of staffIds.filter(id => id !== skimId)) add(id, 'attentive', standalonePortraitUrl(id, true), 'empty tray');
+  for (const [id, moods] of [[djTarget.id, ['microphone']], [pokieId, pokiePortraits], [executiveId, ['tousled']]]) {
+    for (const mood of moods) add(id, mood, standalonePortraitUrl(id, false, mood));
+  }
+  add('security-camera', null, cameraPortrait);
+  add(poolClothing.id, null, standalonePortraitUrl(poolClothing.id));
+  return {catalogue, expressionFamilies, pipReactions};
+}
