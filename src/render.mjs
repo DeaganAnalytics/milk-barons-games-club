@@ -567,6 +567,9 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic, 
         drawSpeech(ctx, speech.text, speech.opacity, speech.x, speech.headY, speech.feetY, cameraX, cameraY);
       }
     }
+    if (elias.departureSpeech && isReady(eliasArt)) {
+      drawSpeech(ctx, elias.departureSpeech, 1, elias.x, eliasFeet - eliasHeight, eliasFeet, cameraX, cameraY);
+    }
     if (baron.speech && !isBaronDancing(baron)) {
       drawSpeech(ctx, baron.speech.text, speechOpacity(baron, cameraX, elapsed, cameraY),
         baron.x, baron.y - 61, baron.y + 34, cameraX, cameraY);

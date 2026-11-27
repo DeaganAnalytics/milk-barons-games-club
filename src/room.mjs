@@ -228,7 +228,7 @@ export function crossesScenery(from, to) {
     && Math.max(from.x, to.x) > DANCE_FLOOR.x - 250;
 }
 
-export function routeAroundBaron(member, target, baron) {
+export function routeAroundBaron(member, target, baron, extraObstacles = null) {
   const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
   const obstacleCorners = ({x, y, halfWidth, halfHeight}) => [-1, 1].flatMap(dx => [-1, 1].map(dy => ({
     x: x + dx * (halfWidth + member.radius + 10), y: y + dy * (halfHeight + member.radius + 10)
@@ -242,6 +242,7 @@ export function routeAroundBaron(member, target, baron) {
   if (crossesPracticeRange(member, target)) obstacles.push(rangeBounds);
   if (crossesSlotArea(member, target)) obstacles.push(...SLOT_STATIONS);
   if (guestEnclosure.active) obstacles.push(enclosureBounds);
+  if (extraObstacles) obstacles.push(...extraObstacles);
   const corners = obstacles.flatMap(obstacleCorners)
     .filter(point => !isNpcBlocked(point.x, point.y, member.radius, baron));
   const nodes = [member, target, ...corners];
@@ -253,7 +254,8 @@ export function routeAroundBaron(member, target, baron) {
     for (let step = 1; step <= samples; step++) {
       const x = start.x + (end.x - start.x) * step / samples;
       const y = start.y + (end.y - start.y) * step / samples;
-      if (isNpcBlocked(x, y, member.radius, baron, start)) return false;
+      if (isNpcBlocked(x, y, member.radius, baron, start)
+          || extraObstacles?.some(obstacle => overlaps(x, y, member.radius, obstacle))) return false;
     }
     return true;
   };
@@ -264,7 +266,7 @@ export function routeAroundBaron(member, target, baron) {
     for (let index = 0; index < nodes.length; index++) {
       if (!visited.has(index) && costs[index] < (costs[next] ?? Infinity)) next = index;
     }
-    if (next === -1) return [target];
+    if (next === -1) return extraObstacles ? [] : [target];
     visited.add(next);
     for (let index = 1; index < nodes.length; index++) {
       if (visited.has(index)) continue;

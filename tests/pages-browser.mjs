@@ -16,6 +16,47 @@ try {
   await send('Page.enable');
   await send('Runtime.enable');
   await send('Network.enable');
+  // Render the real encounter nodes through the same dialogue controller as gameplay.
+  await send('Page.navigate', {url: entry.href});
+  await waitFor("document.readyState === 'complete' && document.getElementById('conversation')", 'Game did not load');
+  const playerLines = await evaluate(`(async () => {
+    const {createDialogue} = await import('./src/dialogue.mjs');
+    const {createBaron} = await import('./src/baron.mjs');
+    const {elias} = await import('./src/elias.mjs');
+    const {milkMysticId} = await import('./src/milk-mystic.mjs');
+    const dialogue = createDialogue(createBaron());
+    const snapshot = () => [
+      document.getElementById('conversation-title').textContent,
+      document.getElementById('conversation-line').textContent,
+      document.getElementById('conversation-player').dataset.expression.split(':')[0]
+    ];
+    const click = label => [...document.querySelectorAll('#conversation-replies button, #conversation-advance button')]
+      .find(button => button.textContent === label).click();
+    dialogue.open({...elias, passThrough: true});
+    const opening = snapshot();
+    click('Continue →');
+    const eliasResponse = snapshot();
+    dialogue.open({id: milkMysticId, title: 'Milk Mystic'});
+    dialogue.open({...elias, passThrough: true});
+    click('Continue →');
+    click("I'm going to ask the Milk Mystic about this!");
+    click('She might know what you are!');
+    click('Continue →');
+    dialogue.open({id: milkMysticId, title: 'Milk Mystic'});
+    click('My God, maybe she can read the future.');
+    click('Continue →');
+    const apology = snapshot();
+    click('Can you explain to me what happened?');
+    const mysticResponse = snapshot();
+    dialogue.dismiss();
+    return {opening, eliasResponse, apology, mysticResponse};
+  })()`);
+  assert.deepEqual(playerLines.opening, ['Pip', 'Did I just... walk through you?', 'thinking']);
+  assert.equal(playerLines.eliasResponse[0], 'Elias');
+  assert.equal(playerLines.eliasResponse[1], 'Vhat are you talking about, Master Pip? Zat is physically impossible.');
+  assert.deepEqual(playerLines.apology, ['Pip', 'Oh. Sorry.', 'sorry']);
+  assert.equal(playerLines.mysticResponse[0], 'Milk Mystic');
+
   for (const [choice, expected, mood, pipMood] of [
     ['Even worse!', 'Only to those in debt, Master Pip.', 'self-assured-smirk', 'alarmed'],
     ['Oh, phew.', 'Your relief may be premature.', 'devious', 'happy'],
@@ -111,6 +152,9 @@ try {
       [...document.querySelectorAll('#conversation-replies button')].some(button => button.textContent === 'What is this place?'),
       [...document.querySelectorAll('#conversation-replies button')].some(button => button.textContent === 'LONG LIVE THE REVOLUTION!')
     ]`), [false, development], 'The question should be consumed and the disposition should be preserved');
+    assert.equal(await evaluate(`[...document.querySelectorAll('#conversation-replies button')]
+      .find(button => button.textContent === 'I have no more questions.')?.classList.contains('conversation-exit')`),
+    true, 'The final welcome choice should use the standard conversation exit appearance');
     await clickChoice('I have no more questions.');
     await evaluate('document.getElementById("conversation-close").click()');
     assert.ok(await evaluate(`document.getElementById('conversation').hidden
