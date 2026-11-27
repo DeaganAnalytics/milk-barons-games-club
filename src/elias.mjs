@@ -260,6 +260,7 @@ const welcomeSections = [
 ];
 
 export const eliasWelcome = welcomeSections.reduceRight((next, {choices, ...line}, section) => ({
+  randomizeWelcomeChoices: Boolean(choices),
   ...line, replies: choices ? choices.map((lines, index) => {
     const option = exchange(lines, next);
     if (index !== choices.length - 1) return option;

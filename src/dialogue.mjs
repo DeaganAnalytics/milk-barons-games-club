@@ -614,6 +614,15 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
+    if (node.randomizeWelcomeChoices) {
+      const communist = availableReplies.filter(reply => reply.requiresDisposition === 'communist' || reply.expressesDisposition === 'communist');
+      const regular = availableReplies.filter(reply => !communist.includes(reply));
+      for (let index = regular.length - 1; index > 0; index--) {
+        const other = Math.floor(Math.random() * (index + 1));
+        [regular[index], regular[other]] = [regular[other], regular[index]];
+      }
+      availableReplies.splice(0, availableReplies.length, ...regular, ...communist);
+    }
     const choiceButtons = [];
     const advanceButtons = [];
     for (const reply of availableReplies) {
