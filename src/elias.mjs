@@ -180,8 +180,8 @@ const welcomeSections = [
       [['Where am I?', "Ze Milk Baron's Games Club. I believe I just established zis.", 'self-assured-smirk']],
       [['How do you know my name?', 'Ve make it our business to know such things.', 'devious', 'worried']],
       [['BAH! A VAMPIRE!', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed', menu => ({replies: [
-        pipResponse('Even worse!', 'alarmed', menu),
-        pipResponse('Oh, phew.', 'happy', menu),
+        exchange([['Even worse!', 'Only to those in debt, Master Pip.', 'self-assured-smirk', 'alarmed']], menu),
+        exchange([['Oh, phew.', 'Your relief may be premature.', 'devious', 'happy']], menu),
         exchange([['Why do you dress like that?',
           'I find that a suitably ominous appearance encourages prompt repayment of outstanding debts, Master Pip.',
           'self-assured-smirk']], menu)
@@ -267,10 +267,6 @@ export const eliasWelcome = welcomeSections.reduceRight((next, {choices, ...line
       : {...option, requiresDisposition: 'communist'};
   }) : [continueTo(next)]
 }), questions);
-
-function pipResponse(label, playerMood, menu) {
-  return {label, playerMood, next: {text: label, speaker: 'Pip', playerMood, replies: [continueTo(menu)]}};
-}
 
 function exchange(lines, menu) {
   let replies = [continueTo(menu)];

@@ -16,6 +16,36 @@ try {
   await send('Page.enable');
   await send('Runtime.enable');
   await send('Network.enable');
+  for (const [choice, expected, mood, pipMood] of [
+    ['Even worse!', 'Only to those in debt, Master Pip.', 'self-assured-smirk', 'alarmed'],
+    ['Oh, phew.', 'Your relief may be premature.', 'devious', 'happy'],
+    ['Why do you dress like that?', 'I find that a suitably ominous appearance encourages prompt repayment of outstanding debts, Master Pip.', 'self-assured-smirk', 'thinking']
+  ]) {
+    await send('Page.navigate', {url: entry.href});
+    await waitFor("!document.getElementById('conversation')?.hidden && document.getElementById('conversation-title')?.textContent === 'Elias'", 'Elias welcome did not open');
+    const click = async label => {
+      assert.ok(await evaluate(`[...document.querySelectorAll('#conversation-replies button, #conversation-advance button')]
+        .some(button => { if (button.textContent !== ${JSON.stringify(label)}) return false; button.click(); return true; })`), 'Missing response ' + label);
+    };
+    await click('BAH! A VAMPIRE!');
+    assert.deepEqual(await evaluate(`[
+      document.getElementById('conversation-speaker').textContent,
+      document.getElementById('conversation-line').textContent,
+      document.getElementById('conversation-npc').dataset.expression,
+      document.getElementById('conversation-player').dataset.expression.split(':')[0]
+    ]`), ['Elias', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed']);
+    assert.ok(await evaluate(`[...document.querySelectorAll('#conversation-replies button')].some(button => button.textContent === ${JSON.stringify(choice)})`));
+    await click(choice);
+    assert.deepEqual(await evaluate(`[
+      document.getElementById('conversation-speaker').textContent,
+      document.getElementById('conversation-line').textContent,
+      document.getElementById('conversation-npc').dataset.expression,
+      document.getElementById('conversation-player').dataset.expression.split(':')[0]
+    ]`), ['Elias', expected, mood, pipMood]);
+    await click('Continue →');
+    assert.equal(await evaluate("document.getElementById('conversation-line').textContent"),
+      'His Excellency, ze Milk Baron, has taken a most considerable interest in you. Your activism at Milk University has not gone unnoticed.');
+  }
   for (const development of [false, true]) {
     const url = new URL(development ? 'dev/' : './', entry);
     events.length = 0;

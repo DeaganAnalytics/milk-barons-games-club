@@ -2834,13 +2834,13 @@ test('Elias welcome expansions preserve the authored beats and disposition gate'
   const accountant = step(eliasWelcome, 'BAH! A VAMPIRE!', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed');
   assert.deepEqual(accountant.replies.map(option => option.label), ['Even worse!', 'Oh, phew.', 'Why do you dress like that?']);
   const activism = eliasWelcome.replies[0].next.replies[0].next;
-  for (const [index, mood] of ['alarmed', 'happy'].entries()) {
-    const {label, next, playerMood} = accountant.replies[index];
-    assert.equal(next.speaker, 'Pip');
-    assert.equal(next.text, label);
-    assert.equal(playerMood, mood);
-    assert.equal(next.vampireStage, undefined);
-    assert.equal(next.replies[0].next, activism);
+  for (const [label, line, mood, playerMood] of [
+    ['Even worse!', 'Only to those in debt, Master Pip.', 'self-assured-smirk', 'alarmed'],
+    ['Oh, phew.', 'Your relief may be premature.', 'devious', 'happy']
+  ]) {
+    const response = step(accountant, label, line, mood, playerMood);
+    assert.equal(response.vampireStage, undefined);
+    assert.equal(response.replies[0].next, activism);
   }
   const dress = step(accountant, 'Why do you dress like that?',
     'I find that a suitably ominous appearance encourages prompt repayment of outstanding debts, Master Pip.', 'self-assured-smirk');
