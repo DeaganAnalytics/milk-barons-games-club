@@ -32,3 +32,7 @@ Luna is a reasonable fit for explicit dialogue, portrait mappings and routine NP
 ## Cutover validation
 
 The complete `npm run test:all` run passed in the managed Chromium environment. It covered **129 Node cases**, the packaged desktop and mobile browser checks at `/` and `/dev/`, and the full legacy browser suite through all four corners, milk service, Lifeguard, and the floor preview. The legacy fixes change fixtures and assertions only. The production diff adds a read-only portrait catalogue for exports and changes no artwork or gameplay logic. The public Pages deployment requires a separate live check after the settings switch.
+
+## GitHub Actions Chromium startup
+
+After PR #84, Game tests #7 passed Node tests but timed out waiting for the Chromium debugger on the Ubuntu 26.04 runner before running browser assertions. The creative job was skipped on that push, but the PR run also failed to start the capture debugger. The logs showed D-Bus errors without establishing the underlying cause. Both browser-dependent jobs now use the same pinned Chrome for Testing headless shell on Ubuntu 24.04. Startup diagnostics identify the debugger endpoint and include Chromium output. Test assertions and Pages publishing are unchanged.

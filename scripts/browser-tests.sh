@@ -11,12 +11,20 @@ python3 -m http.server "$server_port" --bind 127.0.0.1 --directory "${BROWSER_TE
 server_pid=$!
 "$browser" "${flags[@]}" --headless --disable-dev-shm-usage --remote-debugging-port="$debug_port" --user-data-dir="$scratch/chrome" about:blank >"$scratch/chrome.log" 2>&1 &
 chrome_pid=$!
+debugger="http://127.0.0.1:$debug_port"
 for attempt in {1..60}; do
-  if curl -fsS "http://127.0.0.1:$debug_port/json/list" >/dev/null 2>&1; then
+  if ! kill -0 "$chrome_pid" 2>/dev/null; then
+    wait "$chrome_pid" || echo "Chromium exited with status $?." >&2
+    break
+  fi
+  if curl --noproxy "*" --max-time 1 -fsS "$debugger/json/list" >/dev/null 2>"$scratch/probe.log"; then
     GAME_URL=${GAME_URL:-http://127.0.0.1:$server_port/} CHROME_DEBUG_URL="http://127.0.0.1:$debug_port" node "${BROWSER_TEST_FILE:-tests/browser.mjs}"
     exit
   fi
   sleep .25
 done
-cat "$scratch/chrome.log" >&2
+echo "Chromium did not open $debugger/json/list (binary: $browser)." >&2
+"$browser" --version >&2 || true
+touch "$scratch/probe.log"
+cat "$scratch/probe.log" "$scratch/chrome.log" "$scratch/http.log" >&2
 exit 1
