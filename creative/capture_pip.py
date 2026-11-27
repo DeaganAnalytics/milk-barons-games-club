@@ -8,6 +8,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import time
+from urllib.error import URLError
+from urllib.request import urlopen
 from threading import Thread
 
 
@@ -49,22 +51,28 @@ for (const [index, [mood, variant, disguise, lipstick, milk]] of {json.dumps(var
     thread.start()
     target = f"http://127.0.0.1:{server.server_port}/__pip_capture.html"
     profile = stage / "chrome"
-    cmd = [browser, "--headless", "--disable-dev-shm-usage", "--allow-file-access-from-files",
-           "--remote-debugging-port=0", "--user-data-dir=" + str(profile)]
+    port = int(os.environ.get("PIP_DEBUG_PORT", "19291"))
+    debugger = f"http://127.0.0.1:{port}"
+    cmd = [browser, "--headless", "--disable-dev-shm-usage",
+           f"--remote-debugging-port={port}", "--user-data-dir=" + str(profile)]
     if os.environ.get("CHROMIUM_NO_SANDBOX") == "1":
         cmd.append("--no-sandbox")
     with (stage / "chrome.log").open("w") as log:
         chrome = subprocess.Popen([*cmd, "about:blank"], stdout=log, stderr=log)
         try:
             for _ in range(100):
-                if (profile / "DevToolsActivePort").is_file():
-                    break
                 if chrome.poll() is not None:
                     raise RuntimeError("Chromium exited before opening the capture page")
-                time.sleep(0.1)
-            port = (profile / "DevToolsActivePort").read_text().splitlines()[0]
+                try:
+                    with urlopen(debugger + "/json/list", timeout=0.5) as response:
+                        if response.status == 200:
+                            break
+                except (URLError, TimeoutError):
+                    time.sleep(0.1)
+            else:
+                raise RuntimeError("Chromium did not start its capture endpoint: " + (stage / "chrome.log").read_text())
             result = subprocess.run(
-                ["node", str(root / "creative/capture-pip.mjs"), f"http://127.0.0.1:{port}",
+                ["node", str(root / "creative/capture-pip.mjs"), debugger,
                  target, str(len(variants))], capture_output=True, text=True, timeout=25
             )
             if result.returncode:
@@ -72,7 +80,11 @@ for (const [index, [mood, variant, disguise, lipstick, milk]] of {json.dumps(var
             rendered = dict(json.loads(result.stdout))
         finally:
             chrome.terminate()
-            chrome.wait(timeout=10)
+            try:
+                chrome.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                chrome.kill()
+                chrome.wait()
             server.shutdown()
             server.server_close()
     captures = stage / "pip"

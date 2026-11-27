@@ -6,7 +6,7 @@ Install Node 24, Python 3.10+ with Pillow, and Chromium or Google Chrome. Run `n
 npm run creative -- --zip
 ```
 
-Find the Markdown documents, PNGs, manifest, counts and optional ZIP in `creative/output/`. Generated exports are ignored by Git. They stay out of the game and Pages package.
+Find the Markdown documents, PNGs, manifest, counts and optional ZIP in `creative/output/`. Pull request checks also publish a `milk-club-creative` artifact for 30 days. Generated exports are ignored by Git. They stay out of the game and Pages package.
 
 - `npm run creative -- --combined --zip` exports a single contact sheet.
 - `npm run creative -- --character professor` exports a sheet for one exact character ID.
