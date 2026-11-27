@@ -560,7 +560,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       : action === 'attendantMilkBalloon' ? 'Exit dialogue' : 'End conversation';
     closeButton.classList.toggle('conversation-exit', closeButton.textContent === 'End conversation');
     const pipIsSpeaking = node.speaker === 'Pip';
-    line.textContent = pipIsSpeaking && node.text ? 'Pip: ' + node.text : node.text;
+    line.textContent = node.text;
+    title.textContent = pipIsSpeaking ? 'Pip' : activeTarget.title;
     line.hidden = !node.text && !node.direction;
     if (node.direction) {
       const direction = document.createElement('em');
