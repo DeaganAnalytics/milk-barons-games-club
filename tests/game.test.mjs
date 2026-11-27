@@ -2650,7 +2650,8 @@ test('all Elias introduction branches converge and the final questions have inde
   assert.equal(section.text, 'Now, Master Pip, do you have any questions?');
   const exits = section.replies.slice(-2);
   const questions = section.replies.slice(0, -2);
-  assert.equal(questions.length, 12);
+  assert.equal(questions.length, 11);
+  assert.ok(!questions.some(question => question.label === 'Are you actually a vampire?'));
   assert.equal(new Set(questions.map(question => question.once)).size, questions.length);
 
   function countPathsToMenu(node) {
@@ -2661,7 +2662,7 @@ test('all Elias introduction branches converge and the final questions have inde
   }
   for (const question of questions) assert.equal(question.consumeOnSelect, true);
   assert.deepEqual(questions.map(question => countPathsToMenu(question.next)),
-    [1, 1, 1, 1, 1, 1, 1, 1, 12, 1, 1, 6]);
+    [1, 1, 1, 1, 1, 1, 1, 12, 1, 1, 6]);
   for (const exit of exits) {
     const closing = follow(exit.next);
     assert.equal(closing.action, 'finishEliasWelcome');
@@ -2787,7 +2788,7 @@ test('either early Elias answer unlocks the later communist options for the rest
       node = selected.next;
       while (node.replies.length === 1) node = node.replies[0].next;
     }
-    assert.equal(node.replies.filter(reply => !reply.requiresDisposition || communist).length, communist ? 14 : 9);
+    assert.equal(node.replies.filter(reply => !reply.requiresDisposition || communist).length, communist ? 13 : 8);
   }
 });
 

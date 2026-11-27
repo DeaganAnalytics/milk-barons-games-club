@@ -295,7 +295,7 @@ canvas {
   margin-top: 12px;
 }
 
-#conversation-close.conversation-exit {
+.conversation button.conversation-exit {
   border-color: #718778;
   background: transparent;
   color: #deeadf;
