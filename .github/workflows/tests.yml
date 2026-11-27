@@ -16,16 +16,29 @@ jobs:
           node-version: 24
       - run: npm test
   browser:
-    runs-on: ubuntu-latest
+    runs-on: &chromium-runner ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 24
+      - &setup-chromium
+        name: Install pinned Chromium
+        env:
+          CHROMIUM_VERSION: 138.0.7204.94
+        run: |
+          archive="$RUNNER_TEMP/chrome-headless-shell-linux64.zip"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://storage.googleapis.com/chrome-for-testing-public/$CHROMIUM_VERSION/linux64/chrome-headless-shell-linux64.zip" \
+            --output "$archive"
+          unzip -q "$archive" -d "$RUNNER_TEMP"
+          browser="$RUNNER_TEMP/chrome-headless-shell-linux64/chrome-headless-shell"
+          "$browser" --version
+          echo "CHROMIUM=$browser" >> "$GITHUB_ENV"
       - run: CHROMIUM_NO_SANDBOX=1 npm run test:pages
   creative:
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: *chromium-runner
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,6 +48,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: npm ci && python -m pip install -r creative/requirements.txt
+      - *setup-chromium
       - run: CHROMIUM_NO_SANDBOX=1 npm run creative -- --zip
       - uses: actions/upload-artifact@v4
         with:

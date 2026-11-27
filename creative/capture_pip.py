@@ -9,7 +9,7 @@ import shutil
 import subprocess
 import time
 from urllib.error import URLError
-from urllib.request import urlopen
+from urllib.request import ProxyHandler, build_opener
 from threading import Thread
 
 
@@ -57,20 +57,30 @@ for (const [index, [mood, variant, disguise, lipstick, milk]] of {json.dumps(var
            f"--remote-debugging-port={port}", "--user-data-dir=" + str(profile)]
     if os.environ.get("CHROMIUM_NO_SANDBOX") == "1":
         cmd.append("--no-sandbox")
-    with (stage / "chrome.log").open("w") as log:
+    log_path = stage / "chrome.log"
+    endpoint = debugger + "/json/list"
+    opener = build_opener(ProxyHandler({}))
+    last_error = "no response"
+    with log_path.open("w") as log:
         chrome = subprocess.Popen([*cmd, "about:blank"], stdout=log, stderr=log)
         try:
             for _ in range(100):
                 if chrome.poll() is not None:
-                    raise RuntimeError("Chromium exited before opening the capture page")
+                    raise RuntimeError(
+                        f"Chromium {browser} exited with status {chrome.returncode} "
+                        f"before opening {endpoint}:\n{log_path.read_text()}"
+                    )
                 try:
-                    with urlopen(debugger + "/json/list", timeout=0.5) as response:
+                    with opener.open(endpoint, timeout=0.5) as response:
                         if response.status == 200:
                             break
-                except (URLError, TimeoutError):
+                except (URLError, TimeoutError) as error:
+                    last_error = str(error)
                     time.sleep(0.1)
             else:
-                raise RuntimeError("Chromium did not start its capture endpoint: " + (stage / "chrome.log").read_text())
+                raise RuntimeError(
+                    f"Chromium {browser} did not open {endpoint} ({last_error}):\n{log_path.read_text()}"
+                )
             result = subprocess.run(
                 ["node", str(root / "creative/capture-pip.mjs"), debugger,
                  target, str(len(variants))], capture_output=True, text=True, timeout=25
