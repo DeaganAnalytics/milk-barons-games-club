@@ -3119,3 +3119,72 @@ test('Milk Mystic pauses on approach and resumes along the same patrol', async (
   assert.notEqual(mystic.angle, position.angle);
   assert.equal(mystic.walking, true);
 });
+
+test('walking through Elias starts the encounter once, while approaching him does not', async () => {
+  const {startEliasPassThrough} = await import('../src/elias.mjs');
+  const actor = {x: 10, y: 10};
+  assert.equal(startEliasPassThrough(actor, {x: 0, y: 10}, {x: 9, y: 10}), false);
+  assert.equal(startEliasPassThrough(actor, {x: 9, y: 10}, {x: 9, y: 10}), false);
+  assert.equal(startEliasPassThrough(actor, {x: 0, y: 22}, {x: 20, y: 22}), false);
+  assert.equal(startEliasPassThrough(actor, {x: 9, y: 10}, {x: 11, y: 10}), true);
+  assert.equal(startEliasPassThrough(actor, {x: 11, y: 10}, {x: 9, y: 10}), false);
+});
+
+test('Elias pass-through dialogue gates the Mystic reply and rolls the arm outcome once', async () => {
+  const {eliasPassThroughDialogue, eliasPortraits} = await import('../src/elias.mjs');
+  for (const [metMystic, roll, expected, final, action] of [
+    [false, 0.499, 'An optical illusion, Master Pip.', 'A particularly convincing optical illusion.', 'finishEliasPassThrough'],
+    [true, 0.5, 'I did varn you.', 'A chartered accountant, Master Pip.', 'finishEliasPassThroughCold']
+  ]) {
+    let rolls = 0;
+    const start = eliasPassThroughDialogue(metMystic, () => { rolls++; return roll; });
+    assert.equal(start.speaker, 'Pip');
+    assert.equal(start.playerMood, 'thinking');
+    const denial = start.replies[0].next;
+    assert.equal(denial.mood, 'insulted');
+    assert.equal(denial.replies.length, metMystic ? 3 : 2);
+    const warning = denial.replies[1].next();
+    assert.equal(rolls, 1);
+    assert.equal(warning.mood, 'devious');
+    const narration = warning.replies[0].next;
+    assert.match(narration.direction, /passes straight through him/);
+    const first = narration.replies[0].next;
+    const ending = first.replies[0].next;
+    assert.equal(first.text, expected);
+    assert.equal(ending.text, final);
+    assert.ok(eliasPortraits.includes(ending.mood));
+    assert.equal(ending.replies[0].next.exitAction, action);
+    assert.equal(rolls, 1);
+    for (const reply of denial.replies.filter((_, i) => i !== 1)) {
+      assert.equal(reply.next.replies[0].next.replies[0].next.exitAction, 'finishEliasPassThrough');
+    }
+  }
+});
+
+test('Elias pass-through damage deducts two hearts and reports either survival or death', async () => {
+  const {resolveEliasPassThroughAction} = await import('../src/elias.mjs');
+  const {createHealth} = await import('../src/health.mjs');
+  for (const start of [3, 2.5, 2, 1.5, 1, 0.5]) {
+    const actor = {};
+    let death;
+    const health = createHealth((hearts, message) => { if (!hearts) death = message; });
+    health.set(start);
+    const messages = [];
+    const announce = message => messages.push(message);
+    resolveEliasPassThroughAction('eliasPassThroughDamage', actor, health, announce);
+    assert.equal(health.hearts, Math.max(0, start - 2));
+    assert.deepEqual(messages, []);
+    if (start > 2) {
+      resolveEliasPassThroughAction('finishEliasPassThroughCold', actor, health, announce);
+      assert.deepEqual(messages, ['Your arm is cold. Unnaturally cold. (−2 hearts)']);
+      assert.equal(health.hearts, start - 2);
+    } else {
+      assert.equal(death, 'You should have kept your hands to yourself.');
+    }
+    resolveEliasPassThroughAction('eliasPassThroughDamage', actor, health, announce);
+    resolveEliasPassThroughAction('finishEliasPassThroughCold', actor, health, announce);
+    assert.equal(health.hearts, Math.max(0, start - 2));
+    assert.equal(messages.length, start > 2 ? 1 : 0);
+    assert.equal(actor.passThroughCompleted, true);
+  }
+});

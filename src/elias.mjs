@@ -277,6 +277,66 @@ function exchange(lines, menu) {
   return replies[0];
 }
 
+export function startEliasPassThrough(actor, from, to) {
+  if (actor.passThroughStarted) return false;
+  // Player movement resolves horizontally first and then vertically.
+  const crosses = (start, end, center) => (start < center && end >= center)
+    || (start > center && end <= center);
+  const throughBody = (Math.abs(from.y - actor.y) <= 8 && crosses(from.x, to.x, actor.x))
+    || (Math.abs(to.x - actor.x) <= 8 && crosses(from.y, to.y, actor.y));
+  if (!throughBody) return false;
+  actor.passThroughStarted = true;
+  return true;
+}
+
+export function resolveEliasPassThroughAction(action, actor, health, announce) {
+  if (actor.passThroughCompleted) return;
+  if (action === 'eliasPassThroughDamage' && !actor.passThroughDamaged) {
+    actor.passThroughDamaged = true;
+    if (health.hearts <= 2) actor.passThroughCompleted = true;
+    health.change(-2, 'You should have kept your hands to yourself.');
+  }
+  if (action === 'finishEliasPassThrough' || action === 'finishEliasPassThroughCold') {
+    actor.passThroughCompleted = true;
+    if (action === 'finishEliasPassThroughCold') announce('Your arm is cold. Unnaturally cold. (−2 hearts)');
+  }
+}
+
+export function eliasPassThroughDialogue(metMystic, random = Math.random) {
+  const ending = action => ({mustContinue: true, replies: [continueTo({exitAction: action})]});
+  const complete = ending('finishEliasPassThrough');
+  const harmless = exchange([
+    ["MY ARM! IT'S INSIDE YOU!", 'An optical illusion, Master Pip.', 'current-smile', 'alarmed', {mustContinue: true}],
+    ['I CAN SEE MY HAND COMING OUT OF YOUR BACK!', 'A particularly convincing optical illusion.', 'self-assured-smirk', 'exasperated', complete]
+  ]);
+  const damage = exchange([
+    ["That's strange. I can't feel my fingers...", 'I did varn you.', 'evil-laugh', 'worried',
+      {enterAction: 'eliasPassThroughDamage', mustContinue: true}],
+    ['AARGH! WHAT ARE YOU?!', 'A chartered accountant, Master Pip.', 'current-smile', 'alarmed', ending('finishEliasPassThroughCold')]
+  ]);
+  const replies = [exchange([
+    ["You're right. I must be imagining things.", 'A perfectly reasonable conclusion.', 'self-assured-smirk', 'thinking', {mustContinue: true}],
+    ['Perhaps I need more sleep.', 'Or more milk, Master Pip. Preferably purchased on ze premises.', 'current-smile', 'worried', complete]
+  ]), {
+    label: '<Attempt to put your arm through Elias>', next: () => ({
+      text: 'I vould strongly advise against zat.', mood: 'devious', mustContinue: true,
+      replies: [continueTo({
+        direction: "Ignoring Elias's warning, you slowly extend your arm towards his chest. To your astonishment, it passes straight through him.",
+        mood: 'devious', mustContinue: true, replies: [random() < 0.5 ? harmless : damage]
+      })]
+    })
+  }];
+  if (metMystic) replies.push(exchange([
+    ["I'm going to ask the Milk Mystic about this!", 'Ah, yes. An excellent source of thoroughly unsubstantiated information.', 'laugh', 'exasperated', {mustContinue: true}],
+    ['She might know what you are!', 'I can save you ze journey. I am an accountant.', 'self-assured-smirk', 'worried', complete]
+  ]));
+  return {
+    text: 'Did I just... walk through you?', speaker: 'Pip', playerMood: 'thinking', mood: 'insulted', mustContinue: true,
+    replies: [continueTo({text: 'Vhat are you talking about, Master Pip? Zat is physically impossible.',
+      mood: 'insulted', mustContinue: true, replies})]
+  };
+}
+
 export const eliasPokieBan = {
   text: 'Ahem. Master Pip, ve have a little problem.',
   mood: 'thinking',
