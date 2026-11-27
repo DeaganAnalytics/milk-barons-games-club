@@ -5,7 +5,7 @@ import {djTarget} from './dj-dialogue.mjs';
 import {dancerTargets} from './dancer-dialogue.mjs';
 import {createTally} from './elias-accounting.mjs';
 import {linWaitressId, TIPPED_MILK_PRICE, WAITER_MILK_PRICE} from './waiter-dialogue.mjs';
-import {nearbyPracticeGuard} from './practice-range-dialogue.mjs';
+import {nearbyPracticeGuard, practiceGuardTargets} from './practice-range-dialogue.mjs';
 import {practiceRangeHit} from './practice-range.mjs';
 import {createPokieProfit} from './pokie-dialogue.mjs';
 import {createSleepingGambler} from './sleeping-gambler.mjs';
@@ -51,6 +51,11 @@ const sleepingGambler = createSleepingGambler();
 const guests = [...staff, ...dancerTargets, ...slotPlayers, openSlot, sleepingGamblerTarget, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
+function playerCollisionNpcs() {
+  return [milo, mystic, djTarget, ...practiceGuardTargets, ...guests.filter(guest =>
+    guest !== openSlot && (guest !== lin || staff.includes(lin)))];
+}
+
 const milkService = createMilkService();
 const attendantMilk = createAttendantMilk();
 const partyChatter = createPartyChatter();
@@ -653,7 +658,7 @@ const {readMovement, clearInput} = bindControls({
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else {
       const previous = {x: player.x, y: player.y};
-      movePlayer(player, baron, dx, dy, guards);
+      movePlayer(player, baron, dx, dy, guards, playerCollisionNpcs());
       checkPracticeRange(previous, elapsed);
     }
   },
@@ -821,7 +826,7 @@ function frame(timestamp) {
       requestAnimationFrame(frame);
       return;
     }
-    updatePlayer(player, baron, movement, dt, guards);
+    updatePlayer(player, baron, movement, dt, guards, playerCollisionNpcs());
   }
   if (checkPracticeRange(previousPosition, previousTime)) {
     requestAnimationFrame(frame);
@@ -866,8 +871,8 @@ function frame(timestamp) {
   }
   const baronLocked = serviceWasActive || Boolean(milkService.scene);
   if (!baronLocked) updateBaronAttention(baron, player, elapsed, dt);
-  updateMilkMystic(mystic, baron, dt);
-  if (updateMilo(milo, baron, elapsed, dt, guards) && !baronLocked) callOutMilo(baron, milo, elapsed);
+  updateMilkMystic(mystic, baron, dt, player);
+  if (updateMilo(milo, baron, elapsed, dt, guards, player) && !baronLocked) callOutMilo(baron, milo, elapsed);
   if (!baronLocked) updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed);
   if (guestEscort?.executive && !guestEscort.guard) {
     guestEscort.guard = summonGuardFromOffscreen(guards, player, baron);

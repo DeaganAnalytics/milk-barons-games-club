@@ -1,6 +1,6 @@
 import {createMysticMoneyTopic} from './mystic-money-dialogue.mjs';
 import {TURN} from './directions.mjs';
-import {HALL_CENTER, isNpcBlocked} from './room.mjs';
+import {HALL_CENTER, isNpcBlocked, shouldPauseNpc } from './room.mjs';
 
 export const milkMysticId = 'milk-mystic';
 export const milkMysticMoods = ['serene', 'skeptical', 'contemplative', 'warning', 'wry-smile'];
@@ -24,7 +24,11 @@ export function createMilkMystic() {
   };
 }
 
-export function updateMilkMystic(mystic, baron, dt) {
+export function updateMilkMystic(mystic, baron, dt, player) {
+  if (player && shouldPauseNpc(mystic, player)) {
+    mystic.walking = false;
+    return;
+  }
   const tangent = Math.hypot(patrolWidth * Math.sin(mystic.angle), patrolHeight * Math.cos(mystic.angle));
   const angle = (mystic.angle + patrolSpeed * dt / tangent) % TURN;
   const {x, y} = patrolPosition(angle);

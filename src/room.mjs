@@ -152,6 +152,11 @@ export function isNpcBlocked(x, y, radius, baron, from) {
   return insidePracticeRange(x, y, radius) || onDanceFloor(x, y, radius) || isBlocked(x, y, radius, baron, from);
 }
 
+// Routine movement pauses at conversation distance. Scripted movement can bypass this.
+export function shouldPauseNpc(actor, player) {
+  return actor.id !== 'baron' && Math.hypot(actor.x - player.x, actor.y - player.y) <= 40;
+}
+
 export function isBlocked(x, y, radius, baron, from) {
   if (x < WEST_EDGE + 38 || x > EAST_EDGE - 39 || y < NORTH_EDGE + 160 || y > SOUTH_TRIM_Y - 16) return true;
   // The closed center door stands proud of the back wall.

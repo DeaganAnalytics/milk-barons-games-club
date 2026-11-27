@@ -3085,3 +3085,37 @@ test('all seven Karl Curd branches conclude once and return to the Baron menu', 
     assert.equal(completions, 1);
   }
 });
+
+test('future NPCs pause near Pip and block passage, with separate Baron and Elias exceptions', async () => {
+  const {shouldPauseNpc} = await import('../src/room.mjs');
+  const npc = {id: 'future-npc', x: 500, y: 550};
+  const elias = {...npc, id: 'elias'};
+  const baron = {...npc, id: 'baron'};
+  const distantBaron = {x: 0, y: 0};
+  const player = {...createPlayer(), x: 460, y: 550};
+
+  assert.equal(shouldPauseNpc(npc, player), true);
+  assert.equal(shouldPauseNpc(elias, player), true);
+  assert.equal(shouldPauseNpc(baron, player), false);
+  assert.equal(shouldPauseNpc(npc, {...player, x: 459}), false);
+  movePlayer(player, distantBaron, 80, 0, [], [npc]);
+  assert.equal(player.x, 460, 'a large movement step must still stop at an NPC');
+  movePlayer(player, baron, 38, 0);
+  assert.equal(player.x, 460, 'the Baron still blocks movement');
+  movePlayer(player, distantBaron, 80, 0, [], [elias]);
+  assert.equal(player.x, 540, 'Pip can walk through Elias');
+});
+
+test('Milk Mystic pauses on approach and resumes along the same patrol', async () => {
+  const {createMilkMystic, updateMilkMystic} = await import('../src/milk-mystic.mjs');
+  const mystic = createMilkMystic();
+  const baron = {x: 0, y: 0};
+  const near = {x: mystic.x, y: mystic.y + 30};
+  const position = {x: mystic.x, y: mystic.y, angle: mystic.angle};
+  updateMilkMystic(mystic, baron, 0.1, near);
+  assert.deepEqual({x: mystic.x, y: mystic.y, angle: mystic.angle}, position);
+  assert.equal(mystic.walking, false);
+  updateMilkMystic(mystic, baron, 0.1, {...near, y: near.y + 100});
+  assert.notEqual(mystic.angle, position.angle);
+  assert.equal(mystic.walking, true);
+});

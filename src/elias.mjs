@@ -1,4 +1,4 @@
-import {HALL_CENTER, isNpcBlocked, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
+import {HALL_CENTER, isNpcBlocked, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron, shouldPauseNpc } from './room.mjs';
 
 export const eliasPost = {x: HALL_CENTER.x + 145, y: HALL_CENTER.y + 130};
 
@@ -557,7 +557,7 @@ export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
     < Math.hypot(actor.lastPipPosition.x - actor.x, actor.lastPipPosition.y - actor.y);
   actor.lastPipPosition = {x: player.x, y: player.y};
   if (close && approached) actor.findingEdge = false;
-  if (!outside && !actor.findingEdge) {
+  if (shouldPauseNpc(actor, player) || (!outside && !actor.findingEdge)) {
     actor.running = false;
     actor.followRoute = null;
     return;

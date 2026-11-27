@@ -1,9 +1,8 @@
 import {facingIndex, TURN} from './directions.mjs';
-import {cameraLeft, cameraTop, ROOM_WIDTH, ROOM_HEIGHT, crossesScenery, EAST_EDGE, onDanceFloor, isNpcBlocked, MILK_POOL, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {cameraLeft, cameraTop, ROOM_WIDTH, ROOM_HEIGHT, crossesScenery, EAST_EDGE, onDanceFloor, isNpcBlocked, MILK_POOL, NORTH_EDGE, routeAroundBaron, RUGS, SOUTH_TRIM_Y, WEST_EDGE, shouldPauseNpc } from './room.mjs';
 
 const RADIUS = 14;
 const SPEED = 71;
-const APPROACH_DISTANCE = 40;
 const PATROL_INSET = 75;
 const STEERING_ANGLES = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];
 
@@ -174,7 +173,7 @@ export function updateGuards(guards, player, baron, milo, elapsed, dt) {
       pursuit.route = routeAroundBaron(guard, pursuit.destination, baron);
     }
     // Let the player approach instead of constantly evading them.
-    const nearPlayer = Math.hypot(guard.x - player.x, guard.y - player.y) <= APPROACH_DISTANCE;
+    const nearPlayer = shouldPauseNpc(guard, player);
     const needsToYield = [baron, milo].some(actor => Math.hypot(guard.x - actor.x, guard.y - actor.y) < 60);
     if (dt <= 0 || (!pursuit && (elapsed < guard.pauseUntil || (nearPlayer && !needsToYield)))) continue;
     if (!pursuit && !guard.target) {

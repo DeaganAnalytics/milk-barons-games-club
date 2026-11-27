@@ -1,5 +1,5 @@
 import {guardBlocks} from './guards.mjs';
-import {cameraLeft, cameraTop, ROOM_HEIGHT, ROOM_WIDTH, crossesScenery, EAST_EDGE, guestEnclosure, guestGateInside, guestGateOutside, insideGuestEnclosure, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {cameraLeft, cameraTop, ROOM_HEIGHT, ROOM_WIDTH, crossesScenery, EAST_EDGE, guestEnclosure, guestGateInside, guestGateOutside, insideGuestEnclosure, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE, shouldPauseNpc } from './room.mjs';
 
 const uniforms = [
   {id: 'male-waiter', title: 'Waiter Feta'},
@@ -74,7 +74,7 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
   for (const member of staff) {
     if (member.serviceDuty) continue;
     member.walking = false;
-    if (dt <= 0 || elapsed < member.pauseUntil || (!member.rushingOffscreen && Math.hypot(member.x - player.x, member.y - player.y) < 44)) continue;
+    if (dt <= 0 || elapsed < member.pauseUntil || (!member.rushingOffscreen && shouldPauseNpc(member, player))) continue;
     if (guestEnclosure.active && !member.guestAccess && insideGuestEnclosure(member)) {
       member.guestAccess = true;
       member.target = guestGateOutside;
