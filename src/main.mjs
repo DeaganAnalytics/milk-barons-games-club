@@ -13,7 +13,7 @@ import {approachPatron, createSlotReactions} from './slot-reactions.mjs';
 import {openSlot, sleepingGamblerTarget, slotPlayers} from './slot-machines.mjs';
 import {clubSightLines} from './club-sight-lines.mjs';
 import {facingIndex} from './directions.mjs';
-import {advanceEliasRun, elias, resolveEliasFollowingAction, resolveEliasPassThroughAction, routeEliasToPip, startEliasPassThrough, updateEliasFollow} from './elias.mjs';
+import {advanceEliasRun, createEliasDeparture, elias, resolveEliasFollowingAction, resolveEliasPassThroughAction, routeEliasToPip, startEliasPassThrough, updateEliasFollow} from './elias.mjs';
 import {createCoinBalance, STARTING_COINS} from './coins.mjs';
 import {createHealth, MAX_HEARTS} from './health.mjs';
 import {createKarma} from './karma.mjs';
@@ -63,6 +63,7 @@ const milkPool = createMilkPool();
 let seenCowGuard = false;
 const render = createRenderer(document.getElementById('game'), () => { seenCowGuard = true; }, sleepingGambler, mystic, () => !staff.includes(lin));
 let eliasApproaching = true;
+let eliasDeparture = null;
 let eliasScene = null;
 let seenMilo = false;
 let reportedMilo = false;
@@ -546,7 +547,10 @@ const dialogue = createDialogue(baron, {
     if (action === 'collectTax') clubEvent('Elias takes the Baron’s cut.', () => coinBalance.collectTax());
     if (action === 'finishEliasWelcome') {
       document.getElementById('coin-counter').hidden = false;
-      elias.findingEdge = true;
+      clearInput();
+      player.walking = false;
+      eliasDeparture = createEliasDeparture(elias, baron, cameraLeft(player.x), cameraTop(player.y),
+        [player, ...guards, ...playerCollisionNpcs()]);
       clubEvent('Elias opens your account. The Baron expects you to double it.');
     }
     if (action === 'executivePrivateNetworking') {
@@ -661,9 +665,9 @@ function checkEliasPassThrough(previous) {
 }
 
 const {readMovement, clearInput} = bindControls({
-  isPaused: () => eliasApproaching || Boolean(eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene || rangeFall),
+  isPaused: () => eliasApproaching || Boolean(eliasDeparture || eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene || rangeFall),
   nudge: (dx, dy) => {
-    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || rangeFall) return;
+    if (eliasApproaching || eliasDeparture || eliasScene || !gameOver.hidden || milkBalloon || rangeFall) return;
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else {
       const previous = {x: player.x, y: player.y};
@@ -673,9 +677,8 @@ const {readMovement, clearInput} = bindControls({
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
-    if (eliasApproaching || eliasScene || !gameOver.hidden || milkBalloon || rangeFall) return;
-    const nearbyGuests = guests.filter(guest => !(elias.findingEdge && guest === elias)
-      && !(guest === lin && (linConfrontation || dialogue.linRelationship() === 'departed'))
+    if (eliasApproaching || eliasDeparture || eliasScene || !gameOver.hidden || milkBalloon || rangeFall) return;
+    const nearbyGuests = guests.filter(guest => !(guest === lin && (linConfrontation || dialogue.linRelationship() === 'departed'))
       && !(guestEnclosure.active && insideGuestEnclosure(guest))
       && !(guest === sleepingGamblerTarget && sleepingGambler.pose(elapsed).awake));
     nearbyGuests.push(mystic);
@@ -736,6 +739,24 @@ function frame(timestamp) {
       eliasApproaching = false;
       clearInput();
       dialogue.open({...elias, welcome: true});
+    }
+    requestAnimationFrame(frame);
+    return;
+  }
+  if (eliasDeparture) {
+    const {route, text} = eliasDeparture;
+    eliasDeparture.time += dt;
+    if (route.length && advanceEliasRun(elias, route[0], dt, 0)) {
+      route.shift();
+      elias.running = route.length > 0;
+    }
+    elias.departureSpeech = text;
+    render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
+      staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
+    if (!route.length && eliasDeparture.time >= 2.5) {
+      eliasDeparture = null;
+      elias.departureSpeech = null;
+      clearInput();
     }
     requestAnimationFrame(frame);
     return;

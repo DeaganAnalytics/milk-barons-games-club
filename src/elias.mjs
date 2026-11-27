@@ -602,6 +602,42 @@ export function advanceEliasRun(actor, destination, dt, stop, speed = 230) {
   return !actor.running;
 }
 
+const farewellLines = [
+  'Good luck, Master Pip!', 'Remember, ze dairy awaits!', 'Make us proud, Master Pip!',
+  'Fortune favours ze bold!', 'Every coin counts!', 'Do try to remain solvent!',
+  'Happy gambling, Master Pip!', 'Ze milk awaits!', 'Spend wisely! Or unwisely!',
+  'Do make yourself profitable!', 'Ve have high hopes for you!', "Don't disappoint ze Baron!",
+  'Your success is our success!', "I'll be vatching, Master Pip!", 'Remember your debts!',
+  'Ve shall meet again!'
+];
+
+export function createEliasDeparture(actor, baron, cameraX, cameraY, nearbyActors) {
+  const radius = 11;
+  const obstacles = nearbyActors.filter(other => other !== actor
+    && Math.hypot(other.x - actor.x, other.y - actor.y) < ROOM_WIDTH + ROOM_HEIGHT)
+    .map(({x, y}) => ({x, y, halfWidth: 12, halfHeight: 12}));
+  const sides = [
+    offset => ({x: cameraX + 24, y: actor.y + offset}),
+    offset => ({x: cameraX + ROOM_WIDTH - 24, y: actor.y + offset}),
+    offset => ({x: actor.x + offset, y: cameraY + 66}),
+    offset => ({x: actor.x + offset, y: cameraY + ROOM_HEIGHT - 28})
+  ];
+  const firstSide = Math.floor(Math.random() * sides.length);
+  const text = farewellLines[Math.floor(Math.random() * farewellLines.length)];
+  for (let side = 0; side < sides.length; side++) {
+    const edge = sides[(firstSide + side) % sides.length];
+    for (const offset of [0, -60, 60, -120, 120, -180, 180]) {
+      const target = edge(offset);
+      if (target.x < cameraX + 24 || target.x > cameraX + ROOM_WIDTH - 24
+          || target.y < cameraY + 66 || target.y > cameraY + ROOM_HEIGHT - 28
+          || isNpcBlocked(target.x, target.y, radius, baron)) continue;
+      const route = routeAroundBaron({...actor, radius}, target, baron, obstacles);
+      if (route.length) return {route, text, time: 0};
+    }
+  }
+  return {route: [], text, time: 0};
+}
+
 const followingDialogueDistance = 2 * ROOM_WIDTH;
 
 export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
@@ -611,20 +647,13 @@ export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
   const bottom = cameraY + ROOM_HEIGHT - 28;
   const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
   const outside = actor.x < left || actor.x > right || actor.y < top || actor.y > bottom;
-  const close = Math.hypot(player.x - actor.x, player.y - actor.y) < 60;
-  // Once Pip approaches, hold position until the scrolling camera pushes Elias to an edge.
-  const distanceToPip = Math.hypot(player.x - actor.x, player.y - actor.y);
-  const approached = actor.lastPipPosition && distanceToPip
-    < Math.hypot(actor.lastPipPosition.x - actor.x, actor.lastPipPosition.y - actor.y);
-  actor.lastPipPosition = {x: player.x, y: player.y};
-  if (close && approached) actor.findingEdge = false;
-  if (shouldPauseNpc(actor, player) || (!outside && !actor.findingEdge)) {
+  if (shouldPauseNpc(actor, player) || !outside) {
     actor.running = false;
     actor.followRoute = null;
     return;
   }
 
-  const x = actor.findingEdge ? right : clamp(actor.x, left, right);
+  const x = clamp(actor.x, left, right);
   const y = clamp(actor.y, top, bottom);
   const radius = 11;
   const clear = point => !isNpcBlocked(point.x, point.y, radius, baron, actor);
@@ -650,13 +679,12 @@ export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
   const startY = actor.y;
   const arrived = advanceEliasRun(actor, waypoint, dt, 0, 144);
   actor.running = step > 0;
-  if (outside && !actor.findingEdge && step > 0 && !actor.hasFollowedPip) {
+  if (outside && step > 0 && !actor.hasFollowedPip) {
     actor.followDistance = (actor.followDistance ?? 0) + Math.hypot(actor.x - startX, actor.y - startY);
     if (actor.followDistance >= followingDialogueDistance) actor.hasFollowedPip = true;
   }
   if (arrived) {
     actor.followRoute?.shift();
-    if (!actor.followRoute?.length && Math.hypot(target.x - actor.x, target.y - actor.y) < 1) actor.findingEdge = false;
   }
 }
 
