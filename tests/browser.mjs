@@ -82,15 +82,15 @@ async function activate(heading, withButton = false) {
 
 async function reply(label, expected) {
   const quoted = JSON.stringify(label);
-  assert.equal(await evaluate(`[...document.querySelectorAll('#conversation-replies button')]
-    .some(button => { if (button.textContent !== ${quoted}) return false; button.click(); return true; })`), true);
+  assert.equal(await evaluate(`[...document.querySelectorAll('#conversation-replies button, #conversation-advance button')]
+    .some(button => { if (button.textContent !== (${quoted} === 'Continue' ? 'Continue →' : ${quoted})) return false; button.click(); return true; })`), true, 'Missing dialogue choice: ' + label);
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), expected);
 }
 
 async function expressions(player, npc) {
   const values = await evaluate(`['player', 'npc'].map(id =>
     document.getElementById('conversation-' + id).dataset.expression)`);
-  assert.deepEqual(values, [player, npc]);
+  assert.deepEqual([values[0].split(':')[0], values[1]], [player, npc]);
   assert.ok(await evaluate(`(() => {
     const canvas = document.querySelector('#conversation-player canvas');
     const ctx = canvas.getContext('2d');
@@ -112,9 +112,21 @@ async function load(width, height, mobile, name, url = site) {
   await frames(65);
   assert.equal(await evaluate('document.querySelector("#conversation-title").textContent'), 'Elias');
   assert.equal(await evaluate('document.querySelector("#coin-counter").hidden'), true);
-  for (const mood of ['attentive', 'thinking', 'worried', 'alarmed', 'thinking', 'attentive', 'alarmed', 'worried']) {
-    assert.equal(await evaluate('document.querySelector("#conversation-player").dataset.expression'), mood);
-    await evaluate('document.querySelector("#conversation-replies button").click()');
+  const introductoryChoices = ['Where am I?', 'Someone has to stand up for the working class!', 'A HUNDRED MILK TOKENS?!',
+    'What sort of game?', "Wait. You're giving me money because I owe you money?", "THAT'S SLAVERY!"];
+  assert.equal(await evaluate('document.querySelector("#conversation-player").dataset.expression.split(":")[0]'), 'attentive');
+  for (const label of introductoryChoices) {
+    for (let count = 0; count < 4 && await evaluate('Boolean(document.querySelector("#conversation-advance button"))'); count++) {
+      await evaluate('document.querySelector("#conversation-advance button").click()');
+    }
+    assert.ok(await evaluate(`[...document.querySelectorAll('#conversation-replies button')].some(button => {
+      if (button.textContent !== ${JSON.stringify(label)}) return false;
+      button.click();
+      return true;
+    })`), 'Missing introductory choice: ' + label);
+  }
+  for (let count = 0; count < 4 && await evaluate('Boolean(document.querySelector("#conversation-advance button"))'); count++) {
+    await evaluate('document.querySelector("#conversation-advance button").click()');
   }
   assert.equal(await evaluate('document.querySelector("#conversation-line").textContent'), 'Now, Master Pip, do you have any questions?');
   if (name === 'desktop') {
@@ -130,7 +142,7 @@ async function load(width, height, mobile, name, url = site) {
     await reply('How do I double my money?', 'As an aspiring capitalist, I am sure you vill figure it out. Zis establishment offers many delightful games through vich you may multiply your fortune.');
     await reply('Continue', 'Now, Master Pip, do you have any questions?');
     const remaining = await evaluate('Array.from(document.querySelectorAll("#conversation-replies button"), button => button.textContent)');
-    assert.deepEqual(remaining, ['I have no more questions.']);
+    assert.deepEqual(remaining, ['Are those guards cows?', 'Can I just leave?', 'Does my family know where I am?', 'I have no more questions.']);
   }
   await reply('I have no more questions.', 'Vonderful. I vish you a most profitable evening, Master Pip.');
   assert.equal(await evaluate('document.querySelector("#coin-counter").hidden'), true);
@@ -393,7 +405,8 @@ try {
   }
   await reply('Are you a cow?', 'I am a guard.');
   await reply('But you have horns.', 'I am a guard.');
-  await expressions('thinking', 'deadpan');
+  // The greeting and first reply are deadpan. The third consecutive beat rotates to speaking.
+  await expressions('thinking', 'speaking');
   await closeConversation();
   await activate('Bull Guard');
   await reply("No, I don't have anything to report.", 'Then get out of my way!');
