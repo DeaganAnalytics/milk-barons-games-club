@@ -14,7 +14,7 @@ export const eliasPortraits = [
 
 const continueTo = next => ({label: 'Continue', playerMood: 'attentive', next});
 const welcomeEnd = {
-  label: 'I have no more questions.', playerMood: 'attentive', next: {
+  label: 'I have no more questions.', playerMood: 'attentive', conversationExit: true, next: {
     text: 'Vonderful. I vish you a most profitable evening, Master Pip.',
     mood: 'current-smile', action: 'finishEliasWelcome'
   }

@@ -152,6 +152,9 @@ try {
       [...document.querySelectorAll('#conversation-replies button')].some(button => button.textContent === 'What is this place?'),
       [...document.querySelectorAll('#conversation-replies button')].some(button => button.textContent === 'LONG LIVE THE REVOLUTION!')
     ]`), [false, development], 'The question should be consumed and the disposition should be preserved');
+    assert.equal(await evaluate(`[...document.querySelectorAll('#conversation-replies button')]
+      .find(button => button.textContent === 'I have no more questions.')?.classList.contains('conversation-exit')`),
+    true, 'The final welcome choice should use the standard conversation exit appearance');
     await clickChoice('I have no more questions.');
     await evaluate('document.getElementById("conversation-close").click()');
     assert.ok(await evaluate(`document.getElementById('conversation').hidden
