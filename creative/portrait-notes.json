@@ -1,0 +1,354 @@
+{
+  "attentive": [
+    "Forward gaze and relaxed or slightly lifted mouth.",
+    "Neutral attention; low. Service, listening or a routine reply. Avoid a crisis reaction."
+  ],
+  "amused": [
+    "Lifted mouth corner or hand near a smile.",
+    "Amusement, sometimes dry; medium. A private joke or teasing retort. Avoid grief."
+  ],
+  "annoyed": [
+    "Drawn brows and open protesting mouth.",
+    "Irritation; medium. Intrusion or aggravation. Avoid reassurance."
+  ],
+  "angry": [
+    "Steep brows and an open mouth or pronounced frown.",
+    "Anger; high. Reprimand or confrontation. Avoid casual service."
+  ],
+  "apologetic": [
+    "Raised inner brows and small downturned mouth.",
+    "Regret or concern; medium. Apology or refusal. Avoid triumphant lines."
+  ],
+  "appalled": [
+    "Open mouth and worried, lifted brows.",
+    "Alarm or revulsion; high. A startling offence. Avoid agreement."
+  ],
+  "asleep": [
+    "Eyes closed and slack open mouth.",
+    "Sleep; low. Dozing. Avoid an active argument."
+  ],
+  "awake": [
+    "Wide eyes, open mouth and marks beside the head.",
+    "Startle; high. A sudden wake-up. Avoid composed explanation."
+  ],
+  "big-excited-smile": [
+    "Wide open grin, raised hand and accent marks.",
+    "Excitement; high. Celebration. Avoid caution."
+  ],
+  "blushing": [
+    "Closed, curved eyes, small smile and coloured cheeks.",
+    "Shy pleasure with embarrassment; medium. Affection. Avoid indifference."
+  ],
+  "condescending": [
+    "Raised brows and open grin behind spectacles.",
+    "Patronising amusement; medium. A lecture or self-satisfied correction. Avoid sincere contrition."
+  ],
+  "conspiratorial": [
+    "Hand raised near the mouth and lowered eyelids.",
+    "Secrecy or confidence; medium. A whispered aside. Avoid public panic."
+  ],
+  "contemplative": [
+    "Fingers near the chin under the cow skull.",
+    "Reflection; low. Parables or deliberation. Avoid an explosive reaction."
+  ],
+  "current-smile": [
+    "Small curved mouth and steady brows behind spectacles.",
+    "Professional composure; low. A diplomatic explanation. Avoid terror."
+  ],
+  "deadpan": [
+    "Level mouth or restrained frown, posture held still.",
+    "Flat delivery or dryness; low. A procedural or understated reply. Avoid a jubilant outburst."
+  ],
+  "defiant": [
+    "Inward-slanting eyebrows and downturned mouth.",
+    "Defiance with irritation; medium. Refusal. Avoid conciliation."
+  ],
+  "delighted": [
+    "Closed crescent eyes and broad open grin.",
+    "Delight; high. Celebration or pleased recognition. Avoid suspicion."
+  ],
+  "demonic-angry": [
+    "Sharp inward brows and bared teeth.",
+    "Fury; high. A sharp denial or threat. Avoid restrained instruction."
+  ],
+  "despondent": [
+    "Eyes lowered or shut, drooping brows and frown.",
+    "Dejection; medium. Resignation. Avoid energetic disagreement."
+  ],
+  "devious": [
+    "Narrowed eyes and asymmetric smile.",
+    "Cunning with amusement; medium. Hinting or calculation. Avoid open distress."
+  ],
+  "disappointed": [
+    "Lids lowered and mouth downturned.",
+    "Disappointment; medium. A let-down. Avoid enthusiasm."
+  ],
+  "displeased": [
+    "Angled brows with a definite frown.",
+    "Displeasure; medium. Reprimand. Avoid congratulations."
+  ],
+  "dismayed": [
+    "Closed eyes and a deep frown.",
+    "Dismay; medium. Defeat or regret. Avoid boasting."
+  ],
+  "distressed": [
+    "Clenched mouth, taut eyes and a sweat mark.",
+    "Distress; high. Fear of consequences. Avoid quiet hospitality."
+  ],
+  "drowsy": [
+    "Heavy eyelids and slack, open mouth.",
+    "Sleepiness; medium. Groggy responses. Avoid alert scrutiny."
+  ],
+  "evil-laugh": [
+    "Inward brows and broad open grin.",
+    "Menacing amusement; high. A gloating punchline. Avoid sympathetic advice."
+  ],
+  "exasperated": [
+    "Open mouth and expression of strained, closed or upturned eyes.",
+    "Frustration or exhaustion; high. Repetition or disbelief. Avoid relaxed agreement."
+  ],
+  "excited": [
+    "Wide open mouth with a smile; some variants add accent marks.",
+    "Excitement; high. An announcement or invitation. Avoid solemn remarks."
+  ],
+  "exuberant": [
+    "Open grin and uplifted features beneath a top hat.",
+    "Showmanship; high. A pitch. Avoid private regret."
+  ],
+  "flustered": [
+    "Sweat mark, coloured cheeks and round mouth.",
+    "Embarrassment with alarm; high. Being caught out. Avoid deliberate menace."
+  ],
+  "formal": [
+    "Level mouth and squared posture.",
+    "Discipline; low. An official greeting or report. Avoid a joke carried by expression."
+  ],
+  "frown": [
+    "Downturned mouth and angled brows behind sunglasses.",
+    "Disapproval; medium. Impatience. Avoid welcome."
+  ],
+  "frowning": [
+    "Lowered brows and downturned mouth over the pillory.",
+    "Disapproval with strain; medium. Objection or indignity. Avoid delight."
+  ],
+  "happy": [
+    "Small smile or open smiling mouth, shoulders relaxed.",
+    "Pleasure; low to medium. Agreement or genial greeting. Avoid warning."
+  ],
+  "hurried": [
+    "Sweat mark and tense smile, still holding the drink.",
+    "Haste with worry; medium. Pressed service. Avoid leisurely confidence."
+  ],
+  "impressed": [
+    "Lifted brows, wide eyes and small round mouth.",
+    "Surprise or admiration; medium. An unexpected result. Avoid bored dismissal."
+  ],
+  "insulted": [
+    "Arched brows and open protest behind spectacles.",
+    "Indignation with surprise; high. A personal affront. Avoid neutral accounting."
+  ],
+  "irritated": [
+    "Lowered lids and pronounced frown.",
+    "Irritation; medium. Inconvenience. Avoid warm praise."
+  ],
+  "laugh": [
+    "Eyes squeezed into arcs and smiling mouth.",
+    "Amusement; medium. A dry laugh. Avoid threat without comic intent."
+  ],
+  "laughing": [
+    "Curved or closed eyes and wide grin.",
+    "Laughter; high. A punchline or celebration. Avoid sincere sympathy."
+  ],
+  "listening": [
+    "Two-way radio held close, mouth level.",
+    "Concentration; low. Receiving instructions. Avoid a shouted response."
+  ],
+  "microphone": [
+    "Microphone raised and wide open grin.",
+    "Performance excitement; high. Addressing the room. Avoid whispered remarks."
+  ],
+  "milk-drool": [
+    "Eyes closed, milk visibly trailing from the mouth.",
+    "Sleepy loss of composure; medium. Dormant or comic interruption. Avoid an attentive reply."
+  ],
+  "nervous": [
+    "Worried brows, tight mouth and sometimes a sweat mark.",
+    "Unease; medium. Hesitation or awkwardness. Avoid assured delivery."
+  ],
+  "notebook": [
+    "Eyes lowered towards an open book, pen and both hands visible.",
+    "Concentrated enquiry; low. Taking notes or reviewing results. Avoid a sudden outburst."
+  ],
+  "offended": [
+    "Lifted or angled brows, tight mouth; the bartender has a huff mark.",
+    "Indignation; medium. A slight or breach of etiquette. Avoid heartfelt thanks."
+  ],
+  "pleased": [
+    "Soft smile and often closed crescent eyes.",
+    "Contentment; medium. Appreciation or approval. Avoid bad news."
+  ],
+  "polite": [
+    "Slight smile and steady eyes.",
+    "Courtesy; low. Formal service. Avoid grief."
+  ],
+  "protective": [
+    "Angled brows, open mouth and fist raised.",
+    "Defensiveness with fear or anger; high. Protecting possessions. Avoid relaxation."
+  ],
+  "radio": [
+    "Radio raised and open speaking mouth.",
+    "Urgent communication; medium. Calling in a report. Avoid silent listening."
+  ],
+  "reading-figures": [
+    "Open book held in front, eyes directed down.",
+    "Calculation or concentration; low. Financial figures. Avoid a shock reaction."
+  ],
+  "relieved": [
+    "Small smile below lifted, soft brows.",
+    "Relief with residual concern; low. A reprieve. Avoid escalating danger."
+  ],
+  "reserved": [
+    "Small, closed mouth with partly lowered lids.",
+    "Reserve or mild amusement; low. Wary agreement. Avoid euphoria."
+  ],
+  "sad": [
+    "Downturned mouth and low or closed eyes.",
+    "Sadness; medium. Loss or regret. Avoid gloating."
+  ],
+  "self-assured": [
+    "Half-lidded eyes and controlled expression.",
+    "Confidence; low. A practiced explanation. Avoid panic."
+  ],
+  "self-assured-smirk": [
+    "One corner of the mouth lifts; eyes slightly narrowed.",
+    "Arrogance or dry amusement; medium. A smug correction. Avoid sincere distress."
+  ],
+  "serene": [
+    "Soft smile and relaxed shoulders beneath the skull.",
+    "Calm; low. A quiet greeting. Avoid agitation."
+  ],
+  "sheepish": [
+    "Sweat mark and crooked smile.",
+    "Embarrassment; medium. Backpedalling. Avoid unqualified authority."
+  ],
+  "shocked": [
+    "Rounded mouth, raised brows or emphatic head marks.",
+    "Surprise or alarm; high. An abrupt revelation. Avoid composed indifference."
+  ],
+  "sipping": [
+    "Glass raised to the lips and eyes closed.",
+    "Contentment; low. A drink or a pause. Avoid a long uninterrupted speech."
+  ],
+  "skeptical": [
+    "One brow set or raised, with lowered lids or a flat mouth.",
+    "Doubt or suspicion; medium. Testing a claim. Avoid unconditional approval."
+  ],
+  "smirk": [
+    "A slight sideways smile under sunglasses.",
+    "Playful confidence; low. A quip. Avoid anguish."
+  ],
+  "smug": [
+    "Unilateral smile and relaxed or partly closed lids.",
+    "Smug satisfaction; medium. A boast. Avoid a frightened confession."
+  ],
+  "speaking": [
+    "Mouth open in a small oval, shoulders squared.",
+    "Neutral assertion; low. A spoken instruction. Avoid signalling quiet assent."
+  ],
+  "stern": [
+    "Straight or downturned mouth and firm eyebrows.",
+    "Stern disapproval; medium. A boundary or demand. Avoid warmth."
+  ],
+  "stressed": [
+    "Raised inner brows and open, anxious mouth.",
+    "Anxiety; high. Exposure or an urgent request. Avoid composure."
+  ],
+  "suspicious": [
+    "Uneven brow or sidelong set of the face.",
+    "Distrust; medium. A challenge. Avoid open celebration."
+  ],
+  "thinking": [
+    "A raised brow, angled gaze, pursed mouth or hand near the face.",
+    "Reflection or uncertainty; low. A pause to consider. Avoid a determined outburst."
+  ],
+  "tousled": [
+    "Loose hair strands around the face and a half smile.",
+    "Smug relaxation; low. Post-encounter dialogue. Avoid a formal first greeting."
+  ],
+  "warning": [
+    "Open palm raised and mouth open beneath the skull.",
+    "Caution or insistence; medium. A warning. Avoid quiet assent."
+  ],
+  "weary": [
+    "Heavy brows and downturned mouth.",
+    "Fatigue with resignation; medium. Weariness. Avoid enthusiasm."
+  ],
+  "welcoming": [
+    "Open smile and service posture with a glass or tray.",
+    "Hospitality; medium. An offered drink. Avoid rebuke."
+  ],
+  "winded": [
+    "Drooping eyelids, open mouth, sweat and a drawn breath mark.",
+    "Physical fatigue; high. After exertion. Avoid cool deliberation."
+  ],
+  "wistful": [
+    "Small hesitant smile with lifted inner brows.",
+    "Nostalgia with sadness; low. A recollection. Avoid rage."
+  ],
+  "worried": [
+    "Inner brows raised and mouth open or downturned.",
+    "Concern or fear; medium. Uncertain news. Avoid a boast."
+  ],
+  "wry-smile": [
+    "Small smile tucked beneath the skull, head held steady.",
+    "Dry amusement; low. A sly observation. Avoid grief."
+  ],
+  "alarmed": [
+    "Raised inner brows and round open mouth.",
+    "Alarm; high. Shock or fear. Avoid calm reflection."
+  ],
+  "sorry": [
+    "Tilted brows and downturned mouth.",
+    "Regret; medium. Apology. Avoid celebration."
+  ],
+  "hurt": [
+    "A visible tear and downturned mouth as Lin holds the tray.",
+    "Hurt or sadness; medium. Betrayal or rejection. Avoid casual service."
+  ],
+  "assets/slots/slot-executive-portrait.webp": [
+    "Raised eyebrows, small closed smile and dark jacket.",
+    "Poised friendliness; low. An introductory greeting. Avoid a strong reprimand."
+  ],
+  "assets/slots/pokie-default.webp": [
+    "Three blank reels in a crowned red-and-gold cabinet.",
+    "Before a spin. Avoid using as a result."
+  ],
+  "assets/slots/pokie-big-win.webp": [
+    "Three matching red stars.",
+    "Large win. Avoid displaying after a loss."
+  ],
+  "assets/slots/pokie-break-even.webp": [
+    "Bottle followed by two circle symbols.",
+    "Stake returned. Avoid presenting as a profit."
+  ],
+  "assets/slots/pokie-jackpot.webp": [
+    "Three matching bottles.",
+    "Jackpot. Avoid any non-jackpot result."
+  ],
+  "assets/slots/pokie-loss.webp": [
+    "Circle, star and bottle symbols.",
+    "Loss. Avoid displaying after a payout."
+  ],
+  "assets/slots/pokie-small-win.webp": [
+    "Three matching circle symbols.",
+    "Small win. Avoid visualising a jackpot."
+  ],
+  "assets/pool/clothes.webp": [
+    "Piles of colourful clothing on the floor.",
+    "Object interaction near the pool. No facial emotion."
+  ],
+  "assets/dialogue/security-camera.webp": [
+    "Blue lens and red light on a swivelling bracket.",
+    "Surveillance beat. No facial emotion."
+  ]
+}
