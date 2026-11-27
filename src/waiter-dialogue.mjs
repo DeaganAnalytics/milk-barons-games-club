@@ -65,7 +65,6 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
   const tipped = new Set();
   const discussedBan = new Set();
   let tipBanComplete = false;
-  const spokenTo = new Set();
   const askedName = new Set();
   let linStage = 0;
 
@@ -85,9 +84,9 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
     if (reacts) {
       alternativeLinName = !askedName.has(id);
     }
-    const knowsOtherServer = ['handlebar-waiter', 'male-waiter', 'martini-waiter', 'blonde-waitress']
-      .some(server => spokenTo.has(server));
-    spokenTo.add(id);
+    const askedAboutUnusualName = ['handlebar-waiter', 'male-waiter', 'blonde-waitress']
+      .some(server => askedName.has(server));
+    const askedAboutOtherServerName = askedAboutUnusualName || askedName.has('martini-waiter');
     const pool = isLin && open.canOfferKindness() ? poolState() : {};
     const confrontClothing = pool.clothing && !clothingConfrontationSeen;
     const confrontPool = !confrontClothing && !clothingConfrontationSeen && !poolJealousySeen && pool.visited;
@@ -97,7 +96,8 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
     const greeting = greetings[index];
     const canAskName = waiterNameLines[id] && !askedName.has(id)
       && (id !== 'handlebar-waiter' || askedAboutCowGuards())
-      && (id !== 'female-waiter' || knowsOtherServer)
+      && (id !== 'martini-waiter' || askedAboutUnusualName)
+      && (id !== 'female-waiter' || askedAboutOtherServerName)
       && (!isLin || (relationship === 'normal' && !hasSeducedExecutive()) || alternativeLinName);
     const canChatWithLin = isLin && askedName.has(id) && relationship === 'normal' && !hasSeducedExecutive() && !confrontClothing && !confrontPool;
     let currentMenu;

@@ -2363,6 +2363,72 @@ test('DJ Dairy’s financial assistance and musical appreciation topics are sepa
   }
 });
 
+test('Sterling and Genevieve unlock name dialogue after completed name conversations', async () => {
+  const {createWaiterConversation} = await import('../src/waiter-dialogue.mjs');
+  const {waiterNameLines, sterlingResponses} = await import('../src/waiter-name-dialogue.mjs');
+  const bull = 'handlebar-waiter';
+  const feta = 'male-waiter';
+  const brie = 'blonde-waitress';
+  const sterling = 'martini-waiter';
+  const genevieve = 'female-waiter';
+  const lin = 'lin-waitress';
+
+  const nameReply = (menu, id) => menu.replies.find(reply => reply.label === waiterNameLines[id][0]);
+  const select = reply => typeof reply.next === 'function' ? reply.next() : reply.next;
+  function finishName(menu, id, followUp = 0) {
+    const name = nameReply(menu, id);
+    assert.ok(name, id + ' should offer the name topic');
+    let node = select(name);
+    for (let step = 0; step < 20; step++) {
+      if (node.replies.some(reply => reply.label === 'Could I have a glass of milk, please?')) return node;
+      if (node.replies.length > 1) {
+        assert.deepEqual(node.replies.map(reply => reply.label), sterlingResponses.map(lines => lines[0]));
+      }
+      node = select(node.replies.length > 1 ? node.replies[followUp] : node.replies[0]);
+    }
+    assert.fail(id + ' did not return to the regular menu');
+  }
+
+  for (const [id, complete, unlocked] of [
+    [null, false, false], [brie, false, false], [feta, false, false],
+    [bull, false, false], [sterling, false, false], [brie, true, true],
+    [feta, true, true], [bull, true, true], [lin, true, false]
+  ]) {
+    const open = createWaiterConversation(() => 100, () => true);
+    if (id) {
+      const menu = open(false, id);
+      if (complete) {
+        const firstReply = nameReply(menu, id);
+        assert.ok(firstReply, id);
+        select(firstReply);
+        assert.equal(nameReply(open(false, sterling), sterling), undefined);
+        assert.equal(nameReply(open(false, genevieve), genevieve), undefined);
+        assert.equal(nameReply(finishName(menu, id), id), undefined);
+        assert.equal(nameReply(open(false, id), id), undefined);
+      }
+    }
+    for (const server of [sterling, genevieve]) {
+      assert.equal(Boolean(nameReply(open(false, server), server)), unlocked, server + ' after ' + id);
+    }
+  }
+
+  let askedAboutCows = false;
+  const open = createWaiterConversation(() => 100, () => askedAboutCows);
+  assert.equal(nameReply(open(false, bull), bull), undefined);
+  askedAboutCows = true;
+  assert.ok(nameReply(open(false, bull), bull));
+
+  for (const followUp of [0, 1]) {
+    const visit = createWaiterConversation(() => 100);
+    finishName(visit(false, feta), feta);
+    assert.equal(nameReply(finishName(visit(false, sterling), sterling, followUp), sterling), undefined);
+    assert.equal(nameReply(visit(false, sterling), sterling), undefined);
+    assert.ok(nameReply(visit(false, genevieve), genevieve));
+    finishName(visit(false, genevieve), genevieve);
+    assert.equal(nameReply(visit(false, genevieve), genevieve), undefined);
+  }
+});
+
 test('Lin prioritises stolen clothing, preserves flirting progression, and uses pre-penalty karma', async () => {
   const {createWaiterConversation, linWaitressId} = await import('../src/waiter-dialogue.mjs');
   const choose = (node, label) => {
