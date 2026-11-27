@@ -126,6 +126,9 @@ canvas {
   }
 }
 @media (max-width: 600px) {
+  .status-panel::after {
+    display: none;
+  }
   .viewport {
     width: min(100%,calc(100svh - 280px));
     min-width: min(100%,230px);
