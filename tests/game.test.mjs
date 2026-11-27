@@ -2643,7 +2643,13 @@ test('all Elias introduction branches converge and the final questions have inde
   let section = eliasWelcome;
   for (let index = 0; index < 6; index++) {
     assert.equal(section.replies.length, 5);
-    const endings = section.replies.map(option => follow(option.next));
+    function nextSections(node) {
+      if (node.replies?.length === 5 || node.text === 'Now, Master Pip, do you have any questions?') return [node];
+      assert.ok(node.replies?.length, node.text);
+      assert.equal(node.action, undefined);
+      return node.replies.flatMap(reply => nextSections(reply.next));
+    }
+    const endings = section.replies.flatMap(option => nextSections(option.next));
     assert.ok(endings.every(node => node === endings[0]));
     section = endings[0];
   }
@@ -2662,7 +2668,7 @@ test('all Elias introduction branches converge and the final questions have inde
   }
   for (const question of questions) assert.equal(question.consumeOnSelect, true);
   assert.deepEqual(questions.map(question => countPathsToMenu(question.next)),
-    [1, 1, 1, 1, 1, 1, 1, 12, 1, 1, 6]);
+    [1, 1, 4, 1, 1, 1, 1, 12, 1, 1, 6]);
   for (const exit of exits) {
     const closing = follow(exit.next);
     assert.equal(closing.action, 'finishEliasWelcome');
@@ -2773,6 +2779,67 @@ test('Mystic money dialogue remains available after refusal and decline and reso
       assert.ok(theft.node.replies.some(reply => reply.label === askAgain));
     }
   }
+});
+
+test('Elias welcome expansions preserve the authored beats and disposition gate', async () => {
+  const {eliasWelcome, eliasPortraits} = await import('../src/elias.mjs');
+  function step(node, label, text, mood, playerMood = 'thinking') {
+    const reply = node.replies.find(option => option.label === label);
+    assert.ok(reply, label);
+    assert.equal(reply.playerMood, playerMood, label);
+    assert.equal(reply.next.text, text, label);
+    assert.equal(reply.next.mood, mood, label);
+    assert.ok(eliasPortraits.includes(mood), label);
+    return reply.next;
+  }
+  const accountant = step(eliasWelcome, 'BAH! A VAMPIRE!', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed');
+  assert.deepEqual(accountant.replies.map(option => option.label), ['Even worse!', 'Oh, phew.', 'Why do you dress like that?']);
+  const activism = eliasWelcome.replies[0].next.replies[0].next;
+  for (const [index, mood] of ['alarmed', 'happy'].entries()) {
+    const {label, next, playerMood} = accountant.replies[index];
+    assert.equal(next.speaker, 'Pip');
+    assert.equal(next.text, label);
+    assert.equal(playerMood, mood);
+    assert.equal(next.vampireStage, undefined);
+    assert.equal(next.replies[0].next, activism);
+  }
+  const dress = step(accountant, 'Why do you dress like that?',
+    'I find that a suitably ominous appearance encourages prompt repayment of outstanding debts, Master Pip.', 'self-assured-smirk');
+  assert.equal(dress.vampireStage, undefined);
+  assert.equal(dress.replies[0].next, activism);
+
+  let node = activism;
+  while (!node.replies.some(reply => reply.label === 'What happens at the dairy?')) node = node.replies[0].next;
+  const vork = step(node, 'What happens at the dairy?', 'Vork.', 'current-smile');
+  assert.deepEqual(vork.replies.map(reply => reply.label), ['What sort of work?', 'Vork?']);
+  const work = step(vork, 'What sort of work?', 'Considerable quantities of it.', 'self-assured-smirk');
+  const pronunciation = step(vork, 'Vork?', 'Yes. Vork.', 'current-smile');
+  assert.equal(pronunciation.replies.length, 1);
+  const clarification = step(pronunciation, 'You mean work?', 'Yes. Dat is what I said.', 'insulted');
+  assert.equal(clarification.replies.length, 1);
+  const doubleYou = step(clarification, 'No, you said vork. With a V.', 'Yes. Vork. With a double-you.', 'insulted', 'exasperated');
+  const professionalDevelopment = work.replies[0].next;
+  assert.equal(doubleYou.replies[0].next, professionalDevelopment);
+  assert.equal(professionalDevelopment.text, 'Consider it a most generous opportunity for professional development, Master Pip.');
+
+  const menu = professionalDevelopment.replies[0].next;
+  const place = step(menu, 'What is this place?', 'Ah! I am delighted you asked.', 'laugh');
+  const profitability = place.replies[0].next.replies[0].next;
+  assert.deepEqual(profitability.replies.map(reply => reply.requiresDisposition), [undefined, undefined, undefined, 'communist']);
+  for (const [label, response, mood, playerMood] of [
+    ['I thought the Milk Baron made his money from milk?', 'Da! But he keeps his fortune by selling pleasure and amusement!', 'laugh', 'thinking'],
+    ['Pleasure, amusement and an abundance of milk? I like the sound of this place.',
+      'Excellent! Ze Baron takes great pride in separating his guests from their financial burdens.', 'devious', 'happy'],
+    ['All this extravagance while millions are left with empty milk bottles?',
+      'Da! An unfortunate consequence of insufficient purchasing power.', 'current-smile', 'worried']
+  ]) {
+    assert.equal(step(profitability, label, response, mood, playerMood).replies[0].next, menu);
+  }
+  assert.ok(profitability.replies.every(reply => !reply.expressesDisposition));
+  const communist = step(profitability, 'Pleasure for the bourgeoisie, misery for the working cow!',
+    'Ah, a communist! How delightful.', 'laugh', 'exasperated');
+  assert.equal(step(communist, 'Continue', 'Ze Baron is always happy to redistribute your wealth into his own pockets.', 'devious')
+    .replies[0].next, menu);
 });
 
 test('either early Elias answer unlocks the later communist options for the rest of the introduction', async () => {
