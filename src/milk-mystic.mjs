@@ -1,42 +1,50 @@
 import {createMysticMoneyTopic} from './mystic-money-dialogue.mjs';
 import {TURN} from './directions.mjs';
-import {HALL_CENTER, isNpcBlocked, shouldPauseNpc } from './room.mjs';
+import {EAST_EDGE, HALL_CENTER, isNpcBlocked, NORTH_EDGE, routeAroundBaron, shouldPauseNpc, SOUTH_TRIM_Y, WEST_EDGE } from './room.mjs';
 
 export const milkMysticId = 'milk-mystic';
 export const milkMysticMoods = ['serene', 'skeptical', 'contemplative', 'warning', 'wry-smile'];
 
-const patrolWidth = 125;
-const patrolHeight = 155;
 const patrolSpeed = 54;
 
-function patrolPosition(angle) {
+export function createMilkMystic(baron = HALL_CENTER) {
   return {
-    x: HALL_CENTER.x + patrolWidth * Math.cos(angle),
-    y: HALL_CENTER.y + patrolHeight * Math.sin(angle)
+    x: baron.x, y: baron.y + 155, id: milkMysticId, title: 'The Milk Mystic',
+    route: [], radius: 12, walking: false, facingRight: false, stride: 0
   };
 }
 
-export function createMilkMystic() {
-  const angle = Math.PI / 2;
-  return {
-    ...patrolPosition(angle), id: milkMysticId, title: 'The Milk Mystic',
-    angle, radius: 12, walking: false, facingRight: false, stride: 0
-  };
-}
+export function updateMilkMystic(mystic, baron, dt, player, random = Math.random) {
+  mystic.walking = false;
+  if (dt <= 0 || (player && shouldPauseNpc(mystic, player))) return;
 
-export function updateMilkMystic(mystic, baron, dt, player) {
-  if (player && shouldPauseNpc(mystic, player)) {
-    mystic.walking = false;
+  if (!mystic.route.length) {
+    const target = {
+      x: WEST_EDGE + 70 + random() * (EAST_EDGE - WEST_EDGE - 140),
+      y: NORTH_EDGE + 215 + random() * (SOUTH_TRIM_Y - NORTH_EDGE - 257)
+    };
+    if (Math.hypot(target.x - mystic.x, target.y - mystic.y) < 110
+        || isNpcBlocked(target.x, target.y, mystic.radius, baron)) return;
+    mystic.route = routeAroundBaron(mystic, target, baron);
+  }
+
+  const target = mystic.route[0];
+  const dx = target.x - mystic.x;
+  const dy = target.y - mystic.y;
+  const distance = Math.hypot(dx, dy);
+  const step = Math.min(distance, patrolSpeed * dt);
+  const arrived = step === distance;
+  const x = arrived ? target.x : mystic.x + dx * step / distance;
+  const y = arrived ? target.y : mystic.y + dy * step / distance;
+  if (isNpcBlocked(x, y, mystic.radius, baron, mystic)) {
+    mystic.route = [];
     return;
   }
-  const tangent = Math.hypot(patrolWidth * Math.sin(mystic.angle), patrolHeight * Math.cos(mystic.angle));
-  const angle = (mystic.angle + patrolSpeed * dt / tangent) % TURN;
-  const {x, y} = patrolPosition(angle);
-  mystic.walking = dt > 0 && !isNpcBlocked(x, y, mystic.radius, baron, mystic);
-  if (!mystic.walking) return;
-  if (Math.abs(x - mystic.x) > 0.01) mystic.facingRight = x > mystic.x;
-  mystic.stride = (mystic.stride + Math.hypot(x - mystic.x, y - mystic.y) * 0.33) % TURN;
-  Object.assign(mystic, {x, y, angle});
+
+  if (Math.abs(dx) > 0.01) mystic.facingRight = dx > 0;
+  mystic.stride = (mystic.stride + step * 0.33) % TURN;
+  Object.assign(mystic, {x, y, walking: step > 0});
+  if (arrived) mystic.route.shift();
 }
 
 const oracleHints = [

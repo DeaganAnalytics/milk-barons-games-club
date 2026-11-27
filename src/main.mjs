@@ -41,7 +41,7 @@ import {createStaff, updateStaff} from './staff.mjs';
 const player = createPlayer();
 const baron = createBaron();
 const milo = createMilo();
-const mystic = createMilkMystic();
+const mystic = createMilkMystic(baron);
 const guards = createGuards(player, baron, milo);
 const creameryGuard = createCreameryGuard();
 guards.push(creameryGuard);

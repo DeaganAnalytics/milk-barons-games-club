@@ -3106,18 +3106,30 @@ test('future NPCs pause near Pip and block passage, with separate Baron and Elia
   assert.equal(player.x, 540, 'Pip can walk through Elias');
 });
 
-test('Milk Mystic pauses on approach and resumes along the same patrol', async () => {
+test('Milk Mystic spawns near the Baron, pauses near Pip and roams through clear space', async () => {
   const {createMilkMystic, updateMilkMystic} = await import('../src/milk-mystic.mjs');
-  const mystic = createMilkMystic();
-  const baron = {x: 0, y: 0};
+  const {isNpcBlocked} = await import('../src/room.mjs');
+  const baron = createBaron();
+  const mystic = createMilkMystic(baron);
+  const spawn = {x: mystic.x, y: mystic.y};
+  assert.ok(Math.hypot(spawn.x - baron.x, spawn.y - baron.y) < 200);
   const near = {x: mystic.x, y: mystic.y + 30};
-  const position = {x: mystic.x, y: mystic.y, angle: mystic.angle};
-  updateMilkMystic(mystic, baron, 0.1, near);
-  assert.deepEqual({x: mystic.x, y: mystic.y, angle: mystic.angle}, position);
+  updateMilkMystic(mystic, baron, 0.05, near, () => assert.fail('Paused Mystic chose a route'));
+  assert.deepEqual({x: mystic.x, y: mystic.y}, spawn);
   assert.equal(mystic.walking, false);
-  updateMilkMystic(mystic, baron, 0.1, {...near, y: near.y + 100});
-  assert.notEqual(mystic.angle, position.angle);
-  assert.equal(mystic.walking, true);
+
+  let seed = 17;
+  const random = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 2 ** 32;
+  };
+  let furthest = 0;
+  for (let frame = 0; frame < 2400; frame++) {
+    updateMilkMystic(mystic, baron, 0.05, undefined, random);
+    assert.equal(isNpcBlocked(mystic.x, mystic.y, mystic.radius, baron), false);
+    furthest = Math.max(furthest, Math.hypot(mystic.x - spawn.x, mystic.y - spawn.y));
+  }
+  assert.ok(furthest > ROOM_WIDTH, 'Mystic should roam beyond the spawn square');
 });
 
 test('walking through Elias starts the encounter once, while approaching him does not', async () => {
