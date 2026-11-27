@@ -126,7 +126,7 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
       exchange([
         ['So your job is to clean up after the Baron?', 'Correct.'],
         ['That must be humiliating.', 'Not at all! It is an extraordinary privilege to serve such a magnificent individual.'],
-        ['Really?', 'The fat bastard spills more milk than my entire electorate used to receive.', {...lookingAround, direction: 'Skim looks around and whispers.'}],
+        ['Really?', 'The fat swine spills more milk than my entire electorate used to receive.', {...lookingAround, direction: 'Skim looks around and whispers.'}],
         ['What?!', "I SAID HE'S A MAGNIFICENT INDIVIDUAL!", {mood: 'exasperated'}]
       ], back),
       exchange([

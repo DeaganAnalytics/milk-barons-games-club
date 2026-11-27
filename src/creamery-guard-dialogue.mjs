@@ -23,7 +23,7 @@ const drinks = say("What'll it be, sir?", 'polite', [
 
 const offerDrink = reply('You look parched. Can I buy you a drink?', say('Oi! Wait, for real?', 'suspicious', [
   reply('Yes, you look like you could use one.', say('Thanks, appreciate it. Not bad for a peasant.', 'speaking', more(drinks))),
-  reply('Psych! Just kidding!', say('Piss off.', 'angry', [], {
+  reply('Psych! Just kidding!', say('Plough off.', 'angry', [], {
     enterAction: 'guardRifleStrike', playerMood: 'alarmed', direction: 'The guard strikes Pip with the butt of his rifle.'
   }))
 ]));

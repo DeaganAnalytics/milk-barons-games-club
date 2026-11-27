@@ -180,8 +180,8 @@ const welcomeSections = [
       [['Where am I?', "Ze Milk Baron's Games Club. I believe I just established zis.", 'self-assured-smirk']],
       [['How do you know my name?', 'Ve make it our business to know such things.', 'devious', 'worried']],
       [['BAH! A VAMPIRE!', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed', menu => ({replies: [
-        pipResponse('Even worse!', 'alarmed', menu),
-        pipResponse('Oh, phew.', 'happy', menu),
+        exchange([['Even worse!', 'Only to those in debt, Master Pip.', 'self-assured-smirk', 'alarmed']], menu),
+        exchange([['Oh, phew.', 'Your relief may be premature.', 'devious', 'happy']], menu),
         exchange([['Why do you dress like that?',
           'I find that a suitably ominous appearance encourages prompt repayment of outstanding debts, Master Pip.',
           'self-assured-smirk']], menu)
@@ -267,10 +267,6 @@ export const eliasWelcome = welcomeSections.reduceRight((next, {choices, ...line
       : {...option, requiresDisposition: 'communist'};
   }) : [continueTo(next)]
 }), questions);
-
-function pipResponse(label, playerMood, menu) {
-  return {label, playerMood, next: {text: label, speaker: 'Pip', playerMood, replies: [continueTo(menu)]}};
-}
 
 function exchange(lines, menu) {
   let replies = [continueTo(menu)];
@@ -359,17 +355,45 @@ function milkTokenExchange(menu) {
   ];
 }
 
-function buildConversation(exchanges) {
+function buildConversation(exchanges, curdistEncounters = false) {
   const menu = {text: elias.message, mood: 'current-smile', replies: []};
-  menu.replies = [...exchanges, milkTokenExchange(menu)].map(lines => {
-    const option = exchange(lines, menu);
-    return {...option, once: 'Elias: ' + option.label, consumeOnSelect: true, requiresKarmaChange: lines === karmaExchange};
-  });
+  const encounterReplies = curdistEncounters ? [
+    {
+      label: 'What do you think of Karl Curd?', playerMood: 'thinking',
+      requiresDisposition: 'communist', once: 'eliasKarlCurd',
+      next: {text: "I don't.", mood: 'reading-figures', mustContinue: true, replies: [{label: 'Continue', next: {exitAction: 'finishEliasKarlCurd'}}]}
+    },
+    {
+      label: 'Hey! I was talking to you, you bloodsucking leech!', playerMood: 'exasperated',
+      requiresDisposition: 'communist', requiresUsedReplies: ['eliasKarlCurd'],
+      once: 'eliasBloodsuckingLeech',
+      next: {text: 'Leech?', mood: 'insulted', mustContinue: true, replies: [{
+        label: 'Continue', playerMood: 'attentive', next: {
+          text: 'LEECH?!', mood: 'demonic-angry', mustContinue: true, replies: [{
+            label: 'Continue', playerMood: 'attentive', next: {
+              text: "You'll regret ze day you vere born!", mood: 'evil-laugh',
+              mustContinue: true, replies: [{label: 'Continue', next: {exitAction: 'finishEliasBloodsuckingLeech'}}]
+            }
+          }]
+        }
+      }]}
+    }
+  ] : [];
+  menu.replies = [
+    ...exchanges.map(lines => {
+      const option = exchange(lines, menu);
+      return {...option, once: 'Elias: ' + option.label, consumeOnSelect: true, requiresKarmaChange: lines === karmaExchange};
+    }),
+    ...encounterReplies,
+    ...[exchange(milkTokenExchange(menu), menu)].map(option => ({
+      ...option, once: 'Elias: ' + option.label, consumeOnSelect: true
+    }))
+  ];
   return menu;
 }
 
-export const eliasConversation = buildConversation([...regularExchanges, healthExchange, karmaExchange]);
-export const eliasFollowingConversation = buildConversation([...regularExchanges, followingExchange, healthExchange, karmaExchange]);
+export const eliasConversation = buildConversation([...regularExchanges, healthExchange, karmaExchange], true);
+export const eliasFollowingConversation = buildConversation([...regularExchanges, followingExchange, healthExchange, karmaExchange], true);
 
 export function vampireFollowup(menu, stage) {
   if (stage === 1) return {

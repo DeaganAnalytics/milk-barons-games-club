@@ -474,7 +474,7 @@ try {
   await closeConversation();
   await activate('Bull Guard');
   await reply('You look parched. Can I buy you a drink?', 'Oi! Wait, for real?');
-  await reply('Psych! Just kidding!', '(The guard strikes Pip with the butt of his rifle.) Piss off.');
+  await reply('Psych! Just kidding!', '(The guard strikes Pip with the butt of his rifle.) Plough off.');
   await closeConversation();
   await activate('Bull Guard');
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Come to apologise?');

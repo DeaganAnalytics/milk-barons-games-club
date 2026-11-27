@@ -446,6 +446,15 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     if (finishedAction === 'completeCurdistInterview') professorInterview.complete();
     if (['curdistCompensation', 'curdistCoercedCompensation', 'curdistWorkerReward', 'curdistMilk'].includes(finishedAction)
         && !professorInterview.applyEffect(finishedAction)) return;
+    if (finishedAction === 'finishEliasKarlCurd') {
+      usedReplies.add('eliasKarlCurd');
+      return;
+    }
+    if (finishedAction === 'finishEliasBloodsuckingLeech') {
+      usedReplies.add('eliasBloodsuckingLeech');
+      onAction?.('eliasBloodsuckingLeech', target);
+      return;
+    }
     if (finishedAction === 'finishBaronKarlCurd') {
       usedReplies.add('baronKarlCurd');
       return;
@@ -591,6 +600,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     const insertAt = exitIndex < 0 ? replies.length : exitIndex;
     const availableReplies = [...replies.slice(0, insertAt), ...extraReplies, ...replies.slice(insertAt)].filter(reply => !usedReplies.has(reply.once)
       && (!reply.requiresDisposition || politicalDispositions[reply.requiresDisposition])
+      && (!reply.requiresUsedReplies || reply.requiresUsedReplies.every(key => usedReplies.has(key)))
       && (!reply.requiresUnusedReplies || reply.requiresUnusedReplies.some(key => !usedReplies.has(key)))
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())

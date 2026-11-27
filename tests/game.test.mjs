@@ -1427,6 +1427,45 @@ test('Elias’s regular dialogue pairs the cow and garlic reactions with the int
   assert.deepEqual([garlic[2].text, garlic[2].mood], ['VHO HAS GARLIC?!', 'worried']);
 });
 
+test('Elias Curdist exchanges finish through their dedicated actions', async () => {
+  const {eliasConversation, eliasFollowingConversation, eliasPortraits} = await import('../src/elias.mjs');
+  for (const menu of [eliasConversation, eliasFollowingConversation]) {
+    const karl = menu.replies.find(reply => reply.once === 'eliasKarlCurd');
+    const leech = menu.replies.find(reply => reply.once === 'eliasBloodsuckingLeech');
+    assert.equal(karl.requiresDisposition, 'communist');
+    assert.equal(leech.requiresDisposition, 'communist');
+    assert.deepEqual(leech.requiresUsedReplies, ['eliasKarlCurd']);
+    assert.equal(karl.next.text, "I don't.");
+    assert.equal(karl.next.replies[0].next.exitAction, 'finishEliasKarlCurd');
+    let node = leech.next;
+    for (const [line, mood] of [['Leech?', 'insulted'], ['LEECH?!', 'demonic-angry'],
+      ["You'll regret ze day you vere born!", 'evil-laugh']]) {
+      assert.equal(node.text, line);
+      assert.equal(node.mood, mood);
+      assert.ok(eliasPortraits.includes(mood));
+      assert.equal(node.mustContinue, true);
+      node = node.replies[0].next;
+    }
+    assert.equal(node.exitAction, 'finishEliasBloodsuckingLeech');
+  }
+});
+
+test('Elias damage follows current health and triggers the existing death callback', async () => {
+  const {createHealth, MAX_HEARTS} = await import('../src/health.mjs');
+  for (const [before, after] of [[5, 2.5], [4.5, 2], [4, 2], [3.5, 1.5], [3, 1.5],
+    [2.5, 1], [2, 1], [1.5, 0.5], [1, 0.5], [0.5, 0]]) {
+    assert.equal(Math.floor(before) / 2, after);
+    if (before > MAX_HEARTS) continue;
+    let death;
+    const health = createHealth((value, message) => { if (value === 0) death = message; });
+    health.set(before);
+    health.change(Math.floor(health.hearts) / 2 - health.hearts,
+      'You discovered that Elias takes certain accusations rather personally.');
+    assert.equal(health.hearts, after);
+    assert.equal(death, after === 0 ? 'You discovered that Elias takes certain accusations rather personally.' : undefined);
+  }
+});
+
 test('Elias trails the camera edge and stays put while Pip approaches', async () => {
   const {eliasConversation, eliasFollowingConversation, updateEliasFollow} = await import('../src/elias.mjs');
   const actor = {x: 666, y: 500, stride: 0};
@@ -1745,7 +1784,7 @@ test('Elias’s vampire topic progresses from its original exchange to a repeata
   const repeat = vampireFollowup(eliasConversation, second.next.vampireStage);
   assert.equal(repeat.next.enterAction, 'eliasVampireFine');
   assert.equal(repeat.next.replies, undefined);
-  assert.ok(eliasFollowingConversation.replies.every(reply => reply.consumeOnSelect));
+  assert.ok(eliasFollowingConversation.replies.filter(reply => !['eliasKarlCurd', 'eliasBloodsuckingLeech'].includes(reply.once)).every(reply => reply.consumeOnSelect));
 });
 
 test('Milo skips the southwest corner and reroutes if the ropes go up mid-walk', () => {
@@ -2861,13 +2900,13 @@ test('Elias welcome expansions preserve the authored beats and disposition gate'
   const accountant = step(eliasWelcome, 'BAH! A VAMPIRE!', 'Accountant, Master Pip. Accountant.', 'insulted', 'alarmed');
   assert.deepEqual(accountant.replies.map(option => option.label), ['Even worse!', 'Oh, phew.', 'Why do you dress like that?']);
   const activism = eliasWelcome.replies[0].next.replies[0].next;
-  for (const [index, mood] of ['alarmed', 'happy'].entries()) {
-    const {label, next, playerMood} = accountant.replies[index];
-    assert.equal(next.speaker, 'Pip');
-    assert.equal(next.text, label);
-    assert.equal(playerMood, mood);
-    assert.equal(next.vampireStage, undefined);
-    assert.equal(next.replies[0].next, activism);
+  for (const [label, line, mood, playerMood] of [
+    ['Even worse!', 'Only to those in debt, Master Pip.', 'self-assured-smirk', 'alarmed'],
+    ['Oh, phew.', 'Your relief may be premature.', 'devious', 'happy']
+  ]) {
+    const response = step(accountant, label, line, mood, playerMood);
+    assert.equal(response.vampireStage, undefined);
+    assert.equal(response.replies[0].next, activism);
   }
   const dress = step(accountant, 'Why do you dress like that?',
     'I find that a suitably ominous appearance encourages prompt repayment of outstanding debts, Master Pip.', 'self-assured-smirk');

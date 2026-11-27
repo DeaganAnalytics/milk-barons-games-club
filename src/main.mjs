@@ -530,6 +530,11 @@ const dialogue = createDialogue(baron, {
       clubEvent('The Baron charges a behavioural compliance levy.', () => coinBalance.change(-15));
       compassionFineCollected = before - coinBalance.count;
     }
+    if (action === 'eliasBloodsuckingLeech') {
+      const remainingHealth = Math.floor(health.hearts) / 2;
+      health.change(remainingHealth - health.hearts,
+        'You discovered that Elias takes certain accusations rather personally.');
+    }
     if (action === 'eliasVampireFine') clubEvent('Elias charges you for bringing up vampires again.', () => coinBalance.change(-1));
     if (action === 'collectTax') clubEvent('Elias takes the Baron’s cut.', () => coinBalance.collectTax());
     if (action === 'finishEliasWelcome') {

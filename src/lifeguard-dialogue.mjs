@@ -40,7 +40,7 @@ const clothesTheft = reply('What if someone steals their clothes?', 'thinking', 
 
 function moneyOutcome(roll = Math.random()) {
   if (roll < 0.5) return {
-    ...say("Heh, I'm enjoying the view today. Here, have ₥3. Now MOOOVE your scrawny arse out of the way!", grin),
+    ...say("Heh, I'm enjoying the view today. Here, have ₥3. Now MOOOVE your scrawny rump out of the way!", grin),
     action: 'lifeguardMoneyGift'
   };
   if (roll < 0.75) return say("Do I look like a charity? I don't care! Now MOOOVE IT!", frown);
@@ -153,9 +153,9 @@ const reportMissingDresses = reply("Hey, the women's clothing is gone.", 'attent
 const reportMissingSuit = reply("Hey, the man's clothing is gone.", 'attentive', {
   enterAction: 'tellLifeguardAboutClothing',
   ...say(
-    "Oh, shit. What the fuck?! I don't wanna see him getting out of that pool! Did you take it?", frown, [
+    "Oh, curds. What the plough?! I don't wanna see him getting out of that pool! Did you take it?", frown, [
       reply('Yes.', 'sorry', {
-        ...say("Give it here! And I'm fining you ₥10 for pissing me off.", frown), action: 'fineMissingSuit', admitsClothingTheft: true
+        ...say("Give it here! And I'm fining you ₥10 for churning me up.", frown), action: 'fineMissingSuit', admitsClothingTheft: true
       }),
       reply('No.', 'worried', {
         ...say("God damn it. Now I've gotta deal with this. MOOOVE IT!", frown), action: 'dismissMissingSuit'
