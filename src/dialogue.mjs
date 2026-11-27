@@ -2,7 +2,7 @@ import {createProfessorInterview} from './professor-interview.mjs';
 import {baronCurdReply} from './baron-curd-dialogue.mjs';
 import {createMysticVisibilityDialogue} from './mystic-visibility-dialogue.mjs';
 import {createLinDepartureReactions} from './lin-departure-dialogue.mjs';
-import {createMilkMysticConversation, milkMysticId, milkMysticMoods} from './milk-mystic.mjs';
+import {createMilkMysticConversation, createMysticEliasFollowup, milkMysticId, milkMysticMoods} from './milk-mystic.mjs';
 import {createDjConversation, djMoods, djTarget} from './dj-dialogue.mjs';
 import {miloIntroduction, miloMenu} from './milo-dialogue.mjs';
 import {createMiloGreeting} from './milo.mjs';
@@ -356,6 +356,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   let skimSpillFollowupPending = false;
   const skimOpening = createSkimConversation(() => metMilo, () => baronStanding?.() ?? {});
   const askedAboutCowGuards = new Set();
+  const mysticEliasFollowup = createMysticEliasFollowup();
   const mysticOpening = createMilkMysticConversation(() => ({
     lin: {
       relationship: waiterOpening.relationship(),
@@ -443,6 +444,14 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function finishAction(finishedAction, target) {
+    if (finishedAction === 'queueMysticEliasFollowup') {
+      mysticEliasFollowup.queue();
+      return;
+    }
+    if (finishedAction === 'finishMysticEliasFollowup') {
+      mysticEliasFollowup.complete();
+      return;
+    }
     if (finishedAction === 'completeCurdistInterview') professorInterview.complete();
     if (['curdistCompensation', 'curdistCoercedCompensation', 'curdistWorkerReward', 'curdistMilk'].includes(finishedAction)
         && !professorInterview.applyEffect(finishedAction)) return;
@@ -788,7 +797,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
           mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
         }
       : target.id === skimId ? skimOpening(skimSpillFollowupPending)
-      : target.id === milkMysticId ? mysticOpening()
+      : target.id === milkMysticId ? (mysticEliasFollowup.open() ?? mysticOpening())
       : target.id === djTarget.id ? djOpening()
       : target.id.startsWith('dancer-') ? dancerOpening(target.id)
       : staffIds.includes(target.id) ? waiterOpening(target.withoutMilk, target.id, target.linConfrontation)

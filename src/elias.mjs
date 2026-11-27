@@ -327,7 +327,7 @@ export function eliasPassThroughDialogue(metMystic, random = Math.random) {
     })
   }];
   if (metMystic) replies.push(exchange([
-    ["I'm going to ask the Milk Mystic about this!", 'Ah, yes. An excellent source of thoroughly unsubstantiated information.', 'laugh', 'exasperated', {mustContinue: true}],
+    ["I'm going to ask the Milk Mystic about this!", 'Ah, yes. An excellent source of thoroughly unsubstantiated information.', 'laugh', 'exasperated', {mustContinue: true, enterAction: 'queueMysticEliasFollowup'}],
     ['She might know what you are!', 'I can save you ze journey. I am an accountant.', 'self-assured-smirk', 'worried', complete]
   ]));
   return {

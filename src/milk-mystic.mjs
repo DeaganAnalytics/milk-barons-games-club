@@ -101,6 +101,42 @@ const linAdvice = [
     ({receivedGift}) => receivedGift]
 ];
 
+export function createMysticEliasFollowup() {
+  let state = 'locked';
+  const say = (text, mood, replies) => ({text, mood, replies, mustContinue: true});
+  const reply = (label, playerMood, next) => ({label, playerMood, next});
+  const conclusion = reply('Can you explain to me what happened?', 'worried',
+    say('Only when the milk understands the cow shall the cow understand the milk.', 'contemplative', [
+      reply('What does that mean?', 'thinking', say('Meditate upon it, child.', 'serene', [
+        {label: 'Continue', next: {exitAction: 'finishMysticEliasFollowup'}}
+      ]))
+    ]));
+  const opening = say("I've been expecting you, child.", 'serene', [
+    reply('My God, maybe she can read the future.', 'thinking', say('I can hear you, child.', 'skeptical', [
+      {label: 'Continue', next: {
+        ...say('Oh. Sorry.', 'skeptical', [conclusion]), speaker: 'Pip', playerMood: 'sorry'
+      }}
+    ])),
+    reply('I need to know how!', 'alarmed', say('How what?', 'skeptical', [
+      reply('How you knew I was coming.', 'thinking',
+        say('Simple, child. I saw you walking towards me.', 'wry-smile', [conclusion])),
+      reply('How you knew I walked through Elias.', 'worried', say('I saw it with my own eyes.', 'serene', [
+        reply('The eyes of the sacred beast?', 'thinking',
+          say('No, child. Just my normal eyes.', 'skeptical', [conclusion]))
+      ]))
+    ]))
+  ]);
+  return {
+    queue() { if (state === 'locked') state = 'pending'; },
+    open() {
+      if (state !== 'pending') return null;
+      state = 'active';
+      return opening;
+    },
+    complete() { if (state === 'active') state = 'completed'; }
+  };
+}
+
 export function createMilkMysticConversation(getDiscoveries = () => ({}), hints = oracleHints, transact) {
   const say = (text, mood, replies, speaker = 'Milk Mystic', character) =>
     ({text, mood, speaker, character, replies, mustContinue: Boolean(replies)});

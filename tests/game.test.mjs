@@ -3200,3 +3200,35 @@ test('Elias pass-through damage deducts two hearts and reports either survival o
     assert.equal(actor.passThroughCompleted, true);
   }
 });
+
+test('only the Elias consultation queues the one-time Mystic scene and all paths close it', async () => {
+  const {eliasPassThroughDialogue} = await import('../src/elias.mjs');
+  const {createMysticEliasFollowup, milkMysticMoods} = await import('../src/milk-mystic.mjs');
+  const replies = eliasPassThroughDialogue(true).replies[0].next.replies;
+  assert.equal(replies[0].next.enterAction, undefined);
+  assert.equal(replies[1].next().enterAction, undefined);
+  assert.equal(replies[2].next.enterAction, 'queueMysticEliasFollowup');
+  const paths = [[0, 0], [1, 0], [1, 1, 0]];
+  for (const path of paths) {
+    const followup = createMysticEliasFollowup();
+    assert.equal(followup.open(), null);
+    followup.queue();
+    const opening = followup.open();
+    assert.equal(opening.text, "I've been expecting you, child.");
+    assert.equal(followup.open(), null, 'opening consumes the pending interaction');
+    let node = opening;
+    for (const index of path) {
+      assert.equal(node.mustContinue, true);
+      assert.ok(milkMysticMoods.includes(node.mood));
+      node = node.replies[index].next;
+    }
+    const conclusion = opening.replies[0].next.replies[0].next.replies[0];
+    assert.equal(node.replies[0], conclusion);
+    assert.equal(conclusion.label, 'Can you explain to me what happened?');
+    assert.equal(conclusion.next.replies[0].next.text, 'Meditate upon it, child.');
+    assert.deepEqual(conclusion.next.replies[0].next.replies[0].next, {exitAction: 'finishMysticEliasFollowup'});
+    followup.complete();
+    followup.queue();
+    assert.equal(followup.open(), null);
+  }
+});
