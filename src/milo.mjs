@@ -1,4 +1,4 @@
-import {crossesScenery, guestEnclosure, HALL_CENTER, onDanceFloor, routeAroundBaron, EAST_EDGE, NORTH_EDGE, isNpcBlocked, sameSquare, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {crossesScenery, guestEnclosure, HALL_CENTER, onDanceFloor, routeAroundBaron, EAST_EDGE, NORTH_EDGE, isNpcBlocked, sameSquare, SOUTH_TRIM_Y, WEST_EDGE, shouldPauseNpc } from './room.mjs';
 import {guardBlocks} from './guards.mjs';
 import {TURN} from './directions.mjs';
 
@@ -75,7 +75,11 @@ function startEscape(milo, baron, guards, elapsed) {
   return spottedByBaron;
 }
 
-export function updateMilo(milo, baron, elapsed, dt, guards = []) {
+export function updateMilo(milo, baron, elapsed, dt, guards = [], player) {
+  if (player && !milo.fleeing && shouldPauseNpc(milo, player)) {
+    milo.stride = 0;
+    return false;
+  }
   const spotted = startEscape(milo, baron, guards, elapsed);
   const distance = Math.hypot(milo.x - baron.x, milo.y - baron.y);
   if (!canUseCorner(milo.corner) || (!milo.route.length && (elapsed >= milo.nextMove || distance < THREAT_DISTANCE))) {

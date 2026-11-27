@@ -1479,14 +1479,108 @@ test('Elias trails the camera edge and stays put while Pip approaches', async ()
   updateEliasFollow(actor, {x: 300, y: 500}, baron, -45, 200, 0.1);
   assert.ok(actor.x < 666);
   assert.equal(actor.running, true);
+  assert.equal(actor.hasFollowedPip, undefined);
+  assert.equal(actor.followDistance, 666 - actor.x);
+  const distanceBeforePause = actor.followDistance;
+  updateEliasFollow(actor, {x: 300, y: 500}, baron, 0, 200, 0.1);
+  assert.equal(actor.followDistance, distanceBeforePause);
+  actor.followDistance = 2 * ROOM_WIDTH - 2;
+  updateEliasFollow(actor, {x: 300, y: 500}, baron, -45, 200, 1 / 144);
+  assert.equal(actor.hasFollowedPip, undefined);
+  updateEliasFollow(actor, {x: 300, y: 500}, baron, -45, 200, 1 / 144);
+  assert.equal(actor.followDistance, 2 * ROOM_WIDTH);
   assert.equal(actor.hasFollowedPip, true);
   assert.ok(!eliasConversation.replies.some(reply => reply.label === 'Are you following me?'));
   const reply = eliasFollowingConversation.replies.find(reply => reply.label === 'Are you following me?');
-  assert.equal(reply.next.text, 'Da.');
-  assert.equal(reply.next.replies[0].label, 'Wait, what?!');
-  const explanation = reply.next.replies[0].next;
+  const opening = reply.next(0);
+  assert.equal(opening.text, 'Da.');
+  assert.equal(opening.replies[0].label, 'Wait, what?!');
+  const explanation = opening.replies[0].next;
   assert.match(explanation.text, /every single coin you earn or lose/);
   assert.equal(explanation.replies[0].next, eliasFollowingConversation);
+});
+
+test('Elias follows the exact weighted boundaries and each selected branch has a stable ending', async () => {
+  const {eliasFollowingConversation, eliasFollowingTransactions} = await import('../src/elias.mjs');
+  const topic = eliasFollowingConversation.replies.find(reply => reply.label === 'Are you following me?');
+  assert.equal(topic.consumeOnSelect, true);
+  assert.ok(topic.once);
+  assert.equal(topic.playerMood, 'thinking');
+  const cases = [
+    [2075, 'Da.', 'current-smile'], [2075, 'Da!', 'laugh'],
+    [2075, 'Yes!', 'evil-laugh'], [2075, 'Of course, Master Pip!', 'self-assured-smirk'],
+    [100, 'Very astute. Have ten coins.', 'self-assured-smirk'],
+    [500, 'Very astute. Have a coin.', 'current-smile'],
+    [500, 'No.', 'current-smile'],
+    [500, 'No silly questions! A one-coin fine!', 'insulted'],
+    [100, 'Silly question tax. Ten coins!', 'devious']
+  ];
+  let lower = 0;
+  const nodes = cases.map(([weight, text, mood]) => {
+    const upper = lower + weight;
+    for (const roll of [lower / 10000, (upper - 0.001) / 10000]) {
+      const node = topic.next(roll);
+      assert.deepEqual([node.text, node.mood], [text, mood]);
+    }
+    const node = topic.next(lower / 10000);
+    lower = upper;
+    return node;
+  });
+  assert.equal(lower, 10000);
+  for (const node of nodes.slice(0, 4)) {
+    assert.equal(node.replies[0].label, 'Wait, what?!');
+    assert.equal(node.replies[0].next.replies[0].next, eliasFollowingConversation);
+  }
+  for (const [node, amount] of [[nodes[4].replies[0].next, 10], [nodes[5].replies[0].next, 1],
+    [nodes[7], -1], [nodes[8], -10]]) {
+    assert.equal(eliasFollowingTransactions[node.action][0], amount);
+    assert.equal(node.replies, undefined);
+  }
+  const denial = nodes[6].replies;
+  assert.deepEqual(denial.map(reply => reply.label), ['No?', 'Yes you are!']);
+  assert.equal(denial[0].next.enterAction, undefined);
+  assert.equal(denial[0].next.text, 'No!');
+  assert.equal(denial[1].next.enterAction, 'eliasFollowingHypnosis');
+  assert.equal(denial[1].next.replies[0].next.action, 'eliasFollowingGarlic');
+});
+
+test('Elias following actions use actual coin changes and suppress garlic on death', async () => {
+  const {resolveEliasFollowingAction} = await import('../src/elias.mjs');
+  const {createHealth} = await import('../src/health.mjs');
+  for (const [action, start, expected, message] of [
+    ['eliasFollowingTenReward', 100, 110, 'A rare accounting error in your favour. (+₥10)'],
+    ['eliasFollowingOneReward', 100, 101, 'Elias has deemed your observation worth precisely one coin. (+₥1)'],
+    ['eliasFollowingFine', 100, 99, 'Curiosity comes at a price. (−₥1)'],
+    ['eliasFollowingTax', 100, 90, 'Ignorance would have been considerably cheaper. (−₥10)'],
+    ['eliasFollowingTax', 3, 0, 'Ignorance would have been considerably cheaper. (−₥3)'],
+    ['eliasFollowingTenReward', 198, 200, 'A rare accounting error in your favour. (+₥2)']
+  ]) {
+    const coins = createCoinBalance();
+    coins.change(start - coins.count);
+    const health = createHealth();
+    const messages = [];
+    resolveEliasFollowingAction(action, coins, health, message => messages.push(message));
+    assert.equal(coins.count, expected);
+    assert.equal(health.hearts, 3);
+    assert.deepEqual(messages, [message]);
+  }
+  for (const start of [3, 2.5, 2, 1.5, 1, 0.5]) {
+    const coins = createCoinBalance();
+    let death;
+    const health = createHealth((value, message) => { if (!value) death = message; });
+    const messages = [];
+    const announce = message => messages.push(message);
+    health.set(start);
+    resolveEliasFollowingAction('eliasFollowingHypnosis', coins, health, announce);
+    assert.equal(health.hearts, start - 0.5);
+    assert.equal(coins.count, 100);
+    assert.deepEqual(messages, []);
+    assert.equal(death, start > 0.5 ? undefined
+      : 'Your suspicions were correct. Unfortunately, you cannot remember what they were.');
+    resolveEliasFollowingAction('eliasFollowingGarlic', coins, health, announce);
+    assert.equal(health.hearts, start - 0.5);
+    assert.deepEqual(messages, start > 0.5 ? ['You have an inexplicable craving for garlic. (−½ heart)'] : []);
+  }
 });
 
 test('the pool report sends both roving guards to separate cheering spots and leaves posted guards alone', async () => {
@@ -2989,5 +3083,152 @@ test('all seven Karl Curd branches conclude once and return to the Baron menu', 
       response = response.replies[0].next;
     }
     assert.equal(completions, 1);
+  }
+});
+
+test('future NPCs pause near Pip and block passage, with separate Baron and Elias exceptions', async () => {
+  const {shouldPauseNpc} = await import('../src/room.mjs');
+  const npc = {id: 'future-npc', x: 500, y: 550};
+  const elias = {...npc, id: 'elias'};
+  const baron = {...npc, id: 'baron'};
+  const distantBaron = {x: 0, y: 0};
+  const player = {...createPlayer(), x: 460, y: 550};
+
+  assert.equal(shouldPauseNpc(npc, player), true);
+  assert.equal(shouldPauseNpc(elias, player), true);
+  assert.equal(shouldPauseNpc(baron, player), false);
+  assert.equal(shouldPauseNpc(npc, {...player, x: 459}), false);
+  movePlayer(player, distantBaron, 80, 0, [], [npc]);
+  assert.equal(player.x, 460, 'a large movement step must still stop at an NPC');
+  movePlayer(player, baron, 38, 0);
+  assert.equal(player.x, 460, 'the Baron still blocks movement');
+  movePlayer(player, distantBaron, 80, 0, [], [elias]);
+  assert.equal(player.x, 540, 'Pip can walk through Elias');
+});
+
+test('Milk Mystic spawns near the Baron, pauses near Pip and roams through clear space', async () => {
+  const {createMilkMystic, updateMilkMystic} = await import('../src/milk-mystic.mjs');
+  const {isNpcBlocked} = await import('../src/room.mjs');
+  const baron = createBaron();
+  const mystic = createMilkMystic(baron);
+  const spawn = {x: mystic.x, y: mystic.y};
+  assert.ok(Math.hypot(spawn.x - baron.x, spawn.y - baron.y) < 200);
+  const near = {x: mystic.x, y: mystic.y + 30};
+  updateMilkMystic(mystic, baron, 0.05, near, () => assert.fail('Paused Mystic chose a route'));
+  assert.deepEqual({x: mystic.x, y: mystic.y}, spawn);
+  assert.equal(mystic.walking, false);
+
+  let seed = 17;
+  const random = () => {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    return seed / 2 ** 32;
+  };
+  let furthest = 0;
+  for (let frame = 0; frame < 2400; frame++) {
+    updateMilkMystic(mystic, baron, 0.05, undefined, random);
+    assert.equal(isNpcBlocked(mystic.x, mystic.y, mystic.radius, baron), false);
+    furthest = Math.max(furthest, Math.hypot(mystic.x - spawn.x, mystic.y - spawn.y));
+  }
+  assert.ok(furthest > ROOM_WIDTH, 'Mystic should roam beyond the spawn square');
+});
+
+test('walking through Elias starts the encounter once, while approaching him does not', async () => {
+  const {startEliasPassThrough} = await import('../src/elias.mjs');
+  const actor = {x: 10, y: 10};
+  assert.equal(startEliasPassThrough(actor, {x: 0, y: 10}, {x: 9, y: 10}), false);
+  assert.equal(startEliasPassThrough(actor, {x: 9, y: 10}, {x: 9, y: 10}), false);
+  assert.equal(startEliasPassThrough(actor, {x: 0, y: 22}, {x: 20, y: 22}), false);
+  assert.equal(startEliasPassThrough(actor, {x: 9, y: 10}, {x: 11, y: 10}), true);
+  assert.equal(startEliasPassThrough(actor, {x: 11, y: 10}, {x: 9, y: 10}), false);
+});
+
+test('Elias pass-through dialogue gates the Mystic reply and rolls the arm outcome once', async () => {
+  const {eliasPassThroughDialogue, eliasPortraits} = await import('../src/elias.mjs');
+  for (const [metMystic, roll, expected, final, action] of [
+    [false, 0.499, 'An optical illusion, Master Pip.', 'A particularly convincing optical illusion.', 'finishEliasPassThrough'],
+    [true, 0.5, 'I did varn you.', 'A chartered accountant, Master Pip.', 'finishEliasPassThroughCold']
+  ]) {
+    let rolls = 0;
+    const start = eliasPassThroughDialogue(metMystic, () => { rolls++; return roll; });
+    assert.equal(start.speaker, 'Pip');
+    assert.equal(start.playerMood, 'thinking');
+    const denial = start.replies[0].next;
+    assert.equal(denial.mood, 'insulted');
+    assert.equal(denial.replies.length, metMystic ? 3 : 2);
+    const warning = denial.replies[1].next();
+    assert.equal(rolls, 1);
+    assert.equal(warning.mood, 'devious');
+    const narration = warning.replies[0].next;
+    assert.match(narration.direction, /passes straight through him/);
+    const first = narration.replies[0].next;
+    const ending = first.replies[0].next;
+    assert.equal(first.text, expected);
+    assert.equal(ending.text, final);
+    assert.ok(eliasPortraits.includes(ending.mood));
+    assert.equal(ending.replies[0].next.exitAction, action);
+    assert.equal(rolls, 1);
+    for (const reply of denial.replies.filter((_, i) => i !== 1)) {
+      assert.equal(reply.next.replies[0].next.replies[0].next.exitAction, 'finishEliasPassThrough');
+    }
+  }
+});
+
+test('Elias pass-through damage deducts two hearts and reports either survival or death', async () => {
+  const {resolveEliasPassThroughAction} = await import('../src/elias.mjs');
+  const {createHealth} = await import('../src/health.mjs');
+  for (const start of [3, 2.5, 2, 1.5, 1, 0.5]) {
+    const actor = {};
+    let death;
+    const health = createHealth((hearts, message) => { if (!hearts) death = message; });
+    health.set(start);
+    const messages = [];
+    const announce = message => messages.push(message);
+    resolveEliasPassThroughAction('eliasPassThroughDamage', actor, health, announce);
+    assert.equal(health.hearts, Math.max(0, start - 2));
+    assert.deepEqual(messages, []);
+    if (start > 2) {
+      resolveEliasPassThroughAction('finishEliasPassThroughCold', actor, health, announce);
+      assert.deepEqual(messages, ['Your arm is cold. Unnaturally cold. (−2 hearts)']);
+      assert.equal(health.hearts, start - 2);
+    } else {
+      assert.equal(death, 'You should have kept your hands to yourself.');
+    }
+    resolveEliasPassThroughAction('eliasPassThroughDamage', actor, health, announce);
+    resolveEliasPassThroughAction('finishEliasPassThroughCold', actor, health, announce);
+    assert.equal(health.hearts, Math.max(0, start - 2));
+    assert.equal(messages.length, start > 2 ? 1 : 0);
+    assert.equal(actor.passThroughCompleted, true);
+  }
+});
+
+test('only the Elias consultation queues the one-time Mystic scene and all paths close it', async () => {
+  const {eliasPassThroughDialogue} = await import('../src/elias.mjs');
+  const {createMysticEliasFollowup, milkMysticMoods} = await import('../src/milk-mystic.mjs');
+  const replies = eliasPassThroughDialogue(true).replies[0].next.replies;
+  assert.equal(replies[0].next.enterAction, undefined);
+  assert.equal(replies[1].next().enterAction, undefined);
+  assert.equal(replies[2].next.enterAction, 'queueMysticEliasFollowup');
+  const paths = [[0, 0], [1, 0], [1, 1, 0]];
+  for (const path of paths) {
+    const followup = createMysticEliasFollowup();
+    assert.equal(followup.open(), null);
+    followup.queue();
+    const opening = followup.open();
+    assert.equal(opening.text, "I've been expecting you, child.");
+    assert.equal(followup.open(), null, 'opening consumes the pending interaction');
+    let node = opening;
+    for (const index of path) {
+      assert.equal(node.mustContinue, true);
+      assert.ok(milkMysticMoods.includes(node.mood));
+      node = node.replies[index].next;
+    }
+    const conclusion = opening.replies[0].next.replies[0].next.replies[0];
+    assert.equal(node.replies[0], conclusion);
+    assert.equal(conclusion.label, 'Can you explain to me what happened?');
+    assert.equal(conclusion.next.replies[0].next.text, 'Meditate upon it, child.');
+    assert.deepEqual(conclusion.next.replies[0].next.replies[0].next, {exitAction: 'finishMysticEliasFollowup'});
+    followup.complete();
+    followup.queue();
+    assert.equal(followup.open(), null);
   }
 });

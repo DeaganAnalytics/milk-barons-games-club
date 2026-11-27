@@ -1,6 +1,6 @@
 import {PRACTICE_RANGE} from './room.mjs';
 
-const practiceGuardTargets = PRACTICE_RANGE.lanes.map(y => ({
+export const practiceGuardTargets = PRACTICE_RANGE.lanes.map(y => ({
   id: 'guard', title: 'Target Practice Guard', practiceGuard: true,
   x: PRACTICE_RANGE.guardX, y
 }));

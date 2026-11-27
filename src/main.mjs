@@ -5,7 +5,7 @@ import {djTarget} from './dj-dialogue.mjs';
 import {dancerTargets} from './dancer-dialogue.mjs';
 import {createTally} from './elias-accounting.mjs';
 import {linWaitressId, TIPPED_MILK_PRICE, WAITER_MILK_PRICE} from './waiter-dialogue.mjs';
-import {nearbyPracticeGuard} from './practice-range-dialogue.mjs';
+import {nearbyPracticeGuard, practiceGuardTargets} from './practice-range-dialogue.mjs';
 import {practiceRangeHit} from './practice-range.mjs';
 import {createPokieProfit} from './pokie-dialogue.mjs';
 import {createSleepingGambler} from './sleeping-gambler.mjs';
@@ -13,7 +13,7 @@ import {approachPatron, createSlotReactions} from './slot-reactions.mjs';
 import {openSlot, sleepingGamblerTarget, slotPlayers} from './slot-machines.mjs';
 import {clubSightLines} from './club-sight-lines.mjs';
 import {facingIndex} from './directions.mjs';
-import {advanceEliasRun, elias, routeEliasToPip, updateEliasFollow} from './elias.mjs';
+import {advanceEliasRun, elias, resolveEliasFollowingAction, resolveEliasPassThroughAction, routeEliasToPip, startEliasPassThrough, updateEliasFollow} from './elias.mjs';
 import {createCoinBalance, STARTING_COINS} from './coins.mjs';
 import {createHealth, MAX_HEARTS} from './health.mjs';
 import {createKarma} from './karma.mjs';
@@ -41,7 +41,7 @@ import {createStaff, updateStaff} from './staff.mjs';
 const player = createPlayer();
 const baron = createBaron();
 const milo = createMilo();
-const mystic = createMilkMystic();
+const mystic = createMilkMystic(baron);
 const guards = createGuards(player, baron, milo);
 const creameryGuard = createCreameryGuard();
 guards.push(creameryGuard);
@@ -51,6 +51,11 @@ const sleepingGambler = createSleepingGambler();
 const guests = [...staff, ...dancerTargets, ...slotPlayers, openSlot, sleepingGamblerTarget, bartender, lifeguard, professor, elias, pilloryAttendant, pilloryCommissioner, ...partyGuests.map(guest => ({
   ...guest, y: guest.y - 19 // Interaction coordinates are above the feet, like Pip's.
 }))];
+function playerCollisionNpcs() {
+  return [milo, mystic, djTarget, ...practiceGuardTargets, ...guests.filter(guest =>
+    guest !== openSlot && (guest !== lin || staff.includes(lin)))];
+}
+
 const milkService = createMilkService();
 const attendantMilk = createAttendantMilk();
 const partyChatter = createPartyChatter();
@@ -535,6 +540,8 @@ const dialogue = createDialogue(baron, {
       health.change(remainingHealth - health.hearts,
         'You discovered that Elias takes certain accusations rather personally.');
     }
+    resolveEliasPassThroughAction(action, elias, health, clubEvent);
+    resolveEliasFollowingAction(action, coinBalance, health, clubEvent);
     if (action === 'eliasVampireFine') clubEvent('Elias charges you for bringing up vampires again.', () => coinBalance.change(-1));
     if (action === 'collectTax') clubEvent('Elias takes the Baron’s cut.', () => coinBalance.collectTax());
     if (action === 'finishEliasWelcome') {
@@ -645,6 +652,14 @@ function warnAtGuestGate() {
   dialogue.open({id: 'guard', title: 'Bull Guard', guestGate: true});
 }
 
+function checkEliasPassThrough(previous) {
+  if (dialogue.isOpen() || !gameOver.hidden || !startEliasPassThrough(elias, previous, player)) return false;
+  clearInput();
+  player.walking = false;
+  dialogue.open({...elias, passThrough: true});
+  return true;
+}
+
 const {readMovement, clearInput} = bindControls({
   isPaused: () => eliasApproaching || Boolean(eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene || rangeFall),
   nudge: (dx, dy) => {
@@ -652,8 +667,8 @@ const {readMovement, clearInput} = bindControls({
     if (dx < 0 && nearGuestGate(player) && ropeWarning.talks < 2) warnAtGuestGate();
     else {
       const previous = {x: player.x, y: player.y};
-      movePlayer(player, baron, dx, dy, guards);
-      checkPracticeRange(previous, elapsed);
+      movePlayer(player, baron, dx, dy, guards, playerCollisionNpcs());
+      if (!checkPracticeRange(previous, elapsed)) checkEliasPassThrough(previous);
     }
   },
   interact: () => {
@@ -820,9 +835,13 @@ function frame(timestamp) {
       requestAnimationFrame(frame);
       return;
     }
-    updatePlayer(player, baron, movement, dt, guards);
+    updatePlayer(player, baron, movement, dt, guards, playerCollisionNpcs());
   }
   if (checkPracticeRange(previousPosition, previousTime)) {
+    requestAnimationFrame(frame);
+    return;
+  }
+  if (!guestEscort && checkEliasPassThrough(previousPosition)) {
     requestAnimationFrame(frame);
     return;
   }
@@ -865,8 +884,8 @@ function frame(timestamp) {
   }
   const baronLocked = serviceWasActive || Boolean(milkService.scene);
   if (!baronLocked) updateBaronAttention(baron, player, elapsed, dt);
-  updateMilkMystic(mystic, baron, dt);
-  if (updateMilo(milo, baron, elapsed, dt, guards) && !baronLocked) callOutMilo(baron, milo, elapsed);
+  updateMilkMystic(mystic, baron, dt, player);
+  if (updateMilo(milo, baron, elapsed, dt, guards, player) && !baronLocked) callOutMilo(baron, milo, elapsed);
   if (!baronLocked) updateBaronIdleSpeech(baron, cameraX, cameraY, elapsed);
   if (guestEscort?.executive && !guestEscort.guard) {
     guestEscort.guard = summonGuardFromOffscreen(guards, player, baron);

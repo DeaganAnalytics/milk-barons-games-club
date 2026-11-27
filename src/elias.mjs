@@ -1,4 +1,4 @@
-import {HALL_CENTER, isNpcBlocked, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
+import {HALL_CENTER, isNpcBlocked, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron, shouldPauseNpc } from './room.mjs';
 
 export const eliasPost = {x: HALL_CENTER.x + 145, y: HALL_CENTER.y + 130};
 
@@ -260,6 +260,7 @@ const welcomeSections = [
 ];
 
 export const eliasWelcome = welcomeSections.reduceRight((next, {choices, ...line}, section) => ({
+  randomizeWelcomeChoices: Boolean(choices),
   ...line, replies: choices ? choices.map((lines, index) => {
     const option = exchange(lines, next);
     if (index !== choices.length - 1) return option;
@@ -275,6 +276,66 @@ function exchange(lines, menu) {
     replies = [{label, playerMood, next: {text, mood, replies, ...details}}];
   }
   return replies[0];
+}
+
+export function startEliasPassThrough(actor, from, to) {
+  if (actor.passThroughStarted) return false;
+  // Player movement resolves horizontally first and then vertically.
+  const crosses = (start, end, center) => (start < center && end >= center)
+    || (start > center && end <= center);
+  const throughBody = (Math.abs(from.y - actor.y) <= 8 && crosses(from.x, to.x, actor.x))
+    || (Math.abs(to.x - actor.x) <= 8 && crosses(from.y, to.y, actor.y));
+  if (!throughBody) return false;
+  actor.passThroughStarted = true;
+  return true;
+}
+
+export function resolveEliasPassThroughAction(action, actor, health, announce) {
+  if (actor.passThroughCompleted) return;
+  if (action === 'eliasPassThroughDamage' && !actor.passThroughDamaged) {
+    actor.passThroughDamaged = true;
+    if (health.hearts <= 2) actor.passThroughCompleted = true;
+    health.change(-2, 'You should have kept your hands to yourself.');
+  }
+  if (action === 'finishEliasPassThrough' || action === 'finishEliasPassThroughCold') {
+    actor.passThroughCompleted = true;
+    if (action === 'finishEliasPassThroughCold') announce('Your arm is cold. Unnaturally cold. (−2 hearts)');
+  }
+}
+
+export function eliasPassThroughDialogue(metMystic, random = Math.random) {
+  const ending = action => ({mustContinue: true, replies: [continueTo({exitAction: action})]});
+  const complete = ending('finishEliasPassThrough');
+  const harmless = exchange([
+    ["MY ARM! IT'S INSIDE YOU!", 'An optical illusion, Master Pip.', 'current-smile', 'alarmed', {mustContinue: true}],
+    ['I CAN SEE MY HAND COMING OUT OF YOUR BACK!', 'A particularly convincing optical illusion.', 'self-assured-smirk', 'exasperated', complete]
+  ]);
+  const damage = exchange([
+    ["That's strange. I can't feel my fingers...", 'I did varn you.', 'evil-laugh', 'worried',
+      {enterAction: 'eliasPassThroughDamage', mustContinue: true}],
+    ['AARGH! WHAT ARE YOU?!', 'A chartered accountant, Master Pip.', 'current-smile', 'alarmed', ending('finishEliasPassThroughCold')]
+  ]);
+  const replies = [exchange([
+    ["You're right. I must be imagining things.", 'A perfectly reasonable conclusion.', 'self-assured-smirk', 'thinking', {mustContinue: true}],
+    ['Perhaps I need more sleep.', 'Or more milk, Master Pip. Preferably purchased on ze premises.', 'current-smile', 'worried', complete]
+  ]), {
+    label: '<Attempt to put your arm through Elias>', next: () => ({
+      text: 'I vould strongly advise against zat.', mood: 'devious', mustContinue: true,
+      replies: [continueTo({
+        direction: "Ignoring Elias's warning, you slowly extend your arm towards his chest. To your astonishment, it passes straight through him.",
+        mood: 'devious', mustContinue: true, replies: [random() < 0.5 ? harmless : damage]
+      })]
+    })
+  }];
+  if (metMystic) replies.push(exchange([
+    ["I'm going to ask the Milk Mystic about this!", 'Ah, yes. An excellent source of thoroughly unsubstantiated information.', 'laugh', 'exasperated', {mustContinue: true, enterAction: 'queueMysticEliasFollowup'}],
+    ['She might know what you are!', 'I can save you ze journey. I am an accountant.', 'self-assured-smirk', 'worried', complete]
+  ]));
+  return {
+    text: 'Did I just... walk through you?', speaker: 'Pip', playerMood: 'thinking', mood: 'insulted', mustContinue: true,
+    replies: [continueTo({text: 'Vhat are you talking about, Master Pip? Zat is physically impossible.',
+      mood: 'insulted', mustContinue: true, replies})]
+  };
 }
 
 export const eliasPokieBan = {
@@ -323,6 +384,67 @@ const followingExchange = [
   ['Are you following me?', 'Da.', 'current-smile'],
   ['Wait, what?!', 'Naturally, Master Pip. I must account for every single coin you earn or lose. I am an accountant, after all.', 'self-assured-smirk', 'alarmed']
 ];
+
+export const eliasFollowingTransactions = {
+  eliasFollowingTenReward: [10, 'A rare accounting error in your favour.'],
+  eliasFollowingOneReward: [1, 'Elias has deemed your observation worth precisely one coin.'],
+  eliasFollowingFine: [-1, 'Curiosity comes at a price.'],
+  eliasFollowingTax: [-10, 'Ignorance would have been considerably cheaper.']
+};
+
+export function resolveEliasFollowingAction(action, coins, health, announce) {
+  if (Object.hasOwn(eliasFollowingTransactions, action)) {
+    const [amount, message] = eliasFollowingTransactions[action];
+    const before = coins.count;
+    coins.change(amount);
+    const actual = coins.count - before;
+    const sign = actual < 0 ? '−' : actual > 0 ? '+' : '';
+    announce(`${message} (${sign}₥${Math.abs(actual)})`);
+  }
+  if (action === 'eliasFollowingHypnosis') {
+    health.change(-0.5, 'Your suspicions were correct. Unfortunately, you cannot remember what they were.');
+  }
+  if (action === 'eliasFollowingGarlic' && health.hearts > 0) {
+    announce('You have an inexplicable craving for garlic. (−½ heart)');
+  }
+}
+
+function followingOutcome(menu, roll = Math.random()) {
+  const explanation = exchange(followingExchange.slice(1), menu);
+  const end = (text, mood, action) => ({text, mood, action});
+  const thanks = (label, playerMood, action) => ({
+    label, playerMood, next: end('Think nothing of it, Master Pip.', 'current-smile', action)
+  });
+  const outcomes = [
+    [2075, 'Da.', 'current-smile'],
+    [2075, 'Da!', 'laugh'],
+    [2075, 'Yes!', 'evil-laugh'],
+    [2075, 'Of course, Master Pip!', 'self-assured-smirk'],
+    [100, 'Very astute. Have ten coins.', 'self-assured-smirk', {
+      replies: [thanks('Thanks!', 'happy', 'eliasFollowingTenReward')]
+    }],
+    [500, 'Very astute. Have a coin.', 'current-smile', {
+      replies: [thanks('Thanks, I guess.', 'thinking', 'eliasFollowingOneReward')]
+    }],
+    [500, 'No.', 'current-smile', {replies: [
+      {label: 'No?', playerMood: 'thinking', next: end('No!', 'insulted')},
+      {label: 'Yes you are!', playerMood: 'exasperated', next: {
+        text: "No. I'm not.", mood: 'demonic-angry', enterAction: 'eliasFollowingHypnosis',
+        mustContinue: true, replies: [{
+          label: "No... you're... not... Where am I?", playerMood: 'worried',
+          next: end('At ze Milk Baron\'s Games Club, of course!', 'current-smile', 'eliasFollowingGarlic')
+        }]
+      }}
+    ]}],
+    [500, 'No silly questions! A one-coin fine!', 'insulted', {action: 'eliasFollowingFine'}],
+    [100, 'Silly question tax. Ten coins!', 'devious', {action: 'eliasFollowingTax'}]
+  ];
+  let upperBound = 0;
+  for (const [weight, text, mood, details = {replies: [explanation]}] of outcomes) {
+    upperBound += weight;
+    if (roll < upperBound / 10000) return {text, mood, ...details};
+  }
+}
 
 const healthExchange = [
   ['Can I die?', 'Da, of course. Everyone can die.', 'current-smile'],
@@ -382,6 +504,7 @@ function buildConversation(exchanges, curdistEncounters = false) {
   menu.replies = [
     ...exchanges.map(lines => {
       const option = exchange(lines, menu);
+      if (lines === followingExchange) option.next = roll => followingOutcome(menu, roll);
       return {...option, once: 'Elias: ' + option.label, consumeOnSelect: true, requiresKarmaChange: lines === karmaExchange};
     }),
     ...encounterReplies,
@@ -479,6 +602,8 @@ export function advanceEliasRun(actor, destination, dt, stop, speed = 230) {
   return !actor.running;
 }
 
+const followingDialogueDistance = 2 * ROOM_WIDTH;
+
 export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
   const left = cameraX + 24;
   const right = cameraX + ROOM_WIDTH - 24;
@@ -493,7 +618,7 @@ export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
     < Math.hypot(actor.lastPipPosition.x - actor.x, actor.lastPipPosition.y - actor.y);
   actor.lastPipPosition = {x: player.x, y: player.y};
   if (close && approached) actor.findingEdge = false;
-  if (!outside && !actor.findingEdge) {
+  if (shouldPauseNpc(actor, player) || (!outside && !actor.findingEdge)) {
     actor.running = false;
     actor.followRoute = null;
     return;
@@ -521,9 +646,14 @@ export function updateEliasFollow(actor, player, baron, cameraX, cameraY, dt) {
     actor.running = false;
     return;
   }
+  const startX = actor.x;
+  const startY = actor.y;
   const arrived = advanceEliasRun(actor, waypoint, dt, 0, 144);
   actor.running = step > 0;
-  if (outside && !actor.findingEdge && step > 0) actor.hasFollowedPip = true;
+  if (outside && !actor.findingEdge && step > 0 && !actor.hasFollowedPip) {
+    actor.followDistance = (actor.followDistance ?? 0) + Math.hypot(actor.x - startX, actor.y - startY);
+    if (actor.followDistance >= followingDialogueDistance) actor.hasFollowedPip = true;
+  }
   if (arrived) {
     actor.followRoute?.shift();
     if (!actor.followRoute?.length && Math.hypot(target.x - actor.x, target.y - actor.y) < 1) actor.findingEdge = false;

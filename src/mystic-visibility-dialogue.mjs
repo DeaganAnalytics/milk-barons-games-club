@@ -253,5 +253,5 @@ export function createMysticVisibilityDialogue() {
     return build(scenes[id], id === 'baron');
   }
 
-  return {option, meetMystic: () => { metMystic = true; }};
+  return {option, hasMetMystic: () => metMystic, meetMystic: () => { metMystic = true; }};
 }

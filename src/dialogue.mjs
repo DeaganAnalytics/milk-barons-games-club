@@ -2,7 +2,7 @@ import {createProfessorInterview} from './professor-interview.mjs';
 import {baronCurdReply} from './baron-curd-dialogue.mjs';
 import {createMysticVisibilityDialogue} from './mystic-visibility-dialogue.mjs';
 import {createLinDepartureReactions} from './lin-departure-dialogue.mjs';
-import {createMilkMysticConversation, milkMysticId, milkMysticMoods} from './milk-mystic.mjs';
+import {createMilkMysticConversation, createMysticEliasFollowup, milkMysticId, milkMysticMoods} from './milk-mystic.mjs';
 import {createDjConversation, djMoods, djTarget} from './dj-dialogue.mjs';
 import {miloIntroduction, miloMenu} from './milo-dialogue.mjs';
 import {createMiloGreeting} from './milo.mjs';
@@ -19,7 +19,7 @@ import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
 import {bartenderExit, bartenderMoods, bartenderOpening} from './bartender-dialogue.mjs';
 import {additionalBaronReplies, baronCowGuardReply, baronDanceDialogue, baronGreetings, baronKarmaDialogue, DJ_ADMISSION_PRICE} from './baron-dialogue.mjs';
 import {isBaronDancing} from './baron.mjs';
-import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPortraits, eliasPokieBan, eliasPokieRefusal, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
+import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPassThroughDialogue, eliasPortraits, eliasPokieBan, eliasPokieRefusal, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
@@ -356,6 +356,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   let skimSpillFollowupPending = false;
   const skimOpening = createSkimConversation(() => metMilo, () => baronStanding?.() ?? {});
   const askedAboutCowGuards = new Set();
+  const mysticEliasFollowup = createMysticEliasFollowup();
   const mysticOpening = createMilkMysticConversation(() => ({
     lin: {
       relationship: waiterOpening.relationship(),
@@ -443,6 +444,14 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function finishAction(finishedAction, target) {
+    if (finishedAction === 'queueMysticEliasFollowup') {
+      mysticEliasFollowup.queue();
+      return;
+    }
+    if (finishedAction === 'finishMysticEliasFollowup') {
+      mysticEliasFollowup.complete();
+      return;
+    }
     if (finishedAction === 'completeCurdistInterview') professorInterview.complete();
     if (['curdistCompensation', 'curdistCoercedCompensation', 'curdistWorkerReward', 'curdistMilk'].includes(finishedAction)
         && !professorInterview.applyEffect(finishedAction)) return;
@@ -605,6 +614,15 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
+    if (node.randomizeWelcomeChoices) {
+      const communist = availableReplies.filter(reply => reply.requiresDisposition === 'communist' || reply.expressesDisposition === 'communist');
+      const regular = availableReplies.filter(reply => !communist.includes(reply));
+      for (let index = regular.length - 1; index > 0; index--) {
+        const other = Math.floor(Math.random() * (index + 1));
+        [regular[index], regular[other]] = [regular[other], regular[index]];
+      }
+      availableReplies.splice(0, availableReplies.length, ...regular, ...communist);
+    }
     const choiceButtons = [];
     const advanceButtons = [];
     for (const reply of availableReplies) {
@@ -759,6 +777,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     } : partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening(target.id, !firstGuestGreeting)
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.(), isCommissionerSplattered?.(), baronDiscoveries?.()?.pool)
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
+      : target.id === elias.id && target.passThrough ? eliasPassThroughDialogue(mysticVisibility.hasMetMystic())
       : target.id === elias.id && target.pokieBan ? eliasPokieBan
       : target.id === elias.id && target.pokieRefusal ? eliasPokieRefusal
       : target.id === elias.id && target.tax ? eliasTaxConversation(target.tax)
@@ -787,7 +806,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
           mood: target.repeat ? 'formal' : 'speaking', action: 'escortGuest'
         }
       : target.id === skimId ? skimOpening(skimSpillFollowupPending)
-      : target.id === milkMysticId ? mysticOpening()
+      : target.id === milkMysticId ? (mysticEliasFollowup.open() ?? mysticOpening())
       : target.id === djTarget.id ? djOpening()
       : target.id.startsWith('dancer-') ? dancerOpening(target.id)
       : staffIds.includes(target.id) ? waiterOpening(target.withoutMilk, target.id, target.linConfrontation)

@@ -1,38 +1,50 @@
 import {createMysticMoneyTopic} from './mystic-money-dialogue.mjs';
 import {TURN} from './directions.mjs';
-import {HALL_CENTER, isNpcBlocked} from './room.mjs';
+import {EAST_EDGE, HALL_CENTER, isNpcBlocked, NORTH_EDGE, routeAroundBaron, shouldPauseNpc, SOUTH_TRIM_Y, WEST_EDGE } from './room.mjs';
 
 export const milkMysticId = 'milk-mystic';
 export const milkMysticMoods = ['serene', 'skeptical', 'contemplative', 'warning', 'wry-smile'];
 
-const patrolWidth = 125;
-const patrolHeight = 155;
 const patrolSpeed = 54;
 
-function patrolPosition(angle) {
+export function createMilkMystic(baron = HALL_CENTER) {
   return {
-    x: HALL_CENTER.x + patrolWidth * Math.cos(angle),
-    y: HALL_CENTER.y + patrolHeight * Math.sin(angle)
+    x: baron.x, y: baron.y + 155, id: milkMysticId, title: 'The Milk Mystic',
+    route: [], radius: 12, walking: false, facingRight: false, stride: 0
   };
 }
 
-export function createMilkMystic() {
-  const angle = Math.PI / 2;
-  return {
-    ...patrolPosition(angle), id: milkMysticId, title: 'The Milk Mystic',
-    angle, radius: 12, walking: false, facingRight: false, stride: 0
-  };
-}
+export function updateMilkMystic(mystic, baron, dt, player, random = Math.random) {
+  mystic.walking = false;
+  if (dt <= 0 || (player && shouldPauseNpc(mystic, player))) return;
 
-export function updateMilkMystic(mystic, baron, dt) {
-  const tangent = Math.hypot(patrolWidth * Math.sin(mystic.angle), patrolHeight * Math.cos(mystic.angle));
-  const angle = (mystic.angle + patrolSpeed * dt / tangent) % TURN;
-  const {x, y} = patrolPosition(angle);
-  mystic.walking = dt > 0 && !isNpcBlocked(x, y, mystic.radius, baron, mystic);
-  if (!mystic.walking) return;
-  if (Math.abs(x - mystic.x) > 0.01) mystic.facingRight = x > mystic.x;
-  mystic.stride = (mystic.stride + Math.hypot(x - mystic.x, y - mystic.y) * 0.33) % TURN;
-  Object.assign(mystic, {x, y, angle});
+  if (!mystic.route.length) {
+    const target = {
+      x: WEST_EDGE + 70 + random() * (EAST_EDGE - WEST_EDGE - 140),
+      y: NORTH_EDGE + 215 + random() * (SOUTH_TRIM_Y - NORTH_EDGE - 257)
+    };
+    if (Math.hypot(target.x - mystic.x, target.y - mystic.y) < 110
+        || isNpcBlocked(target.x, target.y, mystic.radius, baron)) return;
+    mystic.route = routeAroundBaron(mystic, target, baron);
+  }
+
+  const target = mystic.route[0];
+  const dx = target.x - mystic.x;
+  const dy = target.y - mystic.y;
+  const distance = Math.hypot(dx, dy);
+  const step = Math.min(distance, patrolSpeed * dt);
+  const arrived = step === distance;
+  const x = arrived ? target.x : mystic.x + dx * step / distance;
+  const y = arrived ? target.y : mystic.y + dy * step / distance;
+  if (isNpcBlocked(x, y, mystic.radius, baron, mystic)) {
+    mystic.route = [];
+    return;
+  }
+
+  if (Math.abs(dx) > 0.01) mystic.facingRight = dx > 0;
+  mystic.stride = (mystic.stride + step * 0.33) % TURN;
+  Object.assign(mystic, {x, y, walking: step > 0});
+  if (arrived) mystic.route.shift();
 }
 
 const oracleHints = [
@@ -88,6 +100,42 @@ const linAdvice = [
   ["She who possesses little, yet gives freely, offers you something far more precious than coin.",
     ({receivedGift}) => receivedGift]
 ];
+
+export function createMysticEliasFollowup() {
+  let state = 'locked';
+  const say = (text, mood, replies) => ({text, mood, replies, mustContinue: true});
+  const reply = (label, playerMood, next) => ({label, playerMood, next});
+  const conclusion = reply('Can you explain to me what happened?', 'worried',
+    say('Only when the milk understands the cow shall the cow understand the milk.', 'contemplative', [
+      reply('What does that mean?', 'thinking', say('Meditate upon it, child.', 'serene', [
+        {label: 'Continue', next: {exitAction: 'finishMysticEliasFollowup'}}
+      ]))
+    ]));
+  const opening = say("I've been expecting you, child.", 'serene', [
+    reply('My God, maybe she can read the future.', 'thinking', say('I can hear you, child.', 'skeptical', [
+      {label: 'Continue', next: {
+        ...say('Oh. Sorry.', 'skeptical', [conclusion]), speaker: 'Pip', playerMood: 'sorry'
+      }}
+    ])),
+    reply('I need to know how!', 'alarmed', say('How what?', 'skeptical', [
+      reply('How you knew I was coming.', 'thinking',
+        say('Simple, child. I saw you walking towards me.', 'wry-smile', [conclusion])),
+      reply('How you knew I walked through Elias.', 'worried', say('I saw it with my own eyes.', 'serene', [
+        reply('The eyes of the sacred beast?', 'thinking',
+          say('No, child. Just my normal eyes.', 'skeptical', [conclusion]))
+      ]))
+    ]))
+  ]);
+  return {
+    queue() { if (state === 'locked') state = 'pending'; },
+    open() {
+      if (state !== 'pending') return null;
+      state = 'active';
+      return opening;
+    },
+    complete() { if (state === 'active') state = 'completed'; }
+  };
+}
 
 export function createMilkMysticConversation(getDiscoveries = () => ({}), hints = oracleHints, transact) {
   const say = (text, mood, replies, speaker = 'Milk Mystic', character) =>
