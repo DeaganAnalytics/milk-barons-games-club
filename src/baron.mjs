@@ -29,7 +29,7 @@ const idleLines = [
   'WELCOME! This club is the finest establishment I personally own.',
   'You may find our games extremely fair. To me.',
   'Do you like the carpet? It cost several fortunes. Not mine, naturally.',
-  'I oversee every game personally'
+  'I oversee every game personally.'
 ];
 
 export function createBaron() {
