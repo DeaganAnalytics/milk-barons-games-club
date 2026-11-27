@@ -175,6 +175,8 @@ try {
   await send('Runtime.enable');
   // Drive the same game loop at 60 Hz without depending on key hold durations.
   await send('Page.addScriptToEvaluateOnNewDocument', {source: `
+    // The complete asset roster now exceeds Chromium’s default 250-entry buffer.
+    performance.setResourceTimingBufferSize(2000);
     // Place guards near the player so the dialogue trip is reproducible.
     const spawnRolls = [(443 + 615) / 1920, (582.5 + 1140) / 3101,
       (247 + 615) / 1920, (582.5 + 1140) / 3101];
@@ -486,6 +488,10 @@ try {
   await closeConversation();
   await hold('ArrowLeft', 170);
   await hold('ArrowDown', 1900);
+  // Detour east of the slot-machine bank before returning to the west wall.
+  await hold('ArrowRight', 45);
+  await hold('ArrowDown', 470);
+  await hold('ArrowLeft', 45);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2740]);
   assert.deepEqual(await evaluate(`(() => {
     const original = CanvasRenderingContext2D.prototype.drawImage;
@@ -527,10 +533,15 @@ try {
     return true;
   })()`, true);
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'),
-    'Shh! I’m trying to stay out of the Baron’s way.');
+    "Shh! I'm trying to stay out of the Baron's way.");
   await reply("Hey, don't I know you?", "No. Don't talk to me.");
-  await reply('Are you Milo, the milk activist.', 'Please leave me alone. Please go away, your presence attracts the Baron.');
+  await reply('Are you Milo, the milk activist?', 'Please leave me alone. Please go away. Your presence attracts the Baron.');
   await expressions('thinking', 'sad');
+  await reply('You ARE Milo!', '...');
+  await reply('Continue', 'Okay, okay. Keep your voice down.');
+  await reply("You're the reason I became an activist.", 'I apologise.');
+  await reply("Apologise? Why? You're my hero!", "And now I'm nobody.");
+  await expressions('sorry', 'sad');
   assert.equal(await evaluate('document.documentElement.scrollWidth <= innerWidth'), true);
   await closeConversation();
 
@@ -619,8 +630,8 @@ try {
       ? [stem + '-portrait.webp']
       : [stem + '-portrait.webp', stem + '-empty-portrait.webp'];
   })];
-  assert.ok(await evaluate(`${JSON.stringify(portraits)}.every(path =>
-    performance.getEntriesByName(new URL(path, location.href).href).length > 0)`));
+  await waitFor(`${JSON.stringify(portraits)}.every(path =>
+    performance.getEntriesByName(new URL(path, location.href).href).length > 0)`);
 
   await frames(480);
   for (const id of staffIds) {
@@ -642,10 +653,10 @@ try {
   waiterUrl.searchParams.set('waiter-test', '1');
   await load(1100, 950, false, 'waiter-interaction', waiterUrl.href);
   await hold('ArrowUp', 20);
-  await activate('Waiter');
+  await activate('Waiter Feta');
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Good evening. How may I assist you?');
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
-    .backgroundImage.includes('/waiters/male-waiter-portrait.webp')`));
+    .backgroundImage.includes('/dialogue/expressions/male-waiter-welcoming.webp')`));
   await closeConversation();
 
   const cleanerUrl = new URL(site);
@@ -653,7 +664,7 @@ try {
   await load(1100, 950, false, 'cleaner', cleanerUrl.href);
   await hold('ArrowUp', 20);
   await activate('Edmund Skim');
-  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Hey, I recognise you!');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Pip: Hey, I recognise you!');
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
     .backgroundImage.includes('/waiters/edmund-vale-portrait.webp')`));
   if (process.env.SCREENSHOT_PREFIX) {
@@ -710,7 +721,11 @@ try {
     createDialogue().open(target);
   })()`, true);
   assert.equal(await evaluate('document.getElementById("conversation-title").textContent'), 'Bull Lifeguard');
-  assert.equal(await evaluate('document.querySelectorAll("#conversation-replies button").length'), 8);
+  assert.deepEqual(await choices(), [
+    'Can I go in?', 'Can you swim?', 'I see piles of clothes everywhere.', "I'd like to report something.",
+    'What happens if someone starts drowning?', 'Is the milk fresh?', "What's it like working here?",
+    'Can I have some money?', "I'll leave you to it."
+  ]);
   assert.equal(await evaluate('document.getElementById("conversation-close").hidden'), true);
   await reply('Can I go in?', 'Are you a beautiful woman or a wealthy man?');
   await expressions('thinking', 'thinking');
