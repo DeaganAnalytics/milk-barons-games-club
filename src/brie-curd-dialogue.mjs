@@ -1,4 +1,5 @@
-const brie = (text, mood, extra) => ({text, mood, exactBriePortrait: true, ...extra});
+const brie = (text, mood, extra) => ({text, mood, exactNpcPortrait: true, ...extra});
+const recommendLin = (text, mood, extra) => brie(text, mood, {enterAction: 'queueLinBrieReferral', ...extra});
 const pip = (text, playerMood) => ({text, playerMood, speaker: 'Pip', mood: 'attentive'});
 const advance = next => ({label: 'Continue', next});
 const chain = (lines, end = {replies: []}) => lines.reduceRight((next, line) =>
@@ -104,7 +105,8 @@ export function createBrieCurdTopic() {
       brie("Don't you dare break her heart.", 'attentive'),
       pip('Really?!', 'happy'), ending('Yes! Go get her, tiger!', 'pleased')
     ]) : chain([
-      pip('No, not really.', 'worried'), brie("Have you spoken to Lin? She's been eyeing you!", 'gossiping'),
+      pip('No, not really.', 'worried'), recommendLin("Have you spoken to Lin? She's single, you know!", 'gossiping'),
+      brie("And I've seen the way she looks at you!", 'gossiping'),
       pip('Really?!', 'alarmed'), ending('Yes! Go get her, tiger!', 'pleased')
     ]);
     const admiration = chain([
@@ -192,10 +194,10 @@ export function createBrieBoyfriendTopic(random = Math.random) {
           response = brie("Pip! Don't you go breaking Lin's heart!", 'worried');
         } else {
           const neverMind = choice('Oh... Never mind then.', 'sorry',
-            brie("Have you tried talking to Lin? She's single!", 'pleased'));
+            recommendLin("Have you tried talking to Lin? She's single!", 'pleased'));
           const anyoneElse = choice("Oh... Do you know anyone here who doesn't?", 'thinking', chain([
             brie("Hmm... I'm not sure about Genevieve.", 'thinking'),
-            brie("Lin's single, though! You should chat to her.", 'pleased', {replies: [
+            recommendLin("Lin's single, though! You should chat to her.", 'pleased', {replies: [
               choice('Okay, thanks! Will do!', 'happy', pip('Okay, thanks! Will do!', 'happy')),
               choice('Anyone else?', 'thinking', chain([
                 brie('Most of the women here are married...', 'attentive'),

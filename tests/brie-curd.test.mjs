@@ -192,3 +192,18 @@ test('Brie shares the boyfriend exits with the surname branch and both anyone-el
   assert.equal(thanks.replies, undefined);
   assert.equal(read(pick(anyone, 'Anyone else?')).node.replies, undefined);
 });
+
+test('exactly three Brie recommendations queue the Lin referral when shown', () => {
+  const boyfriend = createBrieBoyfriendTopic();
+  boyfriend.meet();
+  const defaultReply = advance(boyfriend.option(false, boyfriend.meet(), normal).next());
+  const neverMind = pick(defaultReply, 'Oh... Never mind then.');
+  const anyoneElse = advance(pick(defaultReply, "Oh... Do you know anyone here who doesn't?"));
+  const curdReply = read(pick(admiration(opening()), "He's my hero!")).beats
+    .find(beat => beat.text === "Have you spoken to Lin? She's single, you know!");
+  for (const reply of [neverMind, anyoneElse, curdReply]) {
+    assert.equal(reply.enterAction, 'queueLinBrieReferral');
+  }
+  const flirted = read(pick(admiration(opening({...normal, flirts: 4})), "He's my hero!"));
+  assert.ok(flirted.beats.every(beat => !beat.enterAction));
+});

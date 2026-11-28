@@ -1,3 +1,4 @@
+import {linBrieReferral} from './lin-brie-referral.mjs';
 import {eliasTipIntervention, linColdPostBan, postBanLines, waiterTipLines} from './waiter-tipping-dialogue.mjs';
 import {linClothingConfrontation, linPoolJealousy} from './lin-pool-dialogue.mjs';
 import {linColdNameLines, linColdTalkLines, linCrushLines, linFinalInsultLines, linKindnessLines, linPrivateReaction, linPublicReaction, sterlingResponses, waiterNameLines} from './waiter-name-dialogue.mjs';
@@ -74,6 +75,10 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
   let poolJealousySeen = false;
   let clothingConfrontationSeen = false;
   let alternativeLinName = false;
+  let brieReferralPending = false;
+  let brieReferralCompleted = false;
+  const eligibleForBrieReferral = () => !brieReferralCompleted && linStage === 0
+    && relationship === 'normal' && !hasSeducedExecutive();
   const open = function (withoutMilk, id, publicConfrontation = false) {
     const isLin = id === linWaitressId;
     if (publicConfrontation && relationship === 'normal') {
@@ -90,6 +95,9 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
     const pool = isLin && open.canOfferKindness() ? poolState() : {};
     const confrontClothing = pool.clothing && !clothingConfrontationSeen;
     const confrontPool = !confrontClothing && !clothingConfrontationSeen && !poolJealousySeen && pool.visited;
+    if (isLin && brieReferralPending && eligibleForBrieReferral() && !reacts && !confrontClothing && !confrontPool) {
+      return linBrieReferral(askedName.has(id));
+    }
     if (withoutMilk && !reacts && !confrontClothing && !confrontPool) return say('Not now! Busy, busy, busy!');
 
     const index = greetingIndex++ % greetings.length;
@@ -210,6 +218,15 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
         speaker: 'Pip', playerMood: 'happy'};
     }
     return menu();
+  };
+  open.queueBrieReferral = () => {
+    if (eligibleForBrieReferral()) brieReferralPending = true;
+  };
+  open.finishBrieReferral = () => {
+    if (!brieReferralPending || !eligibleForBrieReferral()) return;
+    brieReferralPending = false;
+    brieReferralCompleted = true;
+    askedName.add(linWaitressId);
   };
   open.finishTipBan = () => { tipBanComplete = true; };
   open.canOfferKindness = () => linStage >= 2 && relationship === 'normal' && !hasSeducedExecutive();

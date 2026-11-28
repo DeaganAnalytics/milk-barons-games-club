@@ -84,14 +84,30 @@ try {
     find('Continue →').click();
     const portrait = document.getElementById('conversation-npc');
     const brieReply = [...snapshot(), portrait.dataset.portrait, portrait.dataset.expression];
+    find('I love him too!').click();
+    find('Continue →').click();
+    find("No! I don't love him romantically. I just admire him.").click();
+    find('Continue →').click();
+    find('Continue →').click();
+    find("He's my hero!").click();
+    find('Continue →').click();
+    find('Continue →').click();
+    const referralLine = snapshot();
+    dialogue.open({id: 'lin-waitress', title: 'Waitress Lin'});
+    const referralOpening = snapshot();
+    find('Continue →').click();
+    const linReply = snapshot();
     dialogue.open(brie);
     const consumed = !find(topic);
     dialogue.dismiss();
-    return {locked, unlocked, exclusive, pip, brieReply, consumed};
+    return {locked, unlocked, exclusive, pip, brieReply, consumed, referralLine, referralOpening, linReply};
   })()`);
   assert.deepEqual(brieLines, {
     locked: true, unlocked: true, exclusive: true, pip: ['Pip', 'What do you think of Karl Curd?', 'thinking'],
-    brieReply: ['Waitress Brie', 'Oh, I love him!', 'blonde-waitress', 'lovestruck'], consumed: true
+    brieReply: ['Waitress Brie', 'Oh, I love him!', 'blonde-waitress', 'lovestruck'], consumed: true,
+    referralLine: ['Waitress Brie', "Have you spoken to Lin? She's single, you know!"],
+    referralOpening: ['Pip', 'Excuse me, are you Lin?'],
+    linReply: ['Waitress Lin', 'Yes, sir. Can I help you?']
   });
 
   for (const [choice, expected, mood, pipMood] of [

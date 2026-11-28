@@ -452,6 +452,14 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function finishAction(finishedAction, target) {
+    if (finishedAction === 'queueLinBrieReferral') {
+      waiterOpening.queueBrieReferral();
+      return;
+    }
+    if (finishedAction === 'finishLinBrieReferral') {
+      waiterOpening.finishBrieReferral();
+      return;
+    }
     if (finishedAction === 'queueMysticEliasFollowup') {
       mysticEliasFollowup.queue();
       return;
@@ -591,7 +599,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       : currentSpeaker === bartender.id ? bartender.title
       : currentSpeaker === 'guard' ? 'Bull Guard'
       : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
-    setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactBriePortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactBriePortrait);
+    setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactNpcPortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactNpcPortrait);
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
     const options = character === lifeguard.id
       ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
@@ -848,7 +856,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       || target.postEscort || target.guestGate || target.summoned || target.withoutMilk;
     brieMenu = target.id === 'blonde-waitress' && !target.slotReaction ? opening : null;
     returningToBrie = Boolean(brieMenu) && brieBoyfriendTopic.meet();
-    departureMenu = !scripted && target.id !== skimId && target.id !== milkMysticId
+    departureMenu = !scripted && !opening.linBrieReferral && target.id !== skimId && target.id !== milkMysticId
       && !(target.id === 'baron' && isBaronDancing(baron)) ? opening : null;
     if (target.id === skimId) skimSpillFollowupPending = false;
     speaker.textContent = title.textContent = target.title;
