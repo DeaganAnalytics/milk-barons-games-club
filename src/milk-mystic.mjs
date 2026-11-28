@@ -265,7 +265,7 @@ const ambientLines = [
   'A thousand futures lie within a single drop of milk.',
   'Even the smallest calf casts a shadow.',
   'The wheel of fate turns. The wheel of cheese remains stationary.',
-  'The great cow gives. The great cow takes away.',
+  'The Great Cow gives. The Great Cow takes away.',
   'Some seek fortune. Others seek wisdom. Most seek milk.',
   'The past is curdled. The future is yet to be pasteurised.',
   'I have seen things that would sour your milk.',
