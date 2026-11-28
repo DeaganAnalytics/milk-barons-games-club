@@ -1,3 +1,4 @@
+import {installPipDialogueCheck} from './pip-dialogue-check.mjs';
 import {clubSightLines} from '../src/club-sight-lines.mjs';
 import {milkCalls} from '../src/milk-service.mjs';
 import {staffIds} from '../src/staff.mjs';
@@ -185,6 +186,7 @@ async function load(width, height, mobile, name, url = site) {
 try {
   await send('Page.enable');
   await send('Runtime.enable');
+  await installPipDialogueCheck(send);
   // Drive the same game loop at 60 Hz without depending on key hold durations.
   await send('Page.addScriptToEvaluateOnNewDocument', {source: `
     // The complete asset roster now exceeds Chromium’s default 250-entry buffer.
@@ -689,8 +691,8 @@ try {
   cleanerUrl.searchParams.set('cleaner-test', '1');
   await load(1100, 950, false, 'cleaner', cleanerUrl.href);
   await hold('ArrowUp', 20);
-  await activate('Pip');
-  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Hey, I recognise you!');
+  await activate('Edmund Skim');
+  assert.ok(await evaluate(`[...document.querySelectorAll('#conversation-replies button')].some(button => button.textContent === 'Hey, I recognise you!')`));
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
     .backgroundImage.includes('/waiters/edmund-vale-portrait.webp')`));
   if (process.env.SCREENSHOT_PREFIX) {

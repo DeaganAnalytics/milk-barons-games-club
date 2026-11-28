@@ -112,3 +112,14 @@ When instructions conflict, prioritise:
 - Run focused tests while developing, then run the complete Node suite with `npm test`. Add targeted regression tests where appropriate. Investigate failures, explain intentional expectation changes, and never weaken tests just to pass.
 - Review the Git diff before finishing. Report tests passed, failed or skipped and any remaining uncertainty.
 - Regenerate creative exports from source with `npm run creative -- --zip` when dialogue or portraits change. Maintain portrait annotations and identifier consistency. See `creative/README.md`.
+
+## Pip dialogue
+
+- Every line Pip speaks in a conversation must appear as a selectable response button with his exact words, even if there is only one option. Selecting it advances straight to the next beat. Keep explicit annotations such as `[Lie]` on the choice.
+- Use **Continue** for advancing NPC dialogue or narration. Never use it in place of Pip's words or repeat his selected line in the dialogue panel.
+- Author new Pip lines as response choices. Existing `speaker: 'Pip'` beats use the shared conversion to buttons. Do not add more such placements or embed a literal `Pip:` prefix in dialogue text.
+- Run `npm test` for the source scan and check the affected conversation in the browser when changing dialogue presentation.
+
+## Game version
+
+- Set the displayed game version to `v<PR number>` when preparing a pull request for `develop`. Update both the page title and the game heading in `index.html` once the PR number is known.

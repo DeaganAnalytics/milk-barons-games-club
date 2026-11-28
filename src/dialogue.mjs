@@ -577,7 +577,30 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     } else close();
   }
 
+  function selectPipLine(node, character, withoutMilk) {
+    const silent = {...node, text: '', speaker: node.direction ? 'Narrator' : undefined};
+    const next = node.replies?.length === 1 && node.replies[0].label === 'Continue'
+      ? node.replies[0] : null;
+    if (next && !node.direction && !node.action && !node.enterAction) {
+      const destination = typeof next.next === 'function' ? next.next() : next.next;
+      if (destination?.exitAction) {
+        action = destination.exitAction;
+        close();
+      } else if (destination) show(destination, character, node.playerMood, withoutMilk);
+      else close();
+      return;
+    }
+    show(silent, character, node.playerMood, withoutMilk);
+    if (activeTarget && !node.replies?.length && !node.direction
+        && !node.advanceTo && !node.fadeTo && !node.autoCloseMs) close();
+  }
+
   function show(node, character, playerMood, withoutMilk) {
+    if (node.speaker === 'Pip' && node.text) {
+      const line = node;
+      node = {text: '', mood: line.mood, playerMood: line.playerMood, mustContinue: true,
+        replies: [{label: line.text, playerMood: line.playerMood, selectPipLine: line}]};
+    }
     clearTimeout(autoClose);
     panel.classList.toggle('executive-fade', Boolean(node.fadeTo));
     if (node.disguise !== undefined) disguise = node.disguise;
@@ -691,10 +714,13 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     const choiceButtons = [];
     const advanceButtons = [];
     for (const reply of availableReplies) {
-      const isContinue = reply.label === 'Continue';
+      const pipLine = reply.selectPipLine ?? (reply.next?.speaker === 'Pip' && reply.next.text
+        && (reply.label === 'Continue' || reply.label.replace(/^\[Lie\] /, '') === reply.next.text)
+        ? reply.next : null);
+      const isContinue = reply.label === 'Continue' && !pipLine;
       const button = document.createElement('button');
       button.type = 'button';
-      button.textContent = isContinue ? 'Continue →' : reply.label;
+      button.textContent = isContinue ? 'Continue →' : pipLine && reply.label === 'Continue' ? pipLine.text : reply.label;
       if (reply.conversationExit) button.classList.add('conversation-exit');
       button.addEventListener('click', () => {
         if (cowGuardQuestions.has(reply.label)) {
@@ -707,7 +733,11 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         if (reply.expressesDisposition) politicalDispositions[reply.expressesDisposition] = true;
         if (reply.consumeOnSelect || reply.once === 'bartenderMoneyRequest') usedReplies.add(reply.once);
         const next = typeof reply.next === 'function' ? reply.next() : reply.next;
-        if (next?.exitAction) {
+        const selectedLine = pipLine ?? (next?.speaker === 'Pip' && next.text
+          && reply.label.replace(/^\[Lie\] /, '') === next.text ? next : null);
+        if (selectedLine) {
+          selectPipLine(selectedLine, character, withoutMilk);
+        } else if (next?.exitAction) {
           action = next.exitAction;
           close();
         } else if (next?.action === 'stealPoolClothing') {

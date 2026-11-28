@@ -25,17 +25,12 @@ Use this guide before changing a game system. Read the nearest existing example,
 
 #### Dialogue handoff format
 
-Give each spoken beat its own speaker, portrait ID and exact text. Specify player choices separately, with their destination and any gate or effect. A choice can lead straight to the NPC reply or to a separate Pip beat if the selected line should also appear in the dialogue box.
+Give each spoken beat its own speaker, portrait ID and exact text. Specify player choices separately, with their destination and any gate or effect. Show every Pip line as a response button, even when it is the only choice. Selecting it advances to the next beat.
 
 ```text
 Interaction: Pipe / name
 Choice: My name's Pip. What's yours?
   Player portrait: thinking
-  Next: pip-introduces-himself
-Beat: pip-introduces-himself
-  Speaker: Pip
-  Portrait: thinking
-  Text: My name's Pip. What's yours?
   Next: pipe-reacts
 Beat: pipe-reacts
   Speaker: Pipe
@@ -44,7 +39,7 @@ Beat: pipe-reacts
   Next: name-response-choices
 ```
 
-In code, give a displayed Pip beat `speaker: 'Pip'` and `playerMood`. For a visiting NPC, set `character` to the portrait registry ID and `mood` to its expression. Set `speaker` as well if the scene needs a particular caption. Use `direction` or `speaker: 'Narrator'` for narration. Keep speaker prefixes out of `text`. For lies, put `[Lie]` on the choice label and specify the effect separately.
+In code, give a scripted Pip line `speaker: 'Pip'` and `playerMood` so the dialogue controller can offer it as a response button. For a visiting NPC, set `character` to the portrait registry ID and `mood` to its expression. Set `speaker` as well if the scene needs a particular caption. Use `direction` or `speaker: 'Narrator'` for narration. Keep speaker prefixes out of `text`. For lies, put `[Lie]` on the choice label and specify the effect separately.
 
 ### Portraits
 
