@@ -1,3 +1,4 @@
+import {installPipDialogueCheck} from './pip-dialogue-check.mjs';
 import assert from 'node:assert/strict';
 import {setTimeout as delay} from 'node:timers/promises';
 import {connectChrome} from '../scripts/chrome-session.mjs';
@@ -15,6 +16,7 @@ async function waitFor(expression, message) {
 try {
   await send('Page.enable');
   await send('Runtime.enable');
+  await installPipDialogueCheck(send);
   await send('Network.enable');
   // Render the real encounter nodes through the same dialogue controller as gameplay.
   await send('Page.navigate', {url: entry.href});
@@ -187,6 +189,9 @@ try {
   }
   for (const development of [false, true]) {
     const url = new URL(development ? 'dev/' : './', entry);
+    assert.ok(!events.some(({method, params}) => method === 'Runtime.exceptionThrown'
+      && JSON.stringify(params).includes('Pip dialogue must be a response button')),
+    'Pip dialogue appeared in a panel before navigation');
     events.length = 0;
     await send('Emulation.setDeviceMetricsOverride', development
       ? {width: 390, height: 844, deviceScaleFactor: 1, mobile: true}
