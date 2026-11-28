@@ -32,13 +32,13 @@ try {
     ];
     const click = label => [...document.querySelectorAll('#conversation-replies button, #conversation-advance button')]
       .find(button => button.textContent === label).click();
-    dialogue.open({...elias, passThrough: true});
+    dialogue.open({id: milkMysticId, title: 'Milk Mystic'});
+    elias.passThroughAt = performance.now();
+    dialogue.open(elias);
+    click('Did I just... walk through you?');
     const opening = snapshot();
     click('Continue →');
     const eliasResponse = snapshot();
-    dialogue.open({id: milkMysticId, title: 'Milk Mystic'});
-    dialogue.open({...elias, passThrough: true});
-    click('Continue →');
     click("I'm going to ask the Milk Mystic about this!");
     click('She might know what you are!');
     click('Continue →');
@@ -56,6 +56,59 @@ try {
   assert.equal(playerLines.eliasResponse[1], 'Vhat are you talking about, Master Pip? Zat is physically impossible.');
   assert.deepEqual(playerLines.apology, ['Pip', 'Oh. Sorry.', 'sorry']);
   assert.equal(playerLines.mysticResponse[0], 'Milk Mystic');
+
+  const brieLines = await evaluate(`(async () => {
+    const {createDialogue} = await import('./src/dialogue.mjs');
+    const {createBaron} = await import('./src/baron.mjs');
+    const {elias} = await import('./src/elias.mjs');
+    const dialogue = createDialogue(createBaron());
+    const brie = {id: 'blonde-waitress', title: 'Waitress Brie'};
+    const topic = 'What do you think of Karl Curd?';
+    const find = label => [...document.querySelectorAll('#conversation-replies button, #conversation-advance button')]
+      .find(button => button.textContent === label);
+    const snapshot = () => [
+      document.getElementById('conversation-title').textContent,
+      document.getElementById('conversation-line').textContent
+    ];
+    dialogue.open(brie);
+    const boyfriendTopic = 'So, do you have a boyfriend?';
+    const locked = !find(topic) && !find(boyfriendTopic);
+    dialogue.open(brie);
+    const unlocked = Boolean(find(boyfriendTopic)) && !find(topic);
+    dialogue.open({...elias, welcome: true});
+    find('I refuse to recognise the legitimacy of this bourgeois establishment!').click();
+    dialogue.open(brie);
+    const exclusive = !find(boyfriendTopic);
+    find(topic).click();
+    const pip = [...snapshot(), document.getElementById('conversation-player').dataset.expression.split(':')[0]];
+    find('Continue →').click();
+    const portrait = document.getElementById('conversation-npc');
+    const brieReply = [...snapshot(), portrait.dataset.portrait, portrait.dataset.expression];
+    find('I love him too!').click();
+    find('Continue →').click();
+    find("No! I don't love him romantically. I just admire him.").click();
+    find('Continue →').click();
+    find('Continue →').click();
+    find("He's my hero!").click();
+    find('Continue →').click();
+    find('Continue →').click();
+    const referralLine = snapshot();
+    dialogue.open({id: 'lin-waitress', title: 'Waitress Lin'});
+    const referralOpening = snapshot();
+    find('Continue →').click();
+    const linReply = snapshot();
+    dialogue.open(brie);
+    const consumed = !find(topic);
+    dialogue.dismiss();
+    return {locked, unlocked, exclusive, pip, brieReply, consumed, referralLine, referralOpening, linReply};
+  })()`);
+  assert.deepEqual(brieLines, {
+    locked: true, unlocked: true, exclusive: true, pip: ['Pip', 'What do you think of Karl Curd?', 'thinking'],
+    brieReply: ['Waitress Brie', 'Oh, I love him!', 'blonde-waitress', 'lovestruck'], consumed: true,
+    referralLine: ['Waitress Brie', "Have you spoken to Lin? She's single, you know!"],
+    referralOpening: ['Pip', 'Excuse me, are you Lin?'],
+    linReply: ['Waitress Lin', 'Yes, sir. Can I help you?']
+  });
 
   for (const [choice, expected, mood, pipMood] of [
     ['Even worse!', 'Only to those in debt, Master Pip.', 'self-assured-smirk', 'alarmed'],

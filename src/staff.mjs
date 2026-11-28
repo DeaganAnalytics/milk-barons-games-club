@@ -51,7 +51,7 @@ export function faceStaffMovement(member, dx, dy) {
   if (Math.abs(dx) > 0.1) member.facing = Math.sign(dx);
 }
 
-function offscreenRoute(member, player, baron) {
+function offscreenRoute(member, player, baron, crowd) {
   const left = cameraLeft(player.x);
   const top = cameraTop(player.y);
   const margin = 80;
@@ -62,9 +62,19 @@ function offscreenRoute(member, player, baron) {
     {x: member.x, y: top + ROOM_HEIGHT + margin}
   ];
   const distance = point => Math.hypot(point.x - member.x, point.y - member.y);
+  if (member.departureOrigin) {
+    for (const offset of [-60, 60, -120, 120, -180, 180]) {
+      exits.push({x: left - margin, y: member.y + offset}, {x: left + ROOM_WIDTH + margin, y: member.y + offset},
+        {x: member.x + offset, y: top - margin}, {x: member.x + offset, y: top + ROOM_HEIGHT + margin});
+    }
+  }
+  const obstacles = member.departureOrigin ? crowd.filter(other => other !== member
+    && distance(other) < ROOM_WIDTH + ROOM_HEIGHT
+    && distance(other) > other.radius + member.radius)
+    .map(({x, y, radius}) => ({x, y, halfWidth: radius, halfHeight: radius})) : null;
   for (const exit of exits.sort((a, b) => distance(a) - distance(b))) {
     if (isNpcBlocked(exit.x, exit.y, member.radius, baron)) continue;
-    const route = routeAroundBaron(member, exit, baron);
+    const route = routeAroundBaron(member, exit, baron, obstacles);
     if (route.length) return {target: exit, route};
   }
   return {target: null, route: []};
@@ -81,7 +91,7 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
       member.route = [guestGateInside, guestGateOutside];
     }
     if (!member.target && member.rushingOffscreen) {
-      Object.assign(member, offscreenRoute(member, player, baron));
+      Object.assign(member, offscreenRoute(member, member.departureOrigin ?? player, baron, [...guards, ...staff]));
     } else if (!member.target) {
       member.target = chooseTarget(member, baron, random);
       member.route = member.target && crossesScenery(member, member.target)
@@ -115,8 +125,9 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
       member.route?.shift();
       if (member.route?.length) continue;
       if (member.rushingOffscreen) {
-        const left = cameraLeft(player.x);
-        const top = cameraTop(player.y);
+        const origin = member.departureOrigin ?? player;
+        const left = cameraLeft(origin.x);
+        const top = cameraTop(origin.y);
         member.rushingOffscreen = member.x >= left - 35 && member.x <= left + ROOM_WIDTH + 35
           && member.y >= top - 35 && member.y <= top + ROOM_HEIGHT + 70;
       }

@@ -1,3 +1,4 @@
+import {createBrieCurdActions} from './brie-curd-actions.mjs';
 import {mysticMoneyOutcome} from './mystic-money-dialogue.mjs';
 import {createMilkMystic, updateMilkMystic} from './milk-mystic.mjs';
 import {DJ_ADMISSION_PRICE} from './baron-dialogue.mjs';
@@ -231,6 +232,8 @@ const clothingEvents = {
 let djGiftPending = false;
 const canDeliverDjGift = () => djGiftPending && coinBalance.count >= 60;
 
+const brie = staff.find(member => member.id === 'blonde-waitress');
+const brieCurdActions = createBrieCurdActions(brie, staff, guests, baron, player, guards, clubEvent, karma);
 const lin = staff.find(member => member.id === linWaitressId);
 let linConfrontation = null;
 let linDepartureRegret = false;
@@ -304,6 +307,7 @@ const dialogue = createDialogue(baron, {
     return injured;
   },
   onAction: (action, target) => {
+    brieCurdActions.handle(action, elapsed);
     if (action === 'linReassuranceLie') clubEvent('Pip lies about why he visited the pool.', () => karma.change(-0.5));
     if (action === 'linClothingLie') clubEvent('Pip lies to Lin about the clothing theft.', () => karma.change(-1));
     if (action === 'linApologyKarma') clubEvent('Pip apologises to Lin.', () => karma.change(0.5));
@@ -656,13 +660,6 @@ function warnAtGuestGate() {
   dialogue.open({id: 'guard', title: 'Bull Guard', guestGate: true});
 }
 
-function checkEliasPassThrough(previous) {
-  if (dialogue.isOpen() || !gameOver.hidden || !startEliasPassThrough(elias, previous, player)) return false;
-  clearInput();
-  player.walking = false;
-  dialogue.open({...elias, passThrough: true});
-  return true;
-}
 
 const {readMovement, clearInput} = bindControls({
   isPaused: () => eliasApproaching || Boolean(eliasDeparture || eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene || rangeFall),
@@ -672,13 +669,14 @@ const {readMovement, clearInput} = bindControls({
     else {
       const previous = {x: player.x, y: player.y};
       movePlayer(player, baron, dx, dy, guards, playerCollisionNpcs());
-      if (!checkPracticeRange(previous, elapsed)) checkEliasPassThrough(previous);
+      if (!checkPracticeRange(previous, elapsed)) startEliasPassThrough(elias, previous, player);
     }
   },
   interact: () => {
     if (dialogue.isOpen() || guestEscort || ropeWarning.scene) return;
     if (eliasApproaching || eliasDeparture || eliasScene || !gameOver.hidden || milkBalloon || rangeFall) return;
-    const nearbyGuests = guests.filter(guest => !(guest === lin && (linConfrontation || dialogue.linRelationship() === 'departed'))
+    const nearbyGuests = guests.filter(guest => !(guest === brie && brieCurdActions.isUnavailable())
+      && !(guest === lin && (linConfrontation || dialogue.linRelationship() === 'departed'))
       && !(guestEnclosure.active && insideGuestEnclosure(guest))
       && !(guest === sleepingGamblerTarget && sleepingGambler.pose(elapsed).awake));
     nearbyGuests.push(mystic);
@@ -862,10 +860,7 @@ function frame(timestamp) {
     requestAnimationFrame(frame);
     return;
   }
-  if (!guestEscort && checkEliasPassThrough(previousPosition)) {
-    requestAnimationFrame(frame);
-    return;
-  }
+  if (!guestEscort) startEliasPassThrough(elias, previousPosition, player);
   if (!guestEscort && takeDanceExit(player)) {
     startEliasScene({danceFee: true});
     requestAnimationFrame(frame);
@@ -993,6 +988,12 @@ function frame(timestamp) {
   updateAttendantMilk(attendantMilk, baron, staff, guards, {x: cameraX, y: cameraY}, dt);
   updateMilkPool(milkPool, elapsed, dt);
   updateStaff(staff, player, baron, guards, elapsed, dt);
+  if (brieCurdActions.update(elapsed, dt, !guestEscort && !linConfrontation)) {
+    clearInput();
+    dialogue.open({...brie, brieMysticIntervention: true});
+    requestAnimationFrame(frame);
+    return;
+  }
   if (dialogue.linRelationship() === 'departed' && !lin.rushingOffscreen) {
     const staffIndex = staff.indexOf(lin);
     if (staffIndex >= 0) staff.splice(staffIndex, 1);

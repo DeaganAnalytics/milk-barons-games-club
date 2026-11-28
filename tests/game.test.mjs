@@ -3132,14 +3132,21 @@ test('Milk Mystic spawns near the Baron, pauses near Pip and roams through clear
   assert.ok(furthest > ROOM_WIDTH, 'Mystic should roam beyond the spawn square');
 });
 
-test('walking through Elias starts the encounter once, while approaching him does not', async () => {
-  const {startEliasPassThrough} = await import('../src/elias.mjs');
+test('walking through Elias refreshes the ten-second menu window until selected', async () => {
+  const {startEliasPassThrough, eliasPassThroughAvailable} = await import('../src/elias.mjs');
   const actor = {x: 10, y: 10};
   assert.equal(startEliasPassThrough(actor, {x: 0, y: 10}, {x: 9, y: 10}), false);
   assert.equal(startEliasPassThrough(actor, {x: 9, y: 10}, {x: 9, y: 10}), false);
   assert.equal(startEliasPassThrough(actor, {x: 0, y: 22}, {x: 20, y: 22}), false);
-  assert.equal(startEliasPassThrough(actor, {x: 9, y: 10}, {x: 11, y: 10}), true);
-  assert.equal(startEliasPassThrough(actor, {x: 11, y: 10}, {x: 9, y: 10}), false);
+  assert.equal(eliasPassThroughAvailable(actor, 0), false);
+  assert.equal(startEliasPassThrough(actor, {x: 9, y: 10}, {x: 11, y: 10}, 100), true);
+  assert.equal(eliasPassThroughAvailable(actor, 10_099), true);
+  assert.equal(eliasPassThroughAvailable(actor, 10_100), false);
+  assert.equal(startEliasPassThrough(actor, {x: 11, y: 10}, {x: 9, y: 10}, 11_000), true);
+  assert.equal(eliasPassThroughAvailable(actor, 11_001), true);
+  actor.passThroughStarted = true;
+  assert.equal(eliasPassThroughAvailable(actor, 11_002), false);
+  assert.equal(startEliasPassThrough(actor, {x: 9, y: 10}, {x: 11, y: 10}, 12_000), false);
 });
 
 test('Elias pass-through dialogue gates the Mystic reply and rolls the arm outcome once', async () => {

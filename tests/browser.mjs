@@ -76,6 +76,8 @@ async function activate(heading, withButton = false) {
     assert.equal(await evaluate("document.getElementById('conversation').hidden"), true);
     assert.equal(await evaluate("document.getElementById('heading')"), null);
   } else {
+    assert.equal(await evaluate("document.getElementById('conversation').hidden"), false,
+      `Expected ${heading} dialogue to open`);
     assert.equal(await evaluate("document.getElementById('conversation-title').textContent"), heading);
   }
 }
@@ -164,6 +166,16 @@ async function load(width, height, mobile, name, url = site) {
     assert.ok(assets.some(url => url.endsWith('/waiters/' + id + '-walk.webp')));
   }
   await frames(1);
+  // The Baron routes need the roaming Mystic to clear the path.
+  if (name === 'desktop' || name === 'mobile') await frames(240);
+  const departing = `(async () => Boolean((await import(
+    new URL('./src/elias.mjs', document.baseURI))).elias.departureSpeech))()`;
+  for (let attempt = 0; attempt < 60 && await evaluate(departing, true); attempt++) {
+    await frames(6);
+  }
+  assert.equal(await evaluate(departing, true), false, "Elias's departure should finish before movement");
+  // Later assertions measure ambient speech after the opening cutscene.
+  await evaluate("window.spokenLines.length = 0");
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-${name}.png`, Buffer.from(shot.data, 'base64'));
@@ -457,8 +469,9 @@ try {
   await reply('A glass of whole milk, please.', '(Pip drinks the milk.) An excellent choice, sir. A timeless classic.');
   assert.equal(Number(await evaluate('document.getElementById("coin-count").textContent')), beforeDrink - 3);
   await closeConversation();
-  await hold('ArrowRight', 36);
+  // Step below the bartender's collider before crossing to the posted guard.
   await hold('ArrowDown', 14);
+  await hold('ArrowRight', 36);
   await activate('Bull Guard');
   const postedGreeting = 'If you have something to report, find one of the roving security officers';
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), postedGreeting);
@@ -488,10 +501,11 @@ try {
   await closeConversation();
   await hold('ArrowLeft', 170);
   await hold('ArrowDown', 1900);
-  // Detour east of the slot-machine bank before returning to the west wall.
-  await hold('ArrowRight', 45);
-  await hold('ArrowDown', 470);
-  await hold('ArrowLeft', 45);
+  // Back up before crossing the approach to the occupied slot seats.
+  await hold('ArrowUp', 30);
+  await hold('ArrowRight', 65);
+  await hold('ArrowDown', 510);
+  await hold('ArrowLeft', 65);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2740]);
   assert.deepEqual(await evaluate(`(() => {
     const original = CanvasRenderingContext2D.prototype.drawImage;
@@ -517,6 +531,10 @@ try {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-southeast.png`, Buffer.from(shot.data, 'base64'));
   }
+  // Go around the live firing lanes before following the east wall north.
+  await hold('ArrowLeft', 175);
+  await hold('ArrowUp', 180);
+  await hold('ArrowRight', 175);
   await hold('ArrowUp', 1900);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 0]);
   if (process.env.SCREENSHOT_PREFIX) {
@@ -663,8 +681,8 @@ try {
   cleanerUrl.searchParams.set('cleaner-test', '1');
   await load(1100, 950, false, 'cleaner', cleanerUrl.href);
   await hold('ArrowUp', 20);
-  await activate('Edmund Skim');
-  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Pip: Hey, I recognise you!');
+  await activate('Pip');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Hey, I recognise you!');
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
     .backgroundImage.includes('/waiters/edmund-vale-portrait.webp')`));
   if (process.env.SCREENSHOT_PREFIX) {

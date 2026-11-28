@@ -1,3 +1,5 @@
+import {brieMysticIntervention, mysticSingleDialogue, mysticSingleQuestion} from './mystic-single-dialogue.mjs';
+import {createBrieBoyfriendTopic, createBrieCurdTopic} from './brie-curd-dialogue.mjs';
 import {createProfessorInterview} from './professor-interview.mjs';
 import {baronCurdReply} from './baron-curd-dialogue.mjs';
 import {createMysticVisibilityDialogue} from './mystic-visibility-dialogue.mjs';
@@ -19,7 +21,7 @@ import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
 import {bartenderExit, bartenderMoods, bartenderOpening} from './bartender-dialogue.mjs';
 import {additionalBaronReplies, baronCowGuardReply, baronDanceDialogue, baronGreetings, baronKarmaDialogue, DJ_ADMISSION_PRICE} from './baron-dialogue.mjs';
 import {isBaronDancing} from './baron.mjs';
-import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPassThroughDialogue, eliasPortraits, eliasPokieBan, eliasPokieRefusal, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
+import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPassThroughAvailable, eliasPassThroughDialogue, eliasPortraits, eliasPokieBan, eliasPokieRefusal, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
@@ -184,7 +186,9 @@ const extraPortraitMoods = new Map([
   ['plum', ['delighted', 'smug', 'shocked']],
   ['emerald', ['amused', 'skeptical', 'appalled']],
   [sleepingGamblerId, ['drowsy', 'protective', 'dismayed']],
-  ...staffIds.filter(id => id !== skimId && id !== 'lin-waitress' && id !== 'handlebar-waiter').map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']]),
+  ...staffIds.filter(id => id !== skimId && id !== 'lin-waitress' && id !== 'handlebar-waiter' && id !== 'blonde-waitress').map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']]),
+  ['blonde-waitress', ['welcoming', 'apologetic', 'hurried', 'pleased',
+    'shocked', 'angry', 'worried', 'gossiping', 'lovestruck', 'confused', 'sulking', 'thinking']],
   ['handlebar-waiter', ['welcoming', 'apologetic', 'hurried', 'pleased', 'offended']],
   ['lin-waitress', ['welcoming', 'apologetic', 'hurried', 'pleased', 'angry', 'hurt', 'skeptical', 'blushing']]
 ]);
@@ -343,6 +347,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   const closeButton = document.getElementById('conversation-close');
   let action = null;
   let activeTarget;
+  let passThroughAvailableAtOpen = false;
   let autoClose;
   let disguise;
   let pipLipstick = false;
@@ -350,6 +355,14 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     () => hasLinLeft?.() && hasSeducedExecutive?.());
   const linDepartureReaction = createLinDepartureReactions();
   let departureMenu;
+  let brieMenu;
+  const spokenToMysticStaff = new Set();
+  let finishedBrieBoyfriend = false;
+  let finishedGenevieveSingle = false;
+  let usedMysticSingle = false;
+  let returningToBrie = false;
+  const brieBoyfriendTopic = createBrieBoyfriendTopic();
+  const brieCurdTopic = createBrieCurdTopic();
   const mysticVisibility = createMysticVisibilityDialogue();
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
@@ -411,7 +424,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   const npcHistory = {};
   const pipHistory = {};
 
-  function setPortrait(element, character, mood, withoutMilk) {
+  function setPortrait(element, character, mood, withoutMilk, exact = false) {
     const expressions = [
       ...(npcExpressions.get(character) ?? []),
       ...(!withoutMilk ? extraPortraitMoods.get(character) ?? [] : [])
@@ -424,7 +437,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     }
     const family = expressionFamilies.find(group => group.includes(mood)) ?? [];
     // Repeat an intentional expression if this character has no suitable alternate.
-    const alternatives = special || withoutMilk ? [] : family.filter(expression => expressions.includes(expression));
+    const alternatives = exact || special || withoutMilk ? [] : family.filter(expression => expressions.includes(expression));
     mood = chooseExpression(mood, alternatives, npcHistory);
     const extraPortrait = extraPortraitUrl(character, mood, withoutMilk);
     const reportPortrait = reportPortraits.get(character + '-' + mood);
@@ -444,6 +457,17 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function finishAction(finishedAction, target) {
+    if (finishedAction === 'finishBrieBoyfriend') finishedBrieBoyfriend = true;
+    if (finishedAction === 'finishGenevieveSingle') finishedGenevieveSingle = true;
+    if (finishedAction === 'finishMysticSingle' && !waiterOpening.hasStartedLinFlirting()) return;
+    if (finishedAction === 'queueLinBrieReferral') {
+      waiterOpening.queueBrieReferral();
+      return;
+    }
+    if (finishedAction === 'finishLinBrieReferral') {
+      waiterOpening.finishBrieReferral();
+      return;
+    }
     if (finishedAction === 'queueMysticEliasFollowup') {
       mysticEliasFollowup.queue();
       return;
@@ -551,7 +575,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       || node === lifeguardDialogue || node.mustContinue
       || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.pokieBan || activeTarget.baronKarma) && !action));
     slappedByBaron ||= node.enterAction === 'baronSlap';
-    panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || ['linSlap', 'linPrivateSlap', 'linAlienatingSlap', 'linBunniesSlap'].includes(node.enterAction) || node.action === 'politicianHit');
+    panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || ['linSlap', 'linPrivateSlap', 'linAlienatingSlap', 'linBunniesSlap', 'brieCurdSlap'].includes(node.enterAction) || node.action === 'politicianHit');
     panel.classList.toggle('mystic-collapse', Boolean(node.pipCollapsed));
     panel.classList.toggle('lin-milk-throw', node.enterAction === 'linThrowMilk');
     panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
@@ -583,14 +607,20 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       : currentSpeaker === bartender.id ? bartender.title
       : currentSpeaker === 'guard' ? 'Bull Guard'
       : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
-    setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)));
+    setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactNpcPortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactNpcPortrait);
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
     const options = character === lifeguard.id
       ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
       : node.replies ?? [];
     const eliasMenu = node === eliasConversation || node === eliasFollowingConversation;
     const vampire = eliasMenu ? vampireFollowup(node, vampireStage) : null;
-    const replies = eliasMenu ? [...options, ...(vampire ? [vampire] : []), ...accountingReplies(tallies, node)]
+    const passThrough = eliasMenu && passThroughAvailableAtOpen && !elias.passThroughStarted ? [{
+      label: 'Did I just... walk through you?', playerMood: 'thinking', next: () => {
+        elias.passThroughStarted = true;
+        return eliasPassThroughDialogue(mysticVisibility.hasMetMystic());
+      }
+    }] : [];
+    const replies = eliasMenu ? [...passThrough, ...options, ...(vampire ? [vampire] : []), ...accountingReplies(tallies, node)]
       : report ? [report, ...options] : options;
     const seenCowGuard = hasSeenCowGuard?.();
     const reaction = hasLinLeft?.() && (node === departureMenu || node.linDepartureMenu)
@@ -605,7 +635,22 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         curdist: politicalDispositions.communist, seducedExecutive: hasSeducedExecutive?.(),
         seenDj: hasSeenDjDairy?.() || spokeToDjDairy, spokeToMilo: metMilo
       }) : null;
-    const extraReplies = [reaction, visibility, interview].filter(Boolean);
+    let brieTopic = null;
+    if (node === brieMenu && !activeTarget.serviceDuty) {
+      const state = {
+        seduced: hasSeducedExecutive?.(), relationship: waiterOpening.relationship(), flirts: waiterOpening.completedLinChats()
+      };
+      brieTopic = politicalDispositions.communist ? brieCurdTopic(true, node, state)
+        : brieBoyfriendTopic.option(false, returningToBrie, state);
+    }
+    const mysticSingle = character === milkMysticId && node.linDepartureMenu
+      && !usedMysticSingle && finishedBrieBoyfriend && finishedGenevieveSingle
+      && spokenToMysticStaff.size === 3 && waiterOpening.relationship() === 'normal'
+      ? {label: mysticSingleQuestion, playerMood: 'thinking', next: () => {
+        usedMysticSingle = true;
+        return mysticSingleDialogue();
+      }} : null;
+    const extraReplies = [reaction, visibility, interview, brieTopic, mysticSingle].filter(Boolean);
     const exitIndex = replies.findIndex(reply => reply.conversationExit);
     const insertAt = exitIndex < 0 ? replies.length : exitIndex;
     const availableReplies = [...replies.slice(0, insertAt), ...extraReplies, ...replies.slice(insertAt)].filter(reply => !usedReplies.has(reply.once)
@@ -758,12 +803,15 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     spokeToDjDairy ||= target.id === djTarget.id;
     npcHistory.mood = pipHistory.mood = null;
     activeTarget = target;
+    passThroughAvailableAtOpen = target.id === elias.id && eliasPassThroughAvailable(elias);
     spokeToProfessor ||= target.id === professor.id;
     pokieCounter.hidden = target.id !== pokieId;
     disguise = target.executiveFraud ? 'woman' : null;
     const firstGuestGreeting = !guestGreetingSeen.has(target.id);
     if (partyGuests.some(guest => guest.id === target.id)) guestGreetingSeen.add(target.id);
-    const opening = target.waiterTipBan ? waiterTippingIntervention() : target.linDepartureRegret ? {
+    if (['lin-waitress', 'blonde-waitress', 'female-waiter'].includes(target.id)
+        && !target.slotReaction && !target.brieMysticIntervention) spokenToMysticStaff.add(target.id);
+    const opening = target.brieMysticIntervention ? brieMysticIntervention() : target.waiterTipBan ? waiterTippingIntervention() : target.linDepartureRegret ? {
       text: 'Oh, bloody hell.', speaker: 'Pip', mood: 'hurt', playerMood: 'exasperated'
     } : target.linKindness ? linKindnessDialogue() : target.linAftermath ? {
       text: "Oh, I've really messed this up.", speaker: 'Pip', mood: 'attentive', playerMood: 'sad', mustContinue: true,
@@ -778,7 +826,6 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     } : partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening(target.id, !firstGuestGreeting)
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.(), isCommissionerSplattered?.(), baronDiscoveries?.()?.pool)
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
-      : target.id === elias.id && target.passThrough ? eliasPassThroughDialogue(mysticVisibility.hasMetMystic())
       : target.id === elias.id && target.pokieBan ? eliasPokieBan
       : target.id === elias.id && target.pokieRefusal ? eliasPokieRefusal
       : target.id === elias.id && target.tax ? eliasTaxConversation(target.tax)
@@ -820,11 +867,13 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         }
       : target.id === 'milo' ? openMilo()
         : baronConversation();
-    const scripted = target.waiterTipBan || target.slotReaction || target.linDepartureRegret || target.linKindness || target.linAftermath || target.linConfrontation
+    const scripted = target.brieMysticIntervention || target.waiterTipBan || target.slotReaction || target.linDepartureRegret || target.linKindness || target.linAftermath || target.linConfrontation
       || target.welcome || target.pokieBan || target.pokieRefusal || target.tax || target.danceFee
       || target.baronKarma || target.executiveFraud || target.poolClothesThanks || target.pilloryThanks
       || target.postEscort || target.guestGate || target.summoned || target.withoutMilk;
-    departureMenu = !scripted && target.id !== skimId && target.id !== milkMysticId
+    brieMenu = target.id === 'blonde-waitress' && !target.slotReaction && !target.brieMysticIntervention ? opening : null;
+    returningToBrie = Boolean(brieMenu) && brieBoyfriendTopic.meet();
+    departureMenu = !scripted && !opening.linBrieReferral && target.id !== skimId && target.id !== milkMysticId
       && !(target.id === 'baron' && isBaronDancing(baron)) ? opening : null;
     if (target.id === skimId) skimSpillFollowupPending = false;
     speaker.textContent = title.textContent = target.title;

@@ -61,9 +61,9 @@ for (const file of paths) {
       if (!human(value) && !(typeof value === 'string' && ['text', 'label', 'direction', 'message'].includes(key))) return;
       const call = parent?.type === 'CallExpression' ? parent.callee.name : null;
       const role = {text: 'Line', label: 'Choice', direction: 'Direction', message: 'Notice'}[key]
-        ?? (parent?.arguments?.[0] === node ? {reply: 'Choice', pip: 'Pip', say: 'Line',
+        ?? (parent?.arguments?.[0] === node ? {reply: 'Choice', pip: 'Pip', brie: 'Brie', recommendLin: 'Brie', lin: 'Lin', say: 'Line',
           mystic: 'Milk Mystic', elias: 'Elias', guard: 'Guard', professor: 'Professor', baron: 'Milk Baron'}[call] : null)
-        ?? (call === 'choice' && parent.arguments[1] === node ? 'Choice' : null)
+        ?? (call === 'choice' && parent.arguments[['brie-curd-dialogue.mjs', 'lin-brie-referral.mjs'].includes(file) ? 0 : 1] === node ? 'Choice' : null)
         ?? 'Candidate text';
       const metadata = ['text', 'label'].includes(key) && container?.type === 'ObjectExpression'
         ? container.properties.filter(property => ['speaker', 'character', 'mood', 'once', 'enterAction', 'action'].includes(keyOf(property)))

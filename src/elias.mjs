@@ -278,7 +278,7 @@ function exchange(lines, menu) {
   return replies[0];
 }
 
-export function startEliasPassThrough(actor, from, to) {
+export function startEliasPassThrough(actor, from, to, now = performance.now()) {
   if (actor.passThroughStarted) return false;
   // Player movement resolves horizontally first and then vertically.
   const crosses = (start, end, center) => (start < center && end >= center)
@@ -286,8 +286,12 @@ export function startEliasPassThrough(actor, from, to) {
   const throughBody = (Math.abs(from.y - actor.y) <= 8 && crosses(from.x, to.x, actor.x))
     || (Math.abs(to.x - actor.x) <= 8 && crosses(from.y, to.y, actor.y));
   if (!throughBody) return false;
-  actor.passThroughStarted = true;
+  actor.passThroughAt = now;
   return true;
+}
+
+export function eliasPassThroughAvailable(actor, now = performance.now()) {
+  return !actor.passThroughStarted && now - actor.passThroughAt < 10_000;
 }
 
 export function resolveEliasPassThroughAction(action, actor, health, announce) {
