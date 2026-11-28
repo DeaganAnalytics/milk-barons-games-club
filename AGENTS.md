@@ -116,6 +116,7 @@ When instructions conflict, prioritise:
 ## Pip dialogue
 
 - Every line Pip speaks in a conversation must appear as a selectable response button with his exact words, even if there is only one option. Selecting it advances straight to the next beat. Keep explicit annotations such as `[Lie]` on the choice.
+- Show direction-only dialogue beats in italics with no speaker heading. Keep the heading for spoken lines that also include a direction.
 - Use **Continue** for advancing NPC dialogue or narration. Never use it in place of Pip's words or repeat his selected line in the dialogue panel.
 - Author new Pip lines as response choices. Existing `speaker: 'Pip'` beats use the shared conversion to buttons. Do not add more such placements or embed a literal `Pip:` prefix in dialogue text.
 - Run `npm test` for the source scan and check the affected conversation in the browser when changing dialogue presentation.

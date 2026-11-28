@@ -644,13 +644,15 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       playerPortrait.dataset.expression = portraitKey;
     }
     const currentSpeaker = node.character ?? character;
-    const narration = node.speaker === 'Narrator';
+    const directionOnly = Boolean(node.direction && !node.text?.trim());
+    const narration = directionOnly || node.speaker === 'Narrator';
     const npcName = currentSpeaker === milkMysticId ? 'Milk Mystic'
       : (!pipIsSpeaking && !narration && node.speaker) || (currentSpeaker === elias.id ? elias.title
         : currentSpeaker === bartender.id ? bartender.title
         : currentSpeaker === 'guard' ? 'Bull Guard'
         : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
-    title.textContent = pipIsSpeaking ? 'Pip' : narration ? 'Narrator' : npcName;
+    title.hidden = directionOnly;
+    title.textContent = directionOnly ? '' : pipIsSpeaking ? 'Pip' : narration ? 'Narrator' : npcName;
     speaker.textContent = npcName;
     panel.dataset.speakingSide = pipIsSpeaking ? 'player' : narration ? 'narrator' : 'npc';
     setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactNpcPortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactNpcPortrait);
