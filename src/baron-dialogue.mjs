@@ -92,7 +92,7 @@ export function baronDanceDialogue(used, canPay = () => false, hasAccess = false
     replies: more(elias('Provided ze arts make money for you, my lord.', 'current-smile',
       more(say('Precisely!', 'pleased', {action: 'payDjAdmission'}))))
   });
-  const insufficient = elias('Good heavens, Master Pip. Ve gave you ₥100 upon arrival. Vhat have you been doing?', 'insulted',
+  const insufficient = elias('Merciful milk, Master Pip. Ve gave you ₥100 upon arrival. Vhat have you been doing?', 'insulted',
     more(say('Financially irresponsible, is he?', 'displeased', {
       mustContinue: true,
       replies: more(elias('Evidently, my lord.', 'current-smile',
