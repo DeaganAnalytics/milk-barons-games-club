@@ -147,7 +147,7 @@ export const linCrushLines = [
     'Particularly Sterling.', 'Sterling is actually very experienced.',
     "Well, he doesn't have your smile.", "No, I suppose he doesn't.",
     'Or your eyes.', "We're different people, sir.",
-    'Thank God for that.'
+    'Thank the Cow for that.'
   ],
   [
     'Do you get many interesting customers?', 'Occasionally, sir.',
@@ -190,7 +190,7 @@ export const linPrivateReaction = {
   afterFlirting: [
     {text: 'Hello, Lin!', speaker: 'Pip', playerMood: 'happy'},
     'Continue', "I hear you've been doing some private networking, sir.",
-    'Oh, God. You know too?', 'The entire club knows, sir.',
+    'Oh, milk. You know too?', 'The entire club knows, sir.',
     "It wasn't what you think!", 'No?',
     'It was a financial transaction!', {text: 'Well, I hope it was profitable.', direction: 'Lin slaps Pip.', enterAction: 'linPrivateSlap', mood: 'angry'},
     'OW!', 'Will you be ordering anything, sir?',

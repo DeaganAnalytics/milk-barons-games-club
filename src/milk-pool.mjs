@@ -53,9 +53,19 @@ const exchanges = [
 ];
 
 const lifeguardLines = [
-  'God, I love this job.',
+  'NO STAMPEDING AROUND THE POOL!',
+  "Don't make me get out of this chair!",
+  "I've got my eye on you, runt.",
+  'KEEP YOUR RUMPS SUBMERGED!',
+  "I swear, I'm supervising a herd of idiots.",
+  "Don't test my milkin patience!",
+  'MY POOL! MY RULES!',
+  "You're lucky I'm not charging today.",
+  "Keep it up and you'll see my horns!",
+  "Some days I reckon I'd be better off in a paddock.",
+  'Milk, I love this job.',
   'Looking the other way has never paid off so well.',
-  'God save the Baron!',
+  'The Great Cow save the Baron!',
   'The Dairy Aristocracy certainly knows how to live.',
   'Your taxes at work!',
   'Some call it decadence. I call it culture.',
@@ -80,7 +90,7 @@ const missingDressesExchanges = [
 
 const missingDressesGuardLines = [
   'Oh boy, oh boy, oh boy!',
-  'Best day of my bloody career!',
+  'Best day of my milkin career!',
   "Ladies, I assure you, I'm monitoring the situation very closely.",
   'No need to panic, ladies. Take your time getting out.',
   'Hehehehe... MOOOO!',
@@ -88,21 +98,21 @@ const missingDressesGuardLines = [
   "Unfortunately, ladies, we don't have any spare towels.",
   "I'm afraid you'll have to exit the pool eventually. Health and safety regulations.",
   'Nothing gets past these eyes. Nothing.',
-  'I love my job. I bloody love my job!'
+  'I love my job. I milkin love my job!'
 ];
 
 const missingSuitGuardLines = [
   "Sir, I'm going to need you to remain in the pool.",
-  'Nobody wants to see that, mate. Stay submerged.',
-  'Of all the bloody clothes to steal!',
+  'Nobody wants to see your rump, sunshine. Stay submerged.',
+  'Of all the ploughing clothes to steal!',
   'Someone get this bloke a towel. Immediately!',
   'This is NOT what I signed up for!',
   'Sir, if you attempt to exit that pool, I will have you arrested.',
-  'My day is ruined. Absolutely bloody ruined.',
+  'My day is ruined. Trampled into the manure.',
   'Ladies, your clothing is still there. Unfortunately.',
   "I should've called in sick today.",
-  'Keep everything below the milk, mate!',
-  "Whoever did this is getting a bloody fine!"
+  'Keep your udders below the milk!',
+  "Whoever did this is getting a ploughing fine!"
 ];
 
 export function takePoolClothing(pool, selection, elapsed) {

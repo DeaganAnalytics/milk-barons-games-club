@@ -47,7 +47,7 @@ const orderDrink = say('Certainly, sir. What will it be?', polite, [
   reply('A glass of whole milk, please.', drink('An excellent choice, sir. A timeless classic.', 'Pip drinks the milk.', 'whole')),
   reply("I'll try a Piña Cow-lada.", drink('A splendid choice, sir. Rather potent, I must warn you.', 'Pip drinks the cocktail.', 'cocktail')),
   reply("I'll have a glass of ocean milk.", say('An economical choice, sir. Particularly popular among the financially disadvantaged.', polite, next(
-    say('', skeptical, [reply("Good heavens! That's disgusting!", say('An acquired taste, sir.', deadpan, back,
+    say('', skeptical, [reply("Good meadows! That's disgusting!", say('An acquired taste, sir.', deadpan, back,
       {enterAction: 'bartenderDrink', order: 'ocean'}), 'alarmed')], {direction: 'Pip drinks the milk.', mustContinue: true})
   ), {mustContinue: true}))
 ]);

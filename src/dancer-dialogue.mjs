@@ -51,21 +51,26 @@ const greetings = {
     ['Why do we always attract the weird ones?', 'deadpan']
   ],
   guard: [
-    ['MOOOOOO! How are ya, mate?!', 'excited'],
-    ["I'm off duty! No bloody complaints!", 'deadpan'],
+    ['MOOOOOO! How are ya, little fella?!', 'excited'],
+    ["I'm off duty! No ploughing complaints!", 'deadpan'],
     ['What a night! What a magnificent night!', 'happy'],
     ['Have you seen those two ladies?!', 'excited'],
-    ['God bless the Baron!', 'happy'],
-    ["I'd arrest myself for looking this bloody good!", 'laughing'],
+    ['The Great Cow bless the Baron!', 'happy'],
+    ["I'd arrest myself for looking this milkin good!", 'laughing'],
     ["You haven't got any red on you, have ya?", 'nervous'],
-    ["Between you and me, mate, I'm bloody irresistible.", 'reserved'],
+    ["Between you and me, little fella, I'm milkin irresistible.", 'reserved'],
     ['That idiot with the milk bottle is getting on my nerves.', 'deadpan'],
-    ['Watch and learn, mate. Watch and learn!', 'excited'],
+    ['Watch and learn, runt. Watch and learn!', 'excited'],
     ["I'm normally much smoother than this.", 'reserved'],
     ["I'm not drunk! I've just got four... never mind.", 'nervous'],
     ['You reckon the ladies like a man in uniform?', 'thinking'],
-    ["Bloody hell, that milk's starting to hit me.", 'deadpan'],
-    ['MOOOOOO! Sorry, mate. Hiccups.', 'laughing']
+    ["Milkin hell, that milk's starting to hit me.", 'deadpan'],
+    ['MOOOOOO! Sorry about that. Hiccups.', 'laughing'],
+    ['Look at these moves! Light on my hooves!', 'excited'],
+    ['Finest specimen on the dance floor!', 'excited'],
+    ['Not bad for a big fella, eh?', 'excited'],
+    ["MOOOOOO! That's my singing voice!", 'excited'],
+    ["Careful, little fella. Don't get trampled!", 'excited']
   ]
 };
 

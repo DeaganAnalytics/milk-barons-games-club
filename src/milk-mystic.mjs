@@ -112,7 +112,7 @@ export function createMysticEliasFollowup() {
       ]))
     ]));
   const opening = say("I've been expecting you, child.", 'serene', [
-    reply('My God, maybe she can read the future.', 'thinking', say('I can hear you, child.', 'skeptical', [
+    reply('The Great Cow, maybe she can read the future.', 'thinking', say('I can hear you, child.', 'skeptical', [
       {label: 'Continue', next: {
         ...say('Oh. Sorry.', 'skeptical', [conclusion]), speaker: 'Pip', playerMood: 'sorry'
       }}

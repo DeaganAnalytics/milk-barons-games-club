@@ -18,7 +18,7 @@ const lines = [
   'Protect and serve! The Baron, obviously.',
   'Your complaint has been resolved!',
   'Stop resisting!',
-  'Bloody hell, I missed!',
+  'MILK AND MANURE! I missed!',
   'Udderly magnificent!',
   'Another successful community engagement exercise!',
   'Take that, political dissident!',
@@ -28,7 +28,17 @@ const lines = [
   'Request for additional milk DENIED!',
   "And that's how we maintain public order!",
   'Warning shots are a waste of ammunition!',
-  'God, I love being a guard!'
+  'Milk, I love being a guard!',
+  'RIGHT BETWEEN THE HORNS!',
+  'Stand still, you cardboard runt!',
+  'Another threat to the herd eliminated!',
+  'FOR THE BARON!',
+  'I can smell a communist from three paddocks away!',
+  "Don't get my horns up!",
+  "That's what happens when you threaten the herd!",
+  'Nothing gets my blood pumping like target practice!',
+  'MILKIN TARGETS!',
+  'The Baron should give me a bigger gun!'
 ];
 
 export function createRangeSpeech(random = Math.random) {

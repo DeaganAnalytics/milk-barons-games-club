@@ -131,7 +131,7 @@ const scenes = {
         'Just checking.'
       ]},
       {ends: true, lines: [
-        "Don't worry. I'm sure she won't take your head.", 'I should bloody well hope not, sir!',
+        "Don't worry. I'm sure she won't take your head.", 'I should milkin well hope not, sir!',
         "So you admit you've got a cow's head?", '...',
         'HA! GOT YOU!', 'Sir, I strongly recommend that you reconsider your current line of questioning.',
         'Is that a threat?', 'An exceptionally generous warning, sir.',

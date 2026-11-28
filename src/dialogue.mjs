@@ -832,7 +832,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     if (['lin-waitress', 'blonde-waitress', 'female-waiter'].includes(target.id)
         && !target.slotReaction && !target.brieMysticIntervention) spokenToMysticStaff.add(target.id);
     const opening = target.brieMysticIntervention ? brieMysticIntervention() : target.waiterTipBan ? waiterTippingIntervention() : target.linDepartureRegret ? {
-      text: 'Oh, bloody hell.', speaker: 'Pip', mood: 'hurt', playerMood: 'exasperated'
+      text: 'Oh, milkin hell.', speaker: 'Pip', mood: 'hurt', playerMood: 'exasperated'
     } : target.linKindness ? linKindnessDialogue() : target.linAftermath ? {
       text: "Oh, I've really messed this up.", speaker: 'Pip', mood: 'attentive', playerMood: 'sad', mustContinue: true,
       replies: [{label: 'Continue', next: {

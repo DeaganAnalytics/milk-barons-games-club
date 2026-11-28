@@ -52,7 +52,7 @@ const manInPool = {
       ["But he's chasing women!", "Yes, you've already established that he's enjoying himself. Stop bothering me.", 'angry', 'alarmed']
     ]),
     exchange([
-      ['[Lie] A poor man.', 'Good heavens! How did he get past security?', 'speaking', 'worried'],
+      ['[Lie] A poor man.', 'By the horns! How did he get past security?', 'speaking', 'worried'],
       ['Continue', 'Lifeguard, this is Roaming One. Is there a man in the pool?', 'radio', 'worried', 'Speaks into radio.'],
       ['Continue', 'And is he poor?', 'radio', 'worried', '...'],
       ['Continue', 'How wealthy?', 'listening', 'worried', 'Listens to the radio.'],
@@ -82,7 +82,7 @@ export const unattendedClothes = {
   label: 'There are some unattended clothes by the pool.', playerMood: 'attentive',
   next: {text: "Women's clothes?", mood: 'suspicious', replies: [
     exchange([
-      ['Yes.', "Good heavens. I'd better investigate.", 'speaking', 'attentive'],
+      ['Yes.', "Milk and manure. I'd better investigate.", 'speaking', 'attentive'],
       ['Is that a security concern?', "Potentially. I'll need to conduct a thorough visual inspection.", 'formal'],
       ['Of the clothes?', 'Of the entire pool area. Standard procedure.', 'formal'],
       ["Shouldn't you radio the lifeguard?", "No, no. I wouldn't want to burden him with additional responsibilities. I'll handle this personally.", 'deadpan']

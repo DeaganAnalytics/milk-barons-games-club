@@ -197,7 +197,7 @@ const welcomeSections = [
       [['Someone has to stand up for the working class!', 'Ah, ze enthusiasm of youth.', 'self-assured-smirk']],
       [['I was exercising my democratic rights!', 'Da. Rather expensively, as it turns out.', 'devious']],
       [['Has he? Is there a job opportunity?', 'In a manner of speaking.', 'self-assured-smirk']],
-      [['Oh God. Am I in trouble?', 'Let us not get ahead of ourselves.', 'current-smile', 'worried']],
+      [['Oh milk. Am I in trouble?', 'Let us not get ahead of ourselves.', 'current-smile', 'worried']],
       [['The means of milk production belong to the workers!', 'An interesting theory. Ze ownership documents suggest otherwise.', 'reading-figures', 'exasperated']]
     ]
   },

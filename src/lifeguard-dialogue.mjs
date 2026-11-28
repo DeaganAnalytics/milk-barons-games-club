@@ -24,7 +24,7 @@ const implicated = say("There's a considerable difference between hoping for som
 ]);
 
 const clothesTheft = reply('What if someone steals their clothes?', 'thinking', say(
-  'God, I hope someone does! Just imagine the view! Although, preferably, the gentleman stays in the pool.', grin, [
+  'By the horns, I hope someone does! Just imagine the view! Although, preferably, the gentleman stays in the pool.', grin, [
     reply("Aren't you supposed to be watching their clothes?", 'thinking', say(
       'No, no. I have far more important things to keep an eye on.', deadpan, [
         reply('Such as?', 'thinking', poolSafety)
@@ -77,7 +77,7 @@ const clothesQuestion = reply('I see piles of clothes everywhere.', 'attentive',
 const theftReactions = {
   women: [
     say("Somebody already did! There used to be women's clothes here. This is the best day of my career!", grin, back),
-    say('You already did, you bloody legend!', grin, back)
+    say('You already did, you magnificent beast!', grin, back)
   ],
   man: [
     say("Unfortunately, someone stole the man's clothing. Why the man's? WHY?!", frown, back),
@@ -122,10 +122,10 @@ lifeguardDialogue.replies.push(
       "I wouldn't order the complimentary milkshake if I were you.", thinking, back
     ))
   ]))),
-  once(reply("What's it like working here?", 'thinking', say('Best job in the club, mate!', grin, [
+  once(reply("What's it like working here?", 'thinking', say('Best ploughing job in the club!', grin, [
     reply('Really?', 'curious', {
       ...say('I get paid to keep my eyes on these aristocratic beauties all day!', grin, [
-        reply("Isn't your job to prevent people from drowning?", 'thinking', say("That's what I said, mate.", deadpan, [
+        reply("Isn't your job to prevent people from drowning?", 'thinking', say("Got milk in your ears, boy?", deadpan, [
           reply('Right...', 'attentive', lifeguardDialogue)
         ]))
       ]),
@@ -142,8 +142,8 @@ const reportMissingDresses = reply("Hey, the women's clothing is gone.", 'attent
     'Oh, yes. Yes, yes, YES! Thank the Baron! Here, have ₥15.', grin, [
       reply('Continue', 'attentive', {
         ...say("I'm gonna see some aristocratic bunnies tonight!", grin, [
-          reply("I didn't do it.", 'thinking', say("Then consider it a reward for bringing me news that's made my bloody day!", grin)),
-          reply('I did it.', 'attentive', {...say("Don't tell me that! Of course you bloody did! Now get out of here before someone sees us talking. Take the money and keep your mouth shut!", frown), admitsClothingTheft: true})
+          reply("I didn't do it.", 'thinking', say("Then consider it a reward for bringing me news that's made my milkin day!", grin)),
+          reply('I did it.', 'attentive', {...say("Don't tell me that! Of course you milkin did, you little animal! Now get out of here before someone sees us talking. Take the money and keep your mouth shut!", frown), admitsClothingTheft: true})
         ]),
         enterAction: 'rewardMissingDresses'
       })
@@ -158,7 +158,7 @@ const reportMissingSuit = reply("Hey, the man's clothing is gone.", 'attentive',
         ...say("Give it here! And I'm fining you ₥10 for churning me up.", frown), action: 'fineMissingSuit', admitsClothingTheft: true
       }),
       reply('No.', 'worried', {
-        ...say("God damn it. Now I've gotta deal with this. MOOOVE IT!", frown), action: 'dismissMissingSuit'
+        ...say("MILK AND MANURE! Now I've gotta deal with this. MOOOVE IT!", frown), action: 'dismissMissingSuit'
       })
     ])
 });

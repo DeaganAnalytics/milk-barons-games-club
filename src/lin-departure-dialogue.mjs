@@ -84,7 +84,7 @@ const reactions = {
     'I know that now.', 'EVERYBODY KNEW!',
     'Yes, apparently everybody except me.', 'I WAS ALREADY PLANNING YOUR WEDDING PLAYLIST!',
     'You were?!', 'THREE HOURS OF ROMANTIC DAIRY CLASSICS!',
-    'Oh, God.', "GUESS I'LL HAVE TO PLAY SOMETHING FOR THE BROKENHEARTED!",
+    'Oh, milk.', "GUESS I'LL HAVE TO PLAY SOMETHING FOR THE BROKENHEARTED!",
     "Please don't.", 'THIS NEXT ONE GOES OUT TO PIP, WHO MANAGED TO LOSE A GIRLFRIEND WITHOUT EVER GETTING ONE!',
     'I hate this place.'
   ]
@@ -95,7 +95,7 @@ const guards = [
     'Have you seen Lin?', 'Congratulations, sir.',
     'For what?', 'Successfully asserting your authority over a member of staff.',
     "That's not what I was trying to do!", 'Modesty. An admirable aristocratic quality.',
-    "For God's sake."
+    "For milk's sake."
   ],
   [
     'Do you know where the waitress went?', 'Negative, sir.',

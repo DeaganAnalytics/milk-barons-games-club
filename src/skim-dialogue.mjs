@@ -113,7 +113,7 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
       followups.push(oneTime('myLord', topic.label, topic.next));
     }
     if (returning && !usedTopics.has('falseSpill')) {
-      followups.push(oneTime('falseSpill', "[Lie] Thank God you're here! There's been a milk spillage over there.",
+      followups.push(oneTime('falseSpill', "[Lie] Thank the Cow you're here! There's been a milk spillage over there.",
         say('How much milk?!', [
           reply('Quite a lot.', say('Bloody hell. Out of my way, kid!', [], {mood: 'exasperated', action: 'skimFalseSpill'}))
         ], distressed)));

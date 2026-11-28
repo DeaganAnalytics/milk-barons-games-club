@@ -660,14 +660,14 @@ test('the Baron follows Pip to the dance stop and only dances after arrival', ()
 });
 
 test('one randomly chosen dance-floor character says one line every 15 seconds', () => {
-  const rolls = [0, 0.99, 0.26, 0, 0.51, 0.99, 0.7, 0.99];
+  const rolls = [0, 0.99, 0.26, 0, 0.51, 0.99, 0.7, 0.3];
   const speechAt = createDancerSpeech(() => rolls.shift());
   assert.equal(speechAt(14.9), null);
   for (const [time, id, line] of [
     [15, 'mascot', 'Milk my cow! Milk her now!'],
     [30, 'coral', 'I like to PARTAY!'],
     [45, 'jade', 'That cow guard is kind of cute!!'],
-    [60, 'guard', 'God bless the Baron!']
+    [60, 'guard', 'The Great Cow bless the Baron!']
   ]) {
     const first = speechAt(time + 0.5);
     assert.equal(first.dancer.id, id);
@@ -676,6 +676,29 @@ test('one randomly chosen dance-floor character says one line every 15 seconds',
     assert.equal(speechAt(time + 5), null);
   }
   assert.equal(rolls.length, 0);
+});
+
+test('Off-Duty Bull Guard rotates the new greetings and overhead lines', async () => {
+  const {createDancerConversation} = await import('../src/dancer-dialogue.mjs');
+  const open = createDancerConversation();
+  for (let i = 0; i < 15; i++) open('dancer-guard');
+  for (const text of [
+    'Look at these moves! Light on my hooves!',
+    'Finest specimen on the dance floor!',
+    'Not bad for a big fella, eh?',
+    "MOOOOOO! That's my singing voice!",
+    "Careful, little fella. Don't get trampled!"
+  ]) {
+    const greeting = open('dancer-guard');
+    assert.equal(greeting.text, text);
+    assert.ok(['happy', 'excited', 'laughing'].includes(greeting.mood));
+  }
+
+  const rolls = [0.7, 0.99];
+  const speechAt = createDancerSpeech(() => rolls.shift());
+  const speech = speechAt(75.5);
+  assert.equal(speech.dancer.id, 'guard');
+  assert.equal(speech.text, "Careful, little fella. Don't get trampled!");
 });
 
 test('the Baron pauses his milk countdown and joins the remarks while dancing', () => {
@@ -970,9 +993,10 @@ test('the snorkel touches alternate swimmers and reaches an edge between touches
     if (speech.x === lifeguard.x && speech.y === lifeguard.y) guardRemarks.add(speech.text);
   }
   assert.ok(firstHit > 1, 'the first pursuit should take longer');
-  assert.equal(guardRemarks.size, 10);
-  assert.equal([...guardRemarks][0], 'God, I love this job.');
-  assert.equal([...guardRemarks].at(-1), 'What happens in the milk pool stays in the milk pool.');
+  assert.equal(guardRemarks.size, 17);
+  assert.equal([...guardRemarks][0], 'NO STAMPEDING AROUND THE POOL!');
+  assert.ok(guardRemarks.has('Some days I reckon I\'d be better off in a paddock.'));
+  assert.ok(guardRemarks.size >= 10, 'the ordinary lifeguard pool continues through its full rotation');
   assert.deepEqual(hits.slice(0, 4), [0, 1, 0, 1]);
   assert.deepEqual(edges.slice(0, 4), [-204, 204, -204, 204]);
   assert.ok(heard.has("You're certainly an enthusiastic swimmer!"));
@@ -1018,7 +1042,7 @@ test('pool clothing is reachable, and each theft changes the pile and starts the
     assert.equal(remainingClothing[pool.stolenClothing], left);
     pool.remaining = 0;
     updateMilkPool(pool, 69.99, 0.01, () => 0);
-    assert.equal(milkPoolSpeech(pool, 69.99).text, 'God, I love this job.');
+    assert.equal(milkPoolSpeech(pool, 69.99).text, 'NO STAMPEDING AROUND THE POOL!');
     updateMilkPool(pool, 70, 0.01, () => 0);
     assert.equal(milkPoolSpeech(pool, 70).text, line);
   }
@@ -1809,7 +1833,7 @@ test('the Creamery guard offers both drinks and gates his regular replies behind
   assert.equal(creameryGuardDialogue(guard), opening);
 });
 
-test('the drunk Creamery guard starts after 20 seconds and wraps through all 18 remarks', async () => {
+test('the drunk Creamery guard starts after 20 seconds and wraps through all 26 remarks', async () => {
   const {createCreameryGuard, drunkGuardSpeech} = await import('../src/creamery.mjs');
   const guard = createCreameryGuard();
   assert.equal(drunkGuardSpeech(guard, 200), null);
@@ -1818,9 +1842,15 @@ test('the drunk Creamery guard starts after 20 seconds and wraps through all 18 
   assert.equal(drunkGuardSpeech(guard, 70).text, 'Moooooo... I mean, move.');
   assert.equal(drunkGuardSpeech(guard, 74), null);
   assert.equal(drunkGuardSpeech(guard, 90).text, "Who's guarding the milk? Oh. That's me.");
-  const lines = Array.from({length: 18}, (_, i) => drunkGuardSpeech(guard, 70 + i * 20).text);
-  assert.equal(new Set(lines).size, 18);
-  assert.equal(drunkGuardSpeech(guard, 430).text, lines[0]);
+  const lines = Array.from({length: 26}, (_, i) => drunkGuardSpeech(guard, 70 + i * 20).text);
+  assert.equal(new Set(lines).size, 26);
+  for (const line of [
+    'My horns feel heavier than usual.', 'I could go for a nice lie down in a paddock.',
+    'Anyone else feel like chewing something?', "I reckon I've had a few too many gallons.",
+    "I'm a milkin good guard, you know.", "Don't worry. I've only got double vision in one eye.",
+    "I'd charge at you, but I can't be bothered.", 'Lovely bloke, the Baron. Terrible temper, though.'
+  ]) assert.ok(lines.includes(line), `drunk guard speech includes ${line}`);
+  assert.equal(drunkGuardSpeech(guard, 590).text, lines[0]);
 });
 
 test('lifeguard entry and theft dialogue reflect what Pip has already said and stolen', async () => {
@@ -1835,9 +1865,9 @@ test('lifeguard entry and theft dialogue reflect what Pip has already said and s
   const clothes = lifeguardDialogue.replies.find(reply => reply.label === 'I see piles of clothes everywhere.');
   const askAboutTheft = state => lifeguardReplies(clothes.next, state)
     .find(reply => reply.label === 'What if someone steals their clothes?').next;
-  assert.match(askAboutTheft({}).text, /God, I hope someone does/);
+  assert.match(askAboutTheft({}).text, /By the horns, I hope someone does/);
   assert.match(askAboutTheft({stolenClothing: 'women'}).text, /Somebody already did/);
-  assert.equal(askAboutTheft({stolenClothing: 'women', admittedClothingTheft: true}).text, 'You already did, you bloody legend!');
+  assert.equal(askAboutTheft({stolenClothing: 'women', admittedClothingTheft: true}).text, 'You already did, you magnificent beast!');
   assert.match(askAboutTheft({stolenClothing: 'man'}).text, /someone stole the man's clothing/);
   assert.equal(askAboutTheft({stolenClothing: 'man', admittedClothingTheft: true}).replies, undefined);
   assert.ok(!lifeguardReplies(lifeguardDialogue, {stolenClothing: 'all', admittedClothingTheft: true}).includes(clothes));
@@ -2151,14 +2181,22 @@ test('practice range remarks run every 15 seconds and rotate across all three gu
   const speech = createRangeSpeech(() => 0);
   assert.equal(speech(14.9, true), undefined);
   const remarks = [];
-  for (let index = 0; index < 30; index++) {
+  for (let index = 0; index < 40; index++) {
     const time = (index + 1) * 15;
     const remark = speech(time, true);
     assert.equal(remark.lane, index % 3);
     assert.equal(speech(time + 4, true), undefined);
     remarks.push(remark.text);
   }
-  assert.equal(new Set(remarks).size, 30);
+  assert.equal(new Set(remarks).size, 40);
+  for (const line of [
+    'RIGHT BETWEEN THE HORNS!', 'Stand still, you cardboard runt!',
+    'Another threat to the herd eliminated!', 'FOR THE BARON!',
+    'I can smell a communist from three paddocks away!', "Don't get my horns up!",
+    "That's what happens when you threaten the herd!",
+    'Nothing gets my blood pumping like target practice!', 'MILKIN TARGETS!',
+    'The Baron should give me a bigger gun!'
+  ]) assert.ok(remarks.includes(line), `range speech pool includes ${line}`);
 });
 
 test('only a live projectile intersecting Pip triggers a range hit', async () => {
