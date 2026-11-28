@@ -34,14 +34,14 @@ const requestMilk = exchange([
   exchange([['Oh, okay.', 'Splendid. A peasant who understands his place.', smirk, 'sorry']]),
   exchange([
     ['I deserve milk just as much as anybody else.', 'That is patently untrue. I have written several treatises on this very subject.', skeptical, 'attentive'],
-    ['Can I read them?', "Good heavens, no! I wouldn't want your poverty-stricken hands degrading the leather bindings.", condescending],
+    ['Can I read them?', "Good meadows, no! I wouldn't want your poverty-stricken hands degrading the leather bindings.", condescending],
     ['Can I read a digital version?', 'Digital? My works?! I would never degrade them so!', skeptical],
     ['Then how am I supposed to understand your argument?', "You aren't required to understand it. Merely to accept it.", deadpan, 'worried']
   ])
 ]);
 
 const baronPhysique = exchange([
-  ["Isn't he a bit, umm... big-boned?", 'Big-boned? My dear peasant, he has the physique of a god! That magnificent body is pure milk fat. We can only aspire to such proportions.', condescending, 'worried'],
+  ["Isn't he a bit, umm... big-boned?", 'Big-boned? My dear peasant, he has the physique of a dairy deity! That magnificent body is pure milk fat. We can only aspire to such proportions.', condescending, 'worried'],
   ["Isn't that unhealthy?", "Certainly not! I've published several academic papers demonstrating the obvious health benefits of the Baron's physique.", skeptical],
   ['What sources did you cite?', 'Myself, of course.', smirk],
   ["Isn't that a bit biased?", 'Nonsense. I am a highly respected authority on my own research.', condescending]
@@ -52,7 +52,7 @@ const baronBehaviour = exchange([
   ['Why?', 'To better understand the peasant mind. Our Baron takes a remarkably generous interest in the lower classes.', smirk]
 ], [
   exchange([
-    ["I don't think he's generous at all.", 'Blasphemy! He has provided this magnificent milk fountain entirely free of charge for his guests.', skeptical, 'attentive'],
+    ["I don't think he's generous at all.", 'Dairy heresy! He has provided this magnificent milk fountain entirely free of charge for his guests.', skeptical, 'attentive'],
     ['He paid for all this himself?', "Well, the taxpayers paid for it. But the Baron's guests and the taxpayers rarely overlap on a Venn diagram.", thinking],
     ['Can I have some milk, then?', 'No, no. That would rather undermine the distinction.', deadpan]
   ]),
@@ -80,7 +80,7 @@ const politicalSystem = exchange([
 ]);
 
 const moneyLecture = exchange([
-  ['Can I have some money?', 'Good heavens, no! The indiscriminate redistribution of wealth undermines the incentive structures upon which our magnificent economic system depends.', skeptical, 'attentive'],
+  ['Can I have some money?', 'Good meadows, no! The indiscriminate redistribution of wealth undermines the incentive structures upon which our magnificent economic system depends.', skeptical, 'attentive'],
   ['Continue', 'Were I to reward your poverty with money, I would effectively be subsidising your failure to accumulate capital.', condescending],
   ['Continue', 'Furthermore, by reducing my own wealth, I would diminish my capacity to generate future wealth, thereby depriving society of the considerable economic benefits of my prosperity.', thinking],
   ['Continue', 'You see, young man, by refusing to give you money, I am ultimately acting in your best interests.', smirk, 'worried'],
@@ -101,12 +101,12 @@ const oneTimeTopics = [
     ['What do you think of the Baron?', "Why, he's the greatest man who ever lived!", smirk]
   ], [baronPhysique, baronBehaviour]),
   exchange([
-    ['What do you think about democracy?', 'Democracy?! A terrible thing indeed. One stickman, one vote. Makes absolutely no sense. Thank heavens we abolished it generations ago.', skeptical]
+    ['What do you think about democracy?', 'Democracy?! A terrible thing indeed. One stickman, one vote. Makes absolutely no sense. Thank the Great Cow we abolished it generations ago.', skeptical]
   ], [defendDemocracy, politicalSystem]),
   exchange([
     ['You seem like a smart man. Why are the guards cows?', 'Thank you. I am exceptionally intelligent, yes.', smirk],
     ["You didn't answer my question!", 'Yes, I did. I thanked you for the compliment.', deadpan, 'alarmed'],
-    ['The guards. Cows. The guards being cows.', 'Good heavens, what are you on about?', skeptical, 'attentive'],
+    ['The guards. Cows. The guards being cows.', 'Good meadows, what are you on about?', skeptical, 'attentive'],
     ['All the guards are cows! Some of them even have guns!', "Well, naturally. They're guards.", deadpan, 'alarmed'],
     ["But they're cows!", 'Guards.', deadpan, 'worried'],
     ['They have horns!', 'Guards.', deadpan, 'alarmed'],
