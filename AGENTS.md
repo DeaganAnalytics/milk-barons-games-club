@@ -119,3 +119,7 @@ When instructions conflict, prioritise:
 - Use **Continue** for advancing NPC dialogue or narration. Never use it in place of Pip's words or repeat his selected line in the dialogue panel.
 - Author new Pip lines as response choices. Existing `speaker: 'Pip'` beats use the shared conversion to buttons. Do not add more such placements or embed a literal `Pip:` prefix in dialogue text.
 - Run `npm test` for the source scan and check the affected conversation in the browser when changing dialogue presentation.
+
+## Game version
+
+- Set the displayed game version to `v<PR number>` when preparing a pull request for `develop`. Update both the page title and the game heading in `index.html` once the PR number is known.
