@@ -19,7 +19,7 @@ import {creameryGuardDialogue} from './creamery-guard-dialogue.mjs';
 import {bartenderExit, bartenderMoods, bartenderOpening} from './bartender-dialogue.mjs';
 import {additionalBaronReplies, baronCowGuardReply, baronDanceDialogue, baronGreetings, baronKarmaDialogue, DJ_ADMISSION_PRICE} from './baron-dialogue.mjs';
 import {isBaronDancing} from './baron.mjs';
-import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPassThroughDialogue, eliasPortraits, eliasPokieBan, eliasPokieRefusal, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
+import {elias, eliasConversation, eliasDanceConversation, eliasFollowingConversation, eliasPassThroughAvailable, eliasPassThroughDialogue, eliasPortraits, eliasPokieBan, eliasPokieRefusal, eliasTaxConversation, eliasWelcome, vampireFollowup} from './elias.mjs';
 import {commissionerMoods, createCommissionerConversation} from './commissioner-dialogue.mjs';
 import {attendantMoods, createAttendantConversation} from './attendant-dialogue.mjs';
 import {pilloryAttendant, pilloryCommissioner} from './pillory.mjs';
@@ -343,6 +343,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   const closeButton = document.getElementById('conversation-close');
   let action = null;
   let activeTarget;
+  let passThroughAvailableAtOpen = false;
   let autoClose;
   let disguise;
   let pipLipstick = false;
@@ -590,7 +591,13 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       : node.replies ?? [];
     const eliasMenu = node === eliasConversation || node === eliasFollowingConversation;
     const vampire = eliasMenu ? vampireFollowup(node, vampireStage) : null;
-    const replies = eliasMenu ? [...options, ...(vampire ? [vampire] : []), ...accountingReplies(tallies, node)]
+    const passThrough = eliasMenu && passThroughAvailableAtOpen && !elias.passThroughStarted ? [{
+      label: 'Did I just... walk through you?', playerMood: 'thinking', next: () => {
+        elias.passThroughStarted = true;
+        return eliasPassThroughDialogue(mysticVisibility.hasMetMystic());
+      }
+    }] : [];
+    const replies = eliasMenu ? [...passThrough, ...options, ...(vampire ? [vampire] : []), ...accountingReplies(tallies, node)]
       : report ? [report, ...options] : options;
     const seenCowGuard = hasSeenCowGuard?.();
     const reaction = hasLinLeft?.() && (node === departureMenu || node.linDepartureMenu)
@@ -758,6 +765,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     spokeToDjDairy ||= target.id === djTarget.id;
     npcHistory.mood = pipHistory.mood = null;
     activeTarget = target;
+    passThroughAvailableAtOpen = target.id === elias.id && eliasPassThroughAvailable(elias);
     spokeToProfessor ||= target.id === professor.id;
     pokieCounter.hidden = target.id !== pokieId;
     disguise = target.executiveFraud ? 'woman' : null;
@@ -778,7 +786,6 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     } : partyGuests.some(guest => guest.id === target.id) ? partyGuestOpening(target.id, !firstGuestGreeting)
       : target.id === pilloryCommissioner.id ? commissionerOpening(hasPlayedMilkBalloon?.(), isCommissionerSplattered?.(), baronDiscoveries?.()?.pool)
       : target.id === pilloryAttendant.id ? attendantOpening(hasPlayedMilkBalloon?.())
-      : target.id === elias.id && target.passThrough ? eliasPassThroughDialogue(mysticVisibility.hasMetMystic())
       : target.id === elias.id && target.pokieBan ? eliasPokieBan
       : target.id === elias.id && target.pokieRefusal ? eliasPokieRefusal
       : target.id === elias.id && target.tax ? eliasTaxConversation(target.tax)

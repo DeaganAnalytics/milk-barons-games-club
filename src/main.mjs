@@ -656,13 +656,6 @@ function warnAtGuestGate() {
   dialogue.open({id: 'guard', title: 'Bull Guard', guestGate: true});
 }
 
-function checkEliasPassThrough(previous) {
-  if (dialogue.isOpen() || !gameOver.hidden || !startEliasPassThrough(elias, previous, player)) return false;
-  clearInput();
-  player.walking = false;
-  dialogue.open({...elias, passThrough: true});
-  return true;
-}
 
 const {readMovement, clearInput} = bindControls({
   isPaused: () => eliasApproaching || Boolean(eliasDeparture || eliasScene) || !gameOver.hidden || dialogue.isOpen() || Boolean(guestEscort || ropeWarning.scene || rangeFall),
@@ -672,7 +665,7 @@ const {readMovement, clearInput} = bindControls({
     else {
       const previous = {x: player.x, y: player.y};
       movePlayer(player, baron, dx, dy, guards, playerCollisionNpcs());
-      if (!checkPracticeRange(previous, elapsed)) checkEliasPassThrough(previous);
+      if (!checkPracticeRange(previous, elapsed)) startEliasPassThrough(elias, previous, player);
     }
   },
   interact: () => {
@@ -862,10 +855,7 @@ function frame(timestamp) {
     requestAnimationFrame(frame);
     return;
   }
-  if (!guestEscort && checkEliasPassThrough(previousPosition)) {
-    requestAnimationFrame(frame);
-    return;
-  }
+  if (!guestEscort) startEliasPassThrough(elias, previousPosition, player);
   if (!guestEscort && takeDanceExit(player)) {
     startEliasScene({danceFee: true});
     requestAnimationFrame(frame);

@@ -32,13 +32,13 @@ try {
     ];
     const click = label => [...document.querySelectorAll('#conversation-replies button, #conversation-advance button')]
       .find(button => button.textContent === label).click();
-    dialogue.open({...elias, passThrough: true});
+    dialogue.open({id: milkMysticId, title: 'Milk Mystic'});
+    elias.passThroughAt = performance.now();
+    dialogue.open(elias);
+    click('Did I just... walk through you?');
     const opening = snapshot();
     click('Continue →');
     const eliasResponse = snapshot();
-    dialogue.open({id: milkMysticId, title: 'Milk Mystic'});
-    dialogue.open({...elias, passThrough: true});
-    click('Continue →');
     click("I'm going to ask the Milk Mystic about this!");
     click('She might know what you are!');
     click('Continue →');
