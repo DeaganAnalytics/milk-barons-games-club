@@ -17,7 +17,7 @@ const ambientLines = [
   'The Baron is a most enlightened patron of academia.',
   'A prosperous ruling class is the foundation of a prosperous nation.',
   'The peasants simply lack the intellectual capacity to govern.',
-  'Redistribution of wealth? Good heavens, no!',
+  'Redistribution of wealth? Good meadows, no!',
   'Inherited wealth is merely accumulated intergenerational excellence.',
   'Poverty is an excellent incentive for productivity.',
   'Social mobility is desirable, provided it remains theoretical.',
@@ -34,7 +34,7 @@ const ambientLines = [
   'A milk pool may appear extravagant to the uneducated, but consider the economic stimulus!',
   'History has consistently demonstrated the superiority of whichever class commissions its historians.',
   'I have devoted fifty years to studying why people like myself deserve to rule.',
-  'God save the Baron, and God preserve our dividends!'
+  'The Great Cow save the Baron, and the Great Cow preserve our dividends!'
 ];
 
 export function createProfessorSpeech(random = Math.random) {
