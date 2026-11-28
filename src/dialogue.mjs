@@ -657,8 +657,10 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     }
     const reactions = pipReactions[node.mood] ?? ['attentive', 'thinking'];
     const preferred = node.playerMood ?? playerMood ?? reactions[0];
-    const hasAlternate = alternatePipMoods.has(preferred);
-    const playerExpression = chooseExpression(preferred, node.exactPlayerPortrait || hasAlternate ? [] : [...reactions, 'thinking', 'attentive'], pipHistory);
+    const reactionExpression = chooseExpression(preferred, node.exactPlayerPortrait ? [] : [...reactions, 'thinking', 'attentive'], pipHistory);
+    // Keep passive reactions and give explicitly authored responses their intended expression.
+    const playerExpression = pipSelected && (node.playerMood || playerMood) && alternatePipMoods.has(preferred)
+      ? preferred : reactionExpression;
     const milkMoustache = Boolean(node.milkMoustache);
     const portraitKey = playerExpression + ':' + (disguise ?? '') + ':' + pipLipstick + (milkMoustache ? ':milk' : '');
     const alternate = artwork.select('pip', portraitKey, alternatePipMoods.has(playerExpression), pipSelected);
