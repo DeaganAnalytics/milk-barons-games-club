@@ -130,21 +130,29 @@ try {
     const guest = snapshot();
     dialogue.dismiss();
     dialogue.open({id: 'martini-waiter', title: 'Waiter Sterling'});
+    const pipOptions = () => [
+      [...document.querySelectorAll('#conversation-replies button')].map(button => button.textContent),
+      document.querySelectorAll('#conversation-advance button').length
+    ];
     click('Do all guests pay for milk?');
+    const firstPipOptions = pipOptions();
     const membershipOpening = snapshot().slice(0, 2);
     click('Why?');
     const membershipReply = snapshot().slice(0, 2);
+    const secondPipOptions = pipOptions();
     click('How much does membership cost?');
     const membershipPrice = snapshot().slice(0, 2);
     dialogue.dismiss();
-    return {other, guest, membershipOpening, membershipReply, membershipPrice};
+    return {other, guest, membershipOpening, membershipReply, membershipPrice, firstPipOptions, secondPipOptions};
   })()`);
   assert.deepEqual(attribution, {
     other: ['Pipe', "Pip?! That's the stupidest name I've ever heard.", 'npc', 'Pip', 'Pipe', 'pipe'],
     guest: ['Elias', 'He vants a tip.', 'npc', 'Pip', 'Elias', 'elias'],
     membershipOpening: ['Waiter Sterling', 'Only those without a membership, sir.'],
     membershipReply: ['Waiter Sterling', 'Our more affluent patrons prefer not to concern themselves with such trivial transactions.'],
-    membershipPrice: ['Waiter Sterling', 'Ten thousand coins, sir.']
+    membershipPrice: ['Waiter Sterling', 'Ten thousand coins, sir.'],
+    firstPipOptions: [['Why?'], 0],
+    secondPipOptions: [['How much does membership cost?'], 0]
   });
 
   for (const [choice, expected, mood, pipMood] of [
