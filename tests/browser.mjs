@@ -689,8 +689,8 @@ try {
   cleanerUrl.searchParams.set('cleaner-test', '1');
   await load(1100, 950, false, 'cleaner', cleanerUrl.href);
   await hold('ArrowUp', 20);
-  await activate('Pip');
-  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Hey, I recognise you!');
+  await activate('Edmund Skim');
+  assert.ok(await evaluate(`[...document.querySelectorAll('#conversation-replies button')].some(button => button.textContent === 'Hey, I recognise you!')`));
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
     .backgroundImage.includes('/waiters/edmund-vale-portrait.webp')`));
   if (process.env.SCREENSHOT_PREFIX) {
