@@ -252,12 +252,6 @@ canvas {
   font-weight: 700;
 }
 
-.conversation[data-speaking-side="player"] #conversation-player + figcaption,
-.conversation[data-speaking-side="npc"] #conversation-speaker {
-  background: #e9ca91;
-  color: #24392c;
-}
-
 
 .conversation-replies {
   display: flex;
