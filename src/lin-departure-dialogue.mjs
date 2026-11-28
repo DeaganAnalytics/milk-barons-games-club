@@ -3,7 +3,7 @@ const reactions = {
     'Do you know where Lin went?', "You've got some nerve asking me that.",
     "I just wanted to know if she's alright.", 'Perhaps you should have considered that before humiliating her.',
     "I didn't mean for her to leave.", 'She used to get excited whenever she saw you coming.',
-    'She did?', 'Yes. God knows why.',
+    'She did?', 'Yes. The Great Cow knows why.',
     'Oh...', 'Will you be ordering anything, sir?'
   ],
   'blonde-waitress': [
@@ -17,7 +17,7 @@ const reactions = {
     'Do you know where Lin went?', 'HAHAHAHAHA!',
     "What's so funny?", 'Forgive me, sir. I simply cannot comprehend how you managed it.',
     'Managed what?', 'A beautiful young woman practically throwing herself at you, and you somehow managed to make her resign.',
-    "She wasn't throwing herself at me.", 'Good heavens, sir. Were you even paying attention?',
+    "She wasn't throwing herself at me.", 'Good meadows, sir. Were you even paying attention?',
     'Apparently not.', 'Evidently.'
   ],
   'handlebar-waiter': [
@@ -70,7 +70,7 @@ const reactions = {
     'Thanks, Edmund.', 'Anytime.'
   ],
   'creamery-bartender': [
-    'Have you heard anything about Lin?', 'Mate, the entire staff has heard about Lin.',
+    'Have you heard anything about Lin?', 'Sir, the entire staff has heard about Lin.',
     'Do you know where she went?', 'No. But she left in tears.',
     'Oh...', 'You know, people usually come to a bartender for relationship advice BEFORE they ruin everything.',
     'Do you have any advice for afterwards?', 'Learn from it.',
