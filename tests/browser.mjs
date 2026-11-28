@@ -469,8 +469,9 @@ try {
   await reply('A glass of whole milk, please.', '(Pip drinks the milk.) An excellent choice, sir. A timeless classic.');
   assert.equal(Number(await evaluate('document.getElementById("coin-count").textContent')), beforeDrink - 3);
   await closeConversation();
-  await hold('ArrowRight', 36);
+  // Step below the bartender's collider before crossing to the posted guard.
   await hold('ArrowDown', 14);
+  await hold('ArrowRight', 36);
   await activate('Bull Guard');
   const postedGreeting = 'If you have something to report, find one of the roving security officers';
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), postedGreeting);
