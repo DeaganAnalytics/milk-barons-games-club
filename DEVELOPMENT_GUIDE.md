@@ -23,6 +23,29 @@ Use this guide before changing a game system. Read the nearest existing example,
 4. For a reward, use the existing action and state APIs. `enterAction` runs when a node is shown. Closing can dispatch a node action or an explicit `exitAction`. Verify payment timing and replay prevention. Never duplicate a reward in both callbacks.
 5. For a focused check, use `node --test --test-isolation=none --test-name-pattern='lifeguard|Mystic' tests/game.test.mjs` or `node --test --test-isolation=none tests/curdist-interview.test.mjs`. Then run **`npm test`**. Open and close the affected conversation in a browser if the change involves controls, attribution, or effects.
 
+#### Dialogue handoff format
+
+Give each spoken beat its own speaker, portrait ID and exact text. Specify player choices separately, with their destination and any gate or effect. A choice can lead straight to the NPC reply or to a separate Pip beat if the selected line should also appear in the dialogue box.
+
+```text
+Interaction: Pipe / name
+Choice: My name's Pip. What's yours?
+  Player portrait: thinking
+  Next: pip-introduces-himself
+Beat: pip-introduces-himself
+  Speaker: Pip
+  Portrait: thinking
+  Text: My name's Pip. What's yours?
+  Next: pipe-reacts
+Beat: pipe-reacts
+  Speaker: Pipe
+  Portrait: disgusted
+  Text: Pip?! That's the stupidest name I've ever heard.
+  Next: name-response-choices
+```
+
+In code, give a displayed Pip beat `speaker: 'Pip'` and `playerMood`. For a visiting NPC, set `character` to the portrait registry ID and `mood` to its expression. Set `speaker` as well if the scene needs a particular caption. Use `direction` or `speaker: 'Narrator'` for narration. Keep speaker prefixes out of `text`. For lies, put `[Lie]` on the choice label and specify the effect separately.
+
 ### Portraits
 
 Find the exact character and mood in `src/dialogue.mjs` and the character's dialogue module. The first configured mood is the default. Unsupported moods can fall back and repeated expressions can rotate. A tray, injury, lipstick or another state can select different artwork. Distinguish the requested mood from the ultimately rendered asset. Use the asset conventions already in place. Update creative annotations where the artwork warrants it, then regenerate the exports with `npm run creative -- --zip`. Run `npm test`, and check representative dialogue and state variants at desktop and mobile sizes.
