@@ -220,14 +220,16 @@ const expressionFamilies = [
 ];
 
 export function createPortraitRotation() {
-  const lastTurn = new Map();
+  const lastVariants = new Map();
   return {
-    select(character, key, hasAlternate, speaking) {
-      const previous = lastTurn.get(character);
-      const sameArtworkFamily = previous?.key === key;
-      const alternate = hasAlternate && sameArtworkFamily && (speaking ? !previous.alternate : previous.alternate);
-      if (speaking) lastTurn.set(character, {key, alternate});
-      return alternate;
+    select(character, key, variantCount, advance) {
+      if (variantCount < 2) return 0;
+      if (!lastVariants.has(character)) lastVariants.set(character, new Map());
+      const variants = lastVariants.get(character);
+      const previous = variants.get(key);
+      const selected = advance ? ((previous ?? -1) + 1) % variantCount : previous ?? 0;
+      if (advance) variants.set(key, selected);
+      return selected;
     }
   };
 }
@@ -292,16 +294,19 @@ function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false
 }
 
 const alternateNpcPortraits = new Map([
-  [professor.id, new Map([['thinking', new URL('../assets/dialogue/professor/thinking-alt.webp', import.meta.url)]])],
-  [elias.id, new Map([['current-smile', new URL('../assets/dialogue/elias/current-smile-alt.webp', import.meta.url)]])],
-  [skimId, new Map([['attentive', new URL('../assets/waiters/edmund-vale-attentive-alt-portrait.webp', import.meta.url)]])]
+  [professor.id, new Map([...professorMoods, 'notebook'].map(mood => {
+    const suffixes = mood === 'thinking' ? ['-alt', '-alt-2'] : ['-alt'];
+    return [mood, suffixes.map(suffix => standalonePortraitUrl(professor.id, false, mood + suffix))];
+  }))],
+  [elias.id, new Map([['current-smile', [new URL('../assets/dialogue/elias/current-smile-alt.webp', import.meta.url)]]])],
+  [skimId, new Map([['attentive', [new URL('../assets/waiters/edmund-vale-attentive-alt-portrait.webp', import.meta.url)]]])]
 ]);
 const alternatePipMoods = new Set(['thinking', 'attentive', 'worried']);
 
 function warmPortraits() {
   if (portraitCache.size) return;
   const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values(), ...injuredMiloPortraits.values(), cameraPortrait];
-  for (const portraits of alternateNpcPortraits.values()) urls.push(...portraits.values());
+  for (const portraits of alternateNpcPortraits.values()) urls.push(...[...portraits.values()].flat());
   for (const [id, moods] of extraPortraitMoods) {
     for (const mood of moods) urls.push(extraPortraitUrl(id, mood));
   }
@@ -481,8 +486,9 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     mood = chooseExpression(mood, alternatives, npcHistory);
     const extraPortrait = extraPortraitUrl(character, mood, withoutMilk);
     const reportPortrait = reportPortraits.get(character + '-' + mood);
-    const alternate = alternates?.get(mood);
-    const illustration = artwork.select(character, mood, Boolean(alternate), speaking) ? alternate : null;
+    const variants = alternates?.get(mood) ?? [];
+    const variant = artwork.select(character, mood, variants.length + 1, speaking);
+    const illustration = variants[variant - 1];
     const injuredPortrait = character === 'milo' && miloWasInjured ? injuredMiloPortraits.get(mood) : null;
     element.dataset.injured = String(Boolean(injuredPortrait));
     element.classList.toggle('milo-injury-portrait', Boolean(injuredPortrait));
@@ -664,7 +670,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     const playerExpression = chooseExpression(preferred, node.exactPlayerPortrait ? [] : [...reactions, 'thinking', 'attentive'], pipHistory);
     const milkMoustache = Boolean(node.milkMoustache);
     const portraitKey = playerExpression + ':' + (disguise ?? '') + ':' + pipLipstick + (milkMoustache ? ':milk' : '');
-    const alternate = artwork.select('pip', portraitKey, alternatePipMoods.has(playerExpression), pipSelected);
+    const alternate = artwork.select('pip', portraitKey, alternatePipMoods.has(playerExpression) ? 2 : 1, pipSelected) === 1;
     if (playerPortrait.dataset.expression !== portraitKey || playerPortrait.dataset.alternate !== String(alternate)) {
       drawPipPortrait(playerArt, playerExpression, disguise, pipLipstick, milkMoustache, alternate);
       playerPortrait.dataset.alternate = String(alternate);
@@ -682,7 +688,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     title.textContent = directionOnly ? '' : pipIsSpeaking ? 'Pip' : narration ? 'Narrator' : npcName;
     speaker.textContent = npcName;
     panel.dataset.speakingSide = pipIsSpeaking ? 'player' : narration ? 'narrator' : 'npc';
-    setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactNpcPortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactNpcPortrait, !pipIsSpeaking && !narration && Boolean(node.text));
+    const notebookBeat = currentSpeaker === professor.id && node.mood === 'notebook' && directionOnly;
+    setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactNpcPortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactNpcPortrait, notebookBeat || (!pipIsSpeaking && !narration && Boolean(node.text)));
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
     const options = character === lifeguard.id
       ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
@@ -986,7 +993,9 @@ export function dialoguePortraitInventory() {
     for (const mood of moods) add(id, mood, extraPortraitUrl(id, mood));
   }
   for (const [id, moods] of alternateNpcPortraits) {
-    for (const [mood, asset] of moods) add(id, mood, asset, 'alternate artwork');
+    for (const [mood, variants] of moods) {
+      variants.forEach((asset, index) => add(id, mood, asset, index ? 'alternate artwork ' + (index + 1) : 'alternate artwork'));
+    }
   }
   for (const [mood, asset] of injuredMiloPortraits) add('milo', mood, asset, 'injured');
   for (const [id, asset] of reportPortraits.entries()) {

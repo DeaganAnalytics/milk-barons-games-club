@@ -181,6 +181,44 @@ try {
     avoidsRepeat: true, eliasRotates: true
   });
 
+  const professorPortraits = await evaluate(`(async () => {
+    const {createDialogue} = await import('./src/dialogue.mjs');
+    const {professor} = await import('./src/professor.mjs');
+    const dialogue = createDialogue();
+    const portrait = document.getElementById('conversation-npc');
+    const capture = async () => {
+      const image = new Image();
+      image.src = portrait.style.getPropertyValue('--portrait-image').slice(4, -1);
+      await image.decode();
+      return [portrait.dataset.expression, new URL(image.src).pathname.split('/').pop()];
+    };
+    const click = label => [...document.querySelectorAll('#conversation-replies button, #conversation-advance button')]
+      .find(button => button.textContent === label).click();
+    dialogue.open(professor);
+    const firstThinking = await capture();
+    click('My name is Pip.');
+    click("And what's your name?");
+    const firstSmirk = await capture();
+    click("That's quite a long name.");
+    const secondSmirk = await capture();
+    click('Can I just call you Professor?');
+    click('Continue →');
+    click('Can I have some money?');
+    click('Continue →');
+    click('Continue →');
+    const secondThinking = await capture();
+    click('Continue →');
+    click('I suppose that makes sense.');
+    click('Well, yes.');
+    const thirdThinking = await capture();
+    dialogue.dismiss();
+    return [firstThinking, secondThinking, thirdThinking, firstSmirk, secondSmirk];
+  })()`);
+  assert.deepEqual(professorPortraits, [
+    ['thinking', 'thinking.webp'], ['thinking', 'thinking-alt.webp'], ['thinking', 'thinking-alt-2.webp'],
+    ['self-assured-smirk', 'self-assured-smirk.webp'], ['self-assured-smirk', 'self-assured-smirk-alt.webp']
+  ]);
+
   for (const [choice, expected, mood, pipMood] of [
     ['Even worse!', 'Only to those in debt, Master Pip.', 'self-assured-smirk', 'alarmed'],
     ['Oh, phew.', 'Your relief may be premature.', 'devious', 'happy'],

@@ -31,19 +31,29 @@ test('portrait artwork alternates across consecutive and interleaved turns', () 
     ['pip', 'thinking', false],
     ['pip', 'thinking', true]
   ];
-  assert.deepEqual(turns.map(([character, mood, speaking]) => rotation.select(character, mood, true, speaking)),
-    [false, false, true, true, true, false, true, false]);
+  assert.deepEqual(turns.map(([character, mood, speaking]) => rotation.select(character, mood, 2, speaking)),
+    [0, 0, 1, 1, 1, 0, 1, 0]);
 });
 
-test('portrait rotation keeps distinct expressions and state variants separate', () => {
+test('three portrait variants cycle through other expressions without advancing on passive beats', () => {
   const rotation = createPortraitRotation();
-  assert.equal(rotation.select('pip', 'thinking', true, true), false);
-  assert.equal(rotation.select('pip', 'thinking', true, true), true);
-  assert.equal(rotation.select('pip', 'thinking:disguise', true, false), false);
-  assert.equal(rotation.select('pip', 'thinking:disguise', true, true), false);
-  assert.equal(rotation.select('pip', 'thinking:disguise', true, true), true);
-  assert.equal(rotation.select('pip', 'worried', true, true), false);
-  assert.equal(rotation.select('pip', 'thinking', true, true), false);
-  assert.equal(rotation.select('milo', 'injured', false, true), false);
-  assert.equal(rotation.select('milo', 'injured', false, true), false);
+  const turn = (key, advance = true) => rotation.select('professor', key, 3, advance);
+  assert.equal(turn('thinking'), 0);
+  assert.equal(turn('skeptical'), 0);
+  assert.equal(turn('thinking', false), 0);
+  assert.equal(turn('thinking'), 1);
+  assert.equal(turn('notebook'), 0);
+  assert.equal(turn('thinking', false), 1);
+  assert.equal(turn('thinking'), 2);
+  assert.equal(turn('thinking'), 0);
+  assert.equal(turn('notebook'), 1);
+});
+
+test('Professor artwork covers every expression including notebook directions', () => {
+  const {catalogue} = dialoguePortraitInventory();
+  const portraits = catalogue.filter(entry => entry.character === 'professor');
+  const counts = Object.groupBy(portraits, entry => entry.mood);
+  assert.deepEqual(Object.fromEntries(Object.entries(counts).map(([mood, entries]) => [mood, entries.length])), {
+    'self-assured-smirk': 2, skeptical: 2, thinking: 3, condescending: 2, deadpan: 2, notebook: 2
+  });
 });
