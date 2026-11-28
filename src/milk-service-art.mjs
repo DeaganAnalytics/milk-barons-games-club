@@ -231,20 +231,23 @@ export function drawEmptyServiceGlass(ctx, server) {
 export function drawPipePour(ctx, server) {
   const progress = server.pipePour / pipePourDuration;
   const clamp = value => Math.max(0, Math.min(1, value));
-  const returnToTray = (1 - progress) / 0.2;
-  const handoff = ease(clamp(server.emptyServiceGlass ? Math.min(progress / 0.2, returnToTray) : returnToTray));
-  const tilt = ease(clamp(Math.min((progress - 0.12) / 0.15, (0.87 - progress) / 0.15)));
-  const fill = clamp((progress - 0.27) / 0.45);
+  const pickUp = 0.64;
+  const setDown = 0.94;
+  const returnToTray = 1 - ease(clamp((progress - pickUp) / (setDown - pickUp)));
+  const liftToCounter = server.emptyServiceGlass ? ease(clamp(progress / 0.22)) : 1;
+  const handoff = liftToCounter * returnToTray;
+  const tilt = ease(clamp(Math.min((progress - 0.18) / 0.10, (0.66 - progress) / 0.10)));
+  const fill = clamp((progress - 0.28) / 0.28);
   const grip = serverGlassPosition(server);
-  const glassX = mix(grip.x, pipeHatch.x + 9, handoff);
-  const glassY = mix(grip.y, pipeHatch.top + 42, handoff);
-  const jugX = pipeHatch.x - 7;
-  const jugY = pipeHatch.top + 33;
+  const glassX = mix(grip.x, pipeHatch.x + 13, handoff);
+  const glassY = mix(grip.y, pipeHatch.sill + 6, handoff);
+  const jugX = pipeHatch.x - 4;
+  const jugY = pipeHatch.sill - 3;
   const angle = 1.3 * tilt;
   const lipX = jugX + Math.sin(angle) * 11;
   const lipY = jugY - Math.cos(angle) * 11;
 
-  if (progress > 0.27 && progress < 0.72) {
+  if (progress > 0.28 && progress < 0.56) {
     ctx.save();
     ctx.strokeStyle = '#fff3d8';
     ctx.lineWidth = 1.8;
@@ -253,6 +256,15 @@ export function drawPipePour(ctx, server) {
     ctx.moveTo(lipX, lipY);
     ctx.quadraticCurveTo(lipX + 2, glassY - 15, glassX, glassY - 7);
     ctx.stroke();
+    ctx.restore();
+  }
+  // Keep the returning glass visibly in the server's hand until it meets the tray.
+  if (progress >= pickUp && progress < setDown) {
+    const reachProgress = clamp((progress - pickUp) / 0.035);
+    ctx.save();
+    ctx.globalAlpha = ease(reachProgress);
+    reach(ctx, grip.x - server.facing * 6, grip.y - 5,
+      glassX, glassY + 2, '#f5e2c2', '#dfbd96');
     ctx.restore();
   }
   drawStaffGlass(ctx, server, glassX, glassY, 0, fill);

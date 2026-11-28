@@ -418,5 +418,29 @@
   "assets/dialogue/pipe/disgusted.webp": [
     "Furrowed brows, wrinkled nose and a curled upper lip.",
     "Disgust; high. Use when recoiling from something unpleasant."
+  ],
+  "assets/dialogue/expressions/edmund-vale-conspiratorial.webp": [
+    "Guarded sideways glance and a tight mouth; both hands stay on the mop.",
+    "Wary discretion; medium. A quiet warning or confidential aside. Avoid cheerful exchanges."
+  ],
+  "assets/dialogue/milo-injured/worried.webp": [
+    "Raised inner brows, a frown, facial bruises and scratches.",
+    "Worry; medium. Anxious dialogue after the Baron has injured Milo."
+  ],
+  "assets/dialogue/milo-injured/sad.webp": [
+    "Closed eyes, a lowered mouth, facial bruises and scratches.",
+    "Sadness; medium. Defeat or grief after the Baron has injured Milo."
+  ],
+  "assets/dialogue/milo-injured/relieved.webp": [
+    "Lifted brows and a small smile despite facial bruises and scratches.",
+    "Relief; low. Reassurance after the Baron has injured Milo."
+  ],
+  "assets/dialogue/milo-injured/angry.webp": [
+    "Furrowed brows, open mouth, facial bruises and scratches.",
+    "Anger; high. A sharp outburst after the Baron has injured Milo."
+  ],
+  "assets/dialogue/milo-injured/defiant.webp": [
+    "Inward-slanting brows and a tight frown, with facial bruises and scratches.",
+    "Defiance; medium. Refusal or resistance after the Baron has injured Milo."
   ]
 }

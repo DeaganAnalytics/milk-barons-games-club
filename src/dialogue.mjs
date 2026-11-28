@@ -157,6 +157,8 @@ const portraits = {
 
 const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-listening', 'guard-formal', 'milo-angry'].map(name =>
   [name, new URL('../assets/dialogue/' + name + '.webp', import.meta.url)]));
+const injuredMiloPortraits = new Map(['worried', 'sad', 'relieved', 'angry', 'defiant'].map(mood =>
+  [mood, new URL('../assets/dialogue/milo-injured/' + mood + '.webp', import.meta.url)]));
 const portraitCache = new Map();
 
 const pipePortraitMoods = [
@@ -278,7 +280,7 @@ function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false
 
 function warmPortraits() {
   if (portraitCache.size) return;
-  const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values(), cameraPortrait];
+  const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values(), ...injuredMiloPortraits.values(), cameraPortrait];
   for (const [id, moods] of extraPortraitMoods) {
     for (const mood of moods) urls.push(extraPortraitUrl(id, mood));
   }
@@ -456,12 +458,14 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     mood = chooseExpression(mood, alternatives, npcHistory);
     const extraPortrait = extraPortraitUrl(character, mood, withoutMilk);
     const reportPortrait = reportPortraits.get(character + '-' + mood);
-    element.dataset.injured = String(character === 'milo' && miloWasInjured && !reportPortrait);
+    const injuredPortrait = character === 'milo' && miloWasInjured ? injuredMiloPortraits.get(mood) : null;
+    element.dataset.injured = String(Boolean(injuredPortrait));
+    element.classList.toggle('milo-injury-portrait', Boolean(injuredPortrait));
     element.classList.toggle('report-portrait', Boolean(reportPortrait));
     element.dataset.portrait = character;
-    if (extraPortrait || reportPortrait || !portraits[character]) {
+    if (injuredPortrait || extraPortrait || reportPortrait || !portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.style.setProperty('--portrait-image', `url(${extraPortrait ?? reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.(), pipLipstick)})`);
+      element.style.setProperty('--portrait-image', `url(${injuredPortrait ?? extraPortrait ?? reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.(), pipLipstick)})`);
       element.dataset.expression = mood;
       return;
     }
@@ -949,6 +953,7 @@ export function dialoguePortraitInventory() {
   for (const [id, moods] of extraPortraitMoods) {
     for (const mood of moods) add(id, mood, extraPortraitUrl(id, mood));
   }
+  for (const [mood, asset] of injuredMiloPortraits) add('milo', mood, asset, 'injured');
   for (const [id, asset] of reportPortraits.entries()) {
     const separator = id.indexOf('-');
     add(id.slice(0, separator), id.slice(separator + 1), asset);

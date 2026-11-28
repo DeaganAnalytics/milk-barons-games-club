@@ -100,7 +100,7 @@ function routeToPipe(member, baron, crowd) {
   return {target: null, route: []};
 }
 
-export const pipePourDuration = 1.4;
+export const pipePourDuration = 2.1;
 
 export function updateStaff(staff, player, baron, guards, elapsed, dt, random = Math.random) {
   let activePour = staff.find(member => member.pipePour != null && !member.departing && !member.serviceDuty);
