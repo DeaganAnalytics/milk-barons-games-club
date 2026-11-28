@@ -699,15 +699,17 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         return mysticSingleDialogue();
       }} : null;
     const extraReplies = [reaction, visibility, interview, brieTopic, mysticSingle].filter(Boolean);
-    const exitIndex = replies.findIndex(reply => reply.conversationExit);
-    const insertAt = exitIndex < 0 ? replies.length : exitIndex;
-    const availableReplies = [...replies.slice(0, insertAt), ...extraReplies, ...replies.slice(insertAt)].filter(reply => !usedReplies.has(reply.once)
+    // Older menus use the standard farewell without explicit exit metadata.
+    const isExit = reply => reply.conversationExit || reply.label === "I'll leave you to it."
+      || reply.label === "I'll leave you to it, then.";
+    const visibleReplies = [...replies, ...extraReplies].filter(reply => !usedReplies.has(reply.once)
       && (!reply.requiresDisposition || politicalDispositions[reply.requiresDisposition])
       && (!reply.requiresUsedReplies || reply.requiresUsedReplies.every(key => usedReplies.has(key)))
       && (!reply.requiresUnusedReplies || reply.requiresUnusedReplies.some(key => !usedReplies.has(key)))
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
+    const availableReplies = visibleReplies.filter(reply => !isExit(reply));
     if (node.randomizeWelcomeChoices) {
       const communist = availableReplies.filter(reply => reply.requiresDisposition === 'communist' || reply.expressesDisposition === 'communist');
       const regular = availableReplies.filter(reply => !communist.includes(reply));
@@ -717,6 +719,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       }
       availableReplies.splice(0, availableReplies.length, ...regular, ...communist);
     }
+    availableReplies.push(...visibleReplies.filter(isExit));
     const choiceButtons = [];
     const advanceButtons = [];
     for (const reply of availableReplies) {
