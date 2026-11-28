@@ -1,4 +1,4 @@
-import {createBrieCurdTopic} from './brie-curd-dialogue.mjs';
+import {createBrieBoyfriendTopic, createBrieCurdTopic} from './brie-curd-dialogue.mjs';
 import {createProfessorInterview} from './professor-interview.mjs';
 import {baronCurdReply} from './baron-curd-dialogue.mjs';
 import {createMysticVisibilityDialogue} from './mystic-visibility-dialogue.mjs';
@@ -185,7 +185,9 @@ const extraPortraitMoods = new Map([
   ['plum', ['delighted', 'smug', 'shocked']],
   ['emerald', ['amused', 'skeptical', 'appalled']],
   [sleepingGamblerId, ['drowsy', 'protective', 'dismayed']],
-  ...staffIds.filter(id => id !== skimId && id !== 'lin-waitress' && id !== 'handlebar-waiter').map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']]),
+  ...staffIds.filter(id => id !== skimId && id !== 'lin-waitress' && id !== 'handlebar-waiter' && id !== 'blonde-waitress').map(id => [id, ['welcoming', 'apologetic', 'hurried', 'pleased']]),
+  ['blonde-waitress', ['welcoming', 'apologetic', 'hurried', 'pleased',
+    'shocked', 'angry', 'worried', 'gossiping', 'lovestruck', 'confused', 'sulking', 'thinking']],
   ['handlebar-waiter', ['welcoming', 'apologetic', 'hurried', 'pleased', 'offended']],
   ['lin-waitress', ['welcoming', 'apologetic', 'hurried', 'pleased', 'angry', 'hurt', 'skeptical', 'blushing']]
 ]);
@@ -353,6 +355,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   const linDepartureReaction = createLinDepartureReactions();
   let departureMenu;
   let brieMenu;
+  let returningToBrie = false;
+  const brieBoyfriendTopic = createBrieBoyfriendTopic();
   const brieCurdTopic = createBrieCurdTopic();
   const mysticVisibility = createMysticVisibilityDialogue();
   const pokieOpening = createPokieConversation(placePokieWager);
@@ -415,7 +419,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   const npcHistory = {};
   const pipHistory = {};
 
-  function setPortrait(element, character, mood, withoutMilk) {
+  function setPortrait(element, character, mood, withoutMilk, exact = false) {
     const expressions = [
       ...(npcExpressions.get(character) ?? []),
       ...(!withoutMilk ? extraPortraitMoods.get(character) ?? [] : [])
@@ -428,7 +432,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     }
     const family = expressionFamilies.find(group => group.includes(mood)) ?? [];
     // Repeat an intentional expression if this character has no suitable alternate.
-    const alternatives = special || withoutMilk ? [] : family.filter(expression => expressions.includes(expression));
+    const alternatives = exact || special || withoutMilk ? [] : family.filter(expression => expressions.includes(expression));
     mood = chooseExpression(mood, alternatives, npcHistory);
     const extraPortrait = extraPortraitUrl(character, mood, withoutMilk);
     const reportPortrait = reportPortraits.get(character + '-' + mood);
@@ -587,7 +591,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       : currentSpeaker === bartender.id ? bartender.title
       : currentSpeaker === 'guard' ? 'Bull Guard'
       : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
-    setPortrait(npcPortrait, currentSpeaker, node.mood, withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)));
+    setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactBriePortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactBriePortrait);
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
     const options = character === lifeguard.id
       ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
@@ -615,11 +619,15 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         curdist: politicalDispositions.communist, seducedExecutive: hasSeducedExecutive?.(),
         seenDj: hasSeenDjDairy?.() || spokeToDjDairy, spokeToMilo: metMilo
       }) : null;
-    const brieCurd = node === brieMenu && !activeTarget.serviceDuty
-      ? brieCurdTopic(politicalDispositions.communist, node, {
+    let brieTopic = null;
+    if (node === brieMenu && !activeTarget.serviceDuty) {
+      const state = {
         seduced: hasSeducedExecutive?.(), relationship: waiterOpening.relationship(), flirts: waiterOpening.completedLinChats()
-      }) : null;
-    const extraReplies = [reaction, visibility, interview, brieCurd].filter(Boolean);
+      };
+      brieTopic = politicalDispositions.communist ? brieCurdTopic(true, node, state)
+        : brieBoyfriendTopic.option(false, returningToBrie, state);
+    }
+    const extraReplies = [reaction, visibility, interview, brieTopic].filter(Boolean);
     const exitIndex = replies.findIndex(reply => reply.conversationExit);
     const insertAt = exitIndex < 0 ? replies.length : exitIndex;
     const availableReplies = [...replies.slice(0, insertAt), ...extraReplies, ...replies.slice(insertAt)].filter(reply => !usedReplies.has(reply.once)
@@ -839,6 +847,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       || target.baronKarma || target.executiveFraud || target.poolClothesThanks || target.pilloryThanks
       || target.postEscort || target.guestGate || target.summoned || target.withoutMilk;
     brieMenu = target.id === 'blonde-waitress' && !target.slotReaction ? opening : null;
+    returningToBrie = Boolean(brieMenu) && brieBoyfriendTopic.meet();
     departureMenu = !scripted && target.id !== skimId && target.id !== milkMysticId
       && !(target.id === 'baron' && isBaronDancing(baron)) ? opening : null;
     if (target.id === skimId) skimSpillFollowupPending = false;

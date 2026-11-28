@@ -350,5 +350,37 @@
   "assets/dialogue/security-camera.webp": [
     "Blue lens and red light on a swivelling bracket.",
     "Surveillance beat. No facial emotion."
+  ],
+  "assets/dialogue/expressions/blonde-waitress-shocked.webp": [
+    "Wide eyes, raised brows and a round open mouth.",
+    "Strong surprise. Use for an unexpected revelation. Avoid routine greetings."
+  ],
+  "assets/dialogue/expressions/blonde-waitress-angry.webp": [
+    "Brows angle sharply inward over a tight frown.",
+    "Strong anger. Use for accusations or indignation. Avoid friendly banter."
+  ],
+  "assets/dialogue/expressions/blonde-waitress-worried.webp": [
+    "Raised inner brows, a wavering mouth and a sweat drop.",
+    "Visible anxiety. Use for concern or fear of bad news. Avoid confident replies."
+  ],
+  "assets/dialogue/expressions/blonde-waitress-gossiping.webp": [
+    "Sideways glance, lowered lids and a broad grin.",
+    "Playful confidence. Use for gossip and discreet advice. Avoid sincere apologies."
+  ],
+  "assets/dialogue/expressions/blonde-waitress-lovestruck.webp": [
+    "Heart-shaped eyes, pink cheeks and an open smile.",
+    "Exaggerated infatuation. Use for romantic enthusiasm. Avoid routine service."
+  ],
+  "assets/dialogue/expressions/blonde-waitress-confused.webp": [
+    "Uneven brows, a small open mouth and a question mark.",
+    "Puzzlement. Use for misunderstandings. Avoid certainty."
+  ],
+  "assets/dialogue/expressions/blonde-waitress-sulking.webp": [
+    "Lowered lids and a pinched pout.",
+    "Petulant disappointment. Use for complaints or jealousy. Avoid open delight."
+  ],
+  "assets/dialogue/expressions/blonde-waitress-thinking.webp": [
+    "Uneven brows, a sideways gaze and pursed lips.",
+    "Reflection. Use when trying to remember something. Avoid an immediate outburst."
   ]
 }

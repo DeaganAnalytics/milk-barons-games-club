@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {createBrieCurdActions} from '../src/brie-curd-actions.mjs';
 import {createKarma} from '../src/karma.mjs';
-import {createBrieCurdTopic} from '../src/brie-curd-dialogue.mjs';
+import {createBrieBoyfriendTopic, createBrieCurdTopic} from '../src/brie-curd-dialogue.mjs';
 import {createBaron} from '../src/baron.mjs';
 import {createPlayer} from '../src/player.mjs';
 import {updateStaff} from '../src/staff.mjs';
@@ -33,7 +33,7 @@ test('Brie offers Karl Curd only to communist Pip, consumes it on selection and 
   assert.equal(opening.playerMood, 'thinking');
   const response = advance(opening);
   assert.equal(response.text, 'Oh, I love him!');
-  assert.equal(response.mood, 'pleased');
+  assert.equal(response.mood, 'lovestruck');
   assert.deepEqual(response.replies.map(reply => reply.label), [
     'YOU DO?!', 'I love him too!', 'The means of milk production belong to the workers!'
   ]);
@@ -141,4 +141,54 @@ test('the Baron run follows his current position and releases Brie back to staff
   assert.deepEqual(staff, [brie]);
   assert.deepEqual(guests, [brie]);
   assert.equal(karma.score, 0);
+});
+
+test('Brie boyfriend topic requires a prior visit and is mutually exclusive with the Curd topic', () => {
+  const boyfriend = createBrieBoyfriendTopic();
+  assert.equal(boyfriend.option(false, boyfriend.meet(), normal), null);
+  const returning = boyfriend.meet();
+  assert.equal(boyfriend.option(true, returning, normal), null);
+  assert.ok(createBrieCurdTopic()(true, menu, normal));
+  assert.equal(createBrieCurdTopic()(false, menu, normal), null);
+  const opening = boyfriend.option(false, returning, normal).next();
+  assert.equal(opening.speaker, 'Pip');
+  assert.equal(opening.playerMood, 'thinking');
+  assert.equal(boyfriend.option(false, returning, normal), null);
+});
+
+test('Brie boyfriend responses prioritise the Executive, then Lin upset, then three flirts', () => {
+  for (const [state, roll, mood, text] of [
+    [{seduced: true, relationship: 'departed', flirts: 4}, 0.499, 'angry', "I'm not going to be another one of your trophies, Pip!"],
+    [{seduced: true, relationship: 'alienated', flirts: 4}, 0.5, 'gossiping', "I'm not adding another lipstick kiss to your collection, Pip!"],
+    [{...normal, relationship: 'alienated', flirts: 4}, null, 'angry', "Oh no! Don't come trying your luck here, Pip!"],
+    [{...normal, flirts: 3}, null, 'worried', "Pip! Don't you go breaking Lin's heart!"]
+  ]) {
+    let calls = 0;
+    const boyfriend = createBrieBoyfriendTopic(() => { calls++; return roll; });
+    boyfriend.meet();
+    const option = boyfriend.option(false, boyfriend.meet(), state);
+    assert.equal(calls, 0);
+    const response = advance(option.next());
+    assert.equal(response.text, text);
+    assert.equal(response.mood, mood);
+    assert.equal(response.replies, undefined);
+    assert.equal(calls, state.seduced ? 1 : 0);
+  }
+});
+
+test('Brie shares the boyfriend exits with the surname branch and both anyone-else paths close', () => {
+  const boyfriend = createBrieBoyfriendTopic();
+  boyfriend.meet();
+  const opening = advance(boyfriend.option(false, boyfriend.meet(), {...normal, flirts: 2}).next());
+  assert.equal(opening.mood, 'lovestruck');
+  const surname = read(pick(opening, 'Karl who?'));
+  assert.equal(surname.beats[0].text, 'His last name starts with a C.');
+  for (const label of ['Oh... Never mind then.', "Oh... Do you know anyone here who doesn't?"]) {
+    assert.equal(pick(opening, label), pick(surname.node, label));
+  }
+  const anyone = read(pick(opening, "Oh... Do you know anyone here who doesn't?")).node;
+  const thanks = pick(anyone, 'Okay, thanks! Will do!');
+  assert.equal(thanks.speaker, 'Pip');
+  assert.equal(thanks.replies, undefined);
+  assert.equal(read(pick(anyone, 'Anyone else?')).node.replies, undefined);
 });

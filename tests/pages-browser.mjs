@@ -71,10 +71,14 @@ try {
       document.getElementById('conversation-line').textContent
     ];
     dialogue.open(brie);
-    const locked = !find(topic);
+    const boyfriendTopic = 'So, do you have a boyfriend?';
+    const locked = !find(topic) && !find(boyfriendTopic);
+    dialogue.open(brie);
+    const unlocked = Boolean(find(boyfriendTopic)) && !find(topic);
     dialogue.open({...elias, welcome: true});
     find('I refuse to recognise the legitimacy of this bourgeois establishment!').click();
     dialogue.open(brie);
+    const exclusive = !find(boyfriendTopic);
     find(topic).click();
     const pip = [...snapshot(), document.getElementById('conversation-player').dataset.expression.split(':')[0]];
     find('Continue →').click();
@@ -83,11 +87,11 @@ try {
     dialogue.open(brie);
     const consumed = !find(topic);
     dialogue.dismiss();
-    return {locked, pip, brieReply, consumed};
+    return {locked, unlocked, exclusive, pip, brieReply, consumed};
   })()`);
   assert.deepEqual(brieLines, {
-    locked: true, pip: ['Pip', 'What do you think of Karl Curd?', 'thinking'],
-    brieReply: ['Waitress Brie', 'Oh, I love him!', 'blonde-waitress', 'pleased'], consumed: true
+    locked: true, unlocked: true, exclusive: true, pip: ['Pip', 'What do you think of Karl Curd?', 'thinking'],
+    brieReply: ['Waitress Brie', 'Oh, I love him!', 'blonde-waitress', 'lovestruck'], consumed: true
   });
 
   for (const [choice, expected, mood, pipMood] of [

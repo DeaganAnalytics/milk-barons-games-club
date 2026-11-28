@@ -1,9 +1,4 @@
-const fallback = {
-  shocked: 'hurried', angry: 'hurried', worried: 'apologetic', gossiping: 'pleased',
-  lovestruck: 'pleased', confused: 'attentive', sulking: 'apologetic', thinking: 'attentive'
-};
-
-const brie = (text, mood, extra) => ({text, mood: fallback[mood] ?? mood, ...extra});
+const brie = (text, mood, extra) => ({text, mood, exactBriePortrait: true, ...extra});
 const pip = (text, playerMood) => ({text, playerMood, speaker: 'Pip', mood: 'attentive'});
 const advance = next => ({label: 'Continue', next});
 const chain = (lines, end = {replies: []}) => lines.reduceRight((next, line) =>
@@ -168,5 +163,58 @@ export function createBrieCurdTopic() {
         choice('The means of milk production belong to the workers!', 'happy', book)
       ]}));
     });
+  };
+}
+
+export function createBrieBoyfriendTopic(random = Math.random) {
+  let met = false;
+  let used = false;
+  return {
+    meet() {
+      const returning = met;
+      met = true;
+      return returning;
+    },
+    option(communist, returning, {seduced, relationship, flirts}) {
+      if (communist || !returning || used) return null;
+      const question = 'So, do you have a boyfriend?';
+      return choice(question, 'thinking', () => {
+        if (used) return null;
+        used = true;
+        let response;
+        if (seduced) {
+          response = random() < 0.5
+            ? brie("I'm not going to be another one of your trophies, Pip!", 'angry')
+            : brie("I'm not adding another lipstick kiss to your collection, Pip!", 'gossiping');
+        } else if (relationship !== 'normal') {
+          response = brie("Oh no! Don't come trying your luck here, Pip!", 'angry');
+        } else if (flirts >= 3) {
+          response = brie("Pip! Don't you go breaking Lin's heart!", 'worried');
+        } else {
+          const neverMind = choice('Oh... Never mind then.', 'sorry',
+            brie("Have you tried talking to Lin? She's single!", 'pleased'));
+          const anyoneElse = choice("Oh... Do you know anyone here who doesn't?", 'thinking', chain([
+            brie("Hmm... I'm not sure about Genevieve.", 'thinking'),
+            brie("Lin's single, though! You should chat to her.", 'pleased', {replies: [
+              choice('Okay, thanks! Will do!', 'happy', pip('Okay, thanks! Will do!', 'happy')),
+              choice('Anyone else?', 'thinking', chain([
+                brie('Most of the women here are married...', 'attentive'),
+                brie("Though that doesn't seem to matter as much to them as it does to me.", 'apologetic'),
+                brie('You could try talking to some of the aristocrats.', 'gossiping')
+              ], brie("I'd approach the ones who are alone, though. They prefer to be discreet.", 'gossiping')))
+            ]})
+          ]));
+          response = brie("Yes! His name is Karl. He's such a romantic!", 'lovestruck', {mustContinue: true, replies: [
+            neverMind,
+            choice('Karl who?', 'thinking', chain([
+              brie('His last name starts with a C.', 'thinking'),
+              brie('I can never remember it.', 'apologetic', {replies: [neverMind, anyoneElse]})
+            ])),
+            anyoneElse
+          ]});
+        }
+        return chain([pip(question, 'thinking')], response);
+      });
+    }
   };
 }
