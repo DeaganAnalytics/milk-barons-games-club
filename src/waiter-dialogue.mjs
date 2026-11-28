@@ -1,3 +1,4 @@
+import {membershipQuestion, waiterMembershipDialogue} from './waiter-membership-dialogue.mjs';
 import {linBrieReferral} from './lin-brie-referral.mjs';
 import {eliasTipIntervention, linColdPostBan, postBanLines, waiterTipLines} from './waiter-tipping-dialogue.mjs';
 import {linClothingConfrontation, linPoolJealousy} from './lin-pool-dialogue.mjs';
@@ -101,6 +102,7 @@ export const linWaitressId = 'lin-waitress';
 export function createWaiterConversation(getCoins, askedAboutCowGuards = () => false,
   hasSeducedExecutive = () => false, poolState = () => ({})) {
   let greetingIndex = 0;
+  let membershipAsked = false;
   const tipped = new Set();
   const discussedBan = new Set();
   let tipBanComplete = false;
@@ -241,6 +243,14 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
           return topic.next;
         }});
       }
+      const membership = !membershipAsked && waiterMembershipDialogue(id);
+      if (membership) personal.push({
+        label: membershipQuestion, playerMood: 'thinking', next: () => {
+          if (membershipAsked) return null;
+          membershipAsked = true;
+          return membership;
+        }
+      });
       currentMenu = say(linCold ? "Will you be ordering any milk, sir?" : greeting, [
         reply('Could I have a glass of milk, please?', milkOrder(linCold)),
         ...personal,
