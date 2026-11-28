@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 40299)
+Total output lines: 3319
+
 import {createCoinBalance} from '../src/coins.mjs';
 import {createProfessorConversation, professorMoods} from '../src/professor-dialogue.mjs';
 import {createProfessorSpeech, professor, professorPose} from '../src/professor.mjs';
@@ -1728,26 +1731,7 @@ test('Baron greetings keep the six defaults and add only eligible groups', async
 });
 
 test('the dancing Baron offers one DJ request and the karma encounters switch to Elias', async () => {
-  const {baronDanceDialogue, baronKarmaDialogue} = await import('../src/baron-dialogue.mjs');
-  const baron = {...createBaron(), ...BARON_DANCE_STOP};
-  assert.equal(nearestInteraction({x: baron.x + 42, y: baron.y}, baron, null).id, 'baron');
-  assert.equal(baronDanceDialogue(true).replies.length, 2);
-  const fan = baronDanceDialogue(false).replies[0].next;
-  assert.equal(fan.replies[0].next, null);
-  const slap = fan.replies[1].next;
-  assert.equal(slap.enterAction, 'baronSlap');
-  assert.equal(slap.playerMood, 'alarmed');
-  assert.equal(slap.replies[0].next.direction, 'Heavy breathing');
-  for (const spokeToProfessor of [false, true]) {
-    const elias = baronKarmaDialogue.fine(spokeToProfessor).replies[0].next.replies[0].next;
-    assert.equal(elias.character, 'elias');
-    const fine = elias.replies[0].next;
-    assert.equal(fine.enterAction, 'baronKarmaFine');
-    assert.equal(fine.replies.length, 5);
-    const response = fine.replies[1].next.replies[0].next.replies[0].next.replies[0].next;
-    assert.equal(response.speaker, 'Pip');
-    if (spokeToProfessor) assert.equal(response.action, 'finishBaronPenalty');
-    else assert.equal(response.replies[0].next.text, 'Zere vere two before him, Master Pip.');
+  const {baronDanceDialogue, baro…299 tokens truncated…
     assert.ok(!response.replies || response.replies.every(reply => reply.label === 'Continue'));
   }
   for (const [spokeToMilo, askedAboutCowGuards] of [[false, false], [false, true], [true, false], [true, true]]) {
@@ -2274,7 +2258,39 @@ test('Skim lets Pip retry recognition and unlocks regular topics only after conf
   while (typeof line.replies[0].next !== 'function') line = line.replies[0].next;
   assert.match(line.text, /apparently the problem/);
   assert.equal(line.replies[0].next().replies.length, 6);
-  assert.equal(recognised().text, "Oh, bloody hell. It's you again.");
+  assert.equal(recognised().text, "Oh, milkin hell. It's you again.");
+});
+
+test('Skim rotates the new guarded and identified greetings with registered portrait moods', async () => {
+  const {createSkimConversation} = await import('../src/skim-dialogue.mjs');
+  const unknown = createSkimConversation();
+  unknown();
+  const unknownGreetings = Array.from({length: 9}, () => unknown());
+  assert.deepEqual(unknownGreetings.slice(-4).map(({text, mood}) => [text, mood]), [
+    ['I have no statement to make at this time.', 'distressed'],
+    ['All enquiries should be directed to management.', 'conspiratorial'],
+    ['I can neither confirm nor deny the presence of milk spillage.', 'conspiratorial'],
+    ['Just a janitor, sir. Nothing newsworthy.', 'attentive']
+  ]);
+
+  const identified = createSkimConversation();
+  let line = identified().replies[0].next.replies[1].next;
+  line = line.replies[0].next.replies[0].next.replies[0].next;
+  for (let i = 0; i < 7; i++) {
+    const first = line.replies[0];
+    line = typeof first.next === 'function' ? first.next() : first.next;
+  }
+  const identifiedGreetings = Array.from({length: 14}, () => identified());
+  assert.deepEqual(identifiedGreetings.slice(-8).map(({text, mood}) => [text, mood]), [
+    ['From parliamentary debates to milk stains. What a career.', 'wistful'],
+    ["Unless you're here to announce an election, I'm busy.", 'exasperated'],
+    ['I used to have people who did this for me, kid.', 'wistful'],
+    ['Another day serving the electorate. With a mop.', 'exasperated'],
+    ["I'd resign, but apparently that's not an option.", 'wistful'],
+    ["I've survived three leadership challenges. I can survive this.", 'exasperated'],
+    ["I hope you're not conducting an opinion poll.", 'conspiratorial'],
+    ['If anyone asks, this is a community engagement exercise.', 'conspiratorial']
+  ]);
 });
 
 test('Elias accounts for cumulative actual changes and unlocks each tally independently', async () => {
