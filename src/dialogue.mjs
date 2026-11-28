@@ -219,6 +219,19 @@ const expressionFamilies = [
   ['smug', 'self-assured', 'self-assured-smirk', 'condescending', 'devious', 'conspiratorial', 'evil-laugh']
 ];
 
+export function createPortraitRotation() {
+  const lastTurn = new Map();
+  return {
+    select(character, key, hasAlternate, speaking) {
+      const previous = lastTurn.get(character);
+      const sameArtworkFamily = previous?.key === key;
+      const alternate = hasAlternate && sameArtworkFamily && (speaking ? !previous.alternate : previous.alternate);
+      if (speaking) lastTurn.set(character, {key, alternate});
+      return alternate;
+    }
+  };
+}
+
 function chooseExpression(mood, alternatives, history) {
   let selected = mood;
   if (history.mood === mood && history.count >= 2) {
@@ -278,9 +291,17 @@ function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false
   return new URL('../assets/waiters/' + filename, import.meta.url);
 }
 
+const alternateNpcPortraits = new Map([
+  [professor.id, new Map([['thinking', new URL('../assets/dialogue/professor/thinking-alt.webp', import.meta.url)]])],
+  [elias.id, new Map([['current-smile', new URL('../assets/dialogue/elias/current-smile-alt.webp', import.meta.url)]])],
+  [skimId, new Map([['attentive', new URL('../assets/waiters/edmund-vale-attentive-alt-portrait.webp', import.meta.url)]])]
+]);
+const alternatePipMoods = new Set(['thinking', 'attentive', 'worried']);
+
 function warmPortraits() {
   if (portraitCache.size) return;
   const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values(), ...injuredMiloPortraits.values(), cameraPortrait];
+  for (const portraits of alternateNpcPortraits.values()) urls.push(...portraits.values());
   for (const [id, moods] of extraPortraitMoods) {
     for (const mood of moods) urls.push(extraPortraitUrl(id, mood));
   }
@@ -440,8 +461,9 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
 
   const npcHistory = {};
   const pipHistory = {};
+  const artwork = createPortraitRotation();
 
-  function setPortrait(element, character, mood, withoutMilk, exact = false) {
+  function setPortrait(element, character, mood, withoutMilk, exact = false, speaking = true) {
     const expressions = [
       ...(npcExpressions.get(character) ?? []),
       ...(!withoutMilk ? extraPortraitMoods.get(character) ?? [] : [])
@@ -454,18 +476,21 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     }
     const family = expressionFamilies.find(group => group.includes(mood)) ?? [];
     // Repeat an intentional expression if this character has no suitable alternate.
-    const alternatives = exact || special || withoutMilk ? [] : family.filter(expression => expressions.includes(expression));
+    const alternates = !special && !withoutMilk ? alternateNpcPortraits.get(character) : undefined;
+    const alternatives = exact || special || withoutMilk || alternates?.has(mood) ? [] : family.filter(expression => expressions.includes(expression));
     mood = chooseExpression(mood, alternatives, npcHistory);
     const extraPortrait = extraPortraitUrl(character, mood, withoutMilk);
     const reportPortrait = reportPortraits.get(character + '-' + mood);
+    const alternate = alternates?.get(mood);
+    const illustration = artwork.select(character, mood, Boolean(alternate), speaking) ? alternate : null;
     const injuredPortrait = character === 'milo' && miloWasInjured ? injuredMiloPortraits.get(mood) : null;
     element.dataset.injured = String(Boolean(injuredPortrait));
     element.classList.toggle('milo-injury-portrait', Boolean(injuredPortrait));
     element.classList.toggle('report-portrait', Boolean(reportPortrait));
     element.dataset.portrait = character;
-    if (injuredPortrait || extraPortrait || reportPortrait || !portraits[character]) {
+    if (injuredPortrait || illustration || extraPortrait || reportPortrait || !portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.style.setProperty('--portrait-image', `url(${injuredPortrait ?? extraPortrait ?? reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.(), pipLipstick)})`);
+      element.style.setProperty('--portrait-image', `url(${injuredPortrait ?? illustration ?? extraPortrait ?? reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.(), pipLipstick)})`);
       element.dataset.expression = mood;
       return;
     }
@@ -590,16 +615,16 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       if (destination?.exitAction) {
         action = destination.exitAction;
         close();
-      } else if (destination) show(destination, character, node.playerMood, withoutMilk);
+      } else if (destination) show(destination, character, node.playerMood, withoutMilk, true);
       else close();
       return;
     }
-    show(silent, character, node.playerMood, withoutMilk);
+    show(silent, character, node.playerMood, withoutMilk, true);
     if (activeTarget && !node.replies?.length && !node.direction
         && !node.advanceTo && !node.fadeTo && !node.autoCloseMs) close();
   }
 
-  function show(node, character, playerMood, withoutMilk) {
+  function show(node, character, playerMood, withoutMilk, pipSelected = false) {
     if (node.speaker === 'Pip' && node.text) {
       const line = node;
       node = {text: '', mood: line.mood, playerMood: line.playerMood, mustContinue: true,
@@ -639,8 +664,10 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     const playerExpression = chooseExpression(preferred, node.exactPlayerPortrait ? [] : [...reactions, 'thinking', 'attentive'], pipHistory);
     const milkMoustache = Boolean(node.milkMoustache);
     const portraitKey = playerExpression + ':' + (disguise ?? '') + ':' + pipLipstick + (milkMoustache ? ':milk' : '');
-    if (playerPortrait.dataset.expression !== portraitKey) {
-      drawPipPortrait(playerArt, playerExpression, disguise, pipLipstick, milkMoustache);
+    const alternate = artwork.select('pip', portraitKey, alternatePipMoods.has(playerExpression), pipSelected);
+    if (playerPortrait.dataset.expression !== portraitKey || playerPortrait.dataset.alternate !== String(alternate)) {
+      drawPipPortrait(playerArt, playerExpression, disguise, pipLipstick, milkMoustache, alternate);
+      playerPortrait.dataset.alternate = String(alternate);
       playerPortrait.dataset.expression = portraitKey;
     }
     const currentSpeaker = node.character ?? character;
@@ -655,7 +682,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     title.textContent = directionOnly ? '' : pipIsSpeaking ? 'Pip' : narration ? 'Narrator' : npcName;
     speaker.textContent = npcName;
     panel.dataset.speakingSide = pipIsSpeaking ? 'player' : narration ? 'narrator' : 'npc';
-    setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactNpcPortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactNpcPortrait);
+    setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactNpcPortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactNpcPortrait, !pipIsSpeaking && !narration && Boolean(node.text));
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
     const options = character === lifeguard.id
       ? lifeguardReplies(node, {askedPoolEntry, admittedClothingTheft, stolenClothing: getStolenClothing?.()})
@@ -760,7 +787,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
             finishAction(node.action, activeTarget);
             if (!activeTarget) return; // The fee may end the game.
           }
-          show(next, character, reply.playerMood, withoutMilk);
+          show(next, character, reply.playerMood, withoutMilk, !isContinue && !reply.conversationExit);
         }
       });
       (isContinue ? advanceButtons : choiceButtons).push(button);
@@ -957,6 +984,9 @@ export function dialoguePortraitInventory() {
   }
   for (const [id, moods] of extraPortraitMoods) {
     for (const mood of moods) add(id, mood, extraPortraitUrl(id, mood));
+  }
+  for (const [id, moods] of alternateNpcPortraits) {
+    for (const [mood, asset] of moods) add(id, mood, asset, 'alternate artwork');
   }
   for (const [mood, asset] of injuredMiloPortraits) add('milo', mood, asset, 'injured');
   for (const [id, asset] of reportPortraits.entries()) {
