@@ -158,10 +158,16 @@ const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-listening'
   [name, new URL('../assets/dialogue/' + name + '.webp', import.meta.url)]));
 const portraitCache = new Map();
 
+const pipePortraitMoods = [
+  'attentive', 'flustered', 'apologetic', 'relieved', 'angry',
+  'smug', 'unimpressed', 'proud', 'disgusted'
+];
+
 const npcExpressions = new Map([
   ...Object.entries(portraits).map(([id, portrait]) => [id, portrait.expressions]),
   [djTarget.id, djMoods],
   [milkMysticId, milkMysticMoods],
+  ['pipe', pipePortraitMoods],
   ...dancerTargets.map(({id}) => [id, dancerMoods]),
   ...partyGuests.map(({id}) => [id, ['attentive', 'annoyed']]),
   [skimId, ['attentive', 'distressed']],
@@ -237,6 +243,7 @@ const pipReactions = {
 const cameraPortrait = new URL('../assets/dialogue/security-camera.webp', import.meta.url);
 
 function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false, tousled = false) {
+  if (id === 'pipe') return new URL('../assets/dialogue/pipe/' + (mood ?? 'attentive') + '.webp', import.meta.url);
   if (id === milkMysticId) return new URL('../assets/dialogue/milk-mystic/' + mood + '.webp', import.meta.url);
   if (id === djTarget.id) return new URL('../assets/dance/portraits/dj-' + mood + '.webp', import.meta.url);
   if (id === 'security-camera') return cameraPortrait;
@@ -275,6 +282,7 @@ function warmPortraits() {
     for (const mood of moods) urls.push(extraPortraitUrl(id, mood));
   }
   for (const mood of milkMysticMoods) urls.push(standalonePortraitUrl(milkMysticId, false, mood));
+  for (const mood of pipePortraitMoods) urls.push(standalonePortraitUrl('pipe', false, mood));
   for (const mood of [...djMoods, 'microphone']) urls.push(standalonePortraitUrl(djTarget.id, false, mood));
   for (const {id} of dancerTargets) {
     for (const mood of dancerMoods) urls.push(standalonePortraitUrl(id, false, mood));
