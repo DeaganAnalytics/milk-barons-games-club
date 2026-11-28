@@ -2,7 +2,7 @@ const line = (text, mood, enterAction, extras) => ({text, mood, enterAction, ...
 const pip = (text, extras) => line(text, 'attentive', undefined, {speaker: 'Pip', ...extras});
 
 function insult(clothing) {
-  const ending = line('Enjoy your bloody milk!', 'angry', 'linThrowMilk', {
+  const ending = line('Enjoy your ploughing milk!', 'angry', 'linThrowMilk', {
     direction: "Lin throws her glass of milk into Pip's face.",
     ...(clothing ? {action: 'linDepart'} : {options: [['Continue', pip('...', {action: 'linDepart'})]]})
   });
@@ -20,7 +20,7 @@ function lifeguardPhraseBranch(phrase, clothing, highKarma) {
       line("You know, if anyone else had said that to me, I wouldn't give them another chance.", 'hurt', 'linApologyKarma'),
       "I'm really sorry.", "But I've seen how you treat people, Pip.",
       'Continue', "I know you're better than that.",
-      'I am. I promise.', 'Then bloody well act like it.',
+      'I am. I promise.', 'Then ploughing well act like it.',
       'Yes, Lin.'
     ] : [
       "Sorry! I was quoting the lifeguard. That was inappropriate. Will you forgive me?",
