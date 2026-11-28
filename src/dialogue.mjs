@@ -1,3 +1,4 @@
+import {createBrieCurdTopic} from './brie-curd-dialogue.mjs';
 import {createProfessorInterview} from './professor-interview.mjs';
 import {baronCurdReply} from './baron-curd-dialogue.mjs';
 import {createMysticVisibilityDialogue} from './mystic-visibility-dialogue.mjs';
@@ -351,6 +352,8 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     () => hasLinLeft?.() && hasSeducedExecutive?.());
   const linDepartureReaction = createLinDepartureReactions();
   let departureMenu;
+  let brieMenu;
+  const brieCurdTopic = createBrieCurdTopic();
   const mysticVisibility = createMysticVisibilityDialogue();
   const pokieOpening = createPokieConversation(placePokieWager);
   const practiceGuardOpening = createPracticeGuardConversation();
@@ -552,7 +555,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       || node === lifeguardDialogue || node.mustContinue
       || ((activeTarget.welcome || activeTarget.danceFee || activeTarget.tax || activeTarget.pokieBan || activeTarget.baronKarma) && !action));
     slappedByBaron ||= node.enterAction === 'baronSlap';
-    panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || ['linSlap', 'linPrivateSlap', 'linAlienatingSlap', 'linBunniesSlap'].includes(node.enterAction) || node.action === 'politicianHit');
+    panel.classList.toggle('baron-slap', node.enterAction === 'baronSlap' || ['linSlap', 'linPrivateSlap', 'linAlienatingSlap', 'linBunniesSlap', 'brieCurdSlap'].includes(node.enterAction) || node.action === 'politicianHit');
     panel.classList.toggle('mystic-collapse', Boolean(node.pipCollapsed));
     panel.classList.toggle('lin-milk-throw', node.enterAction === 'linThrowMilk');
     panel.classList.toggle('guard-strike', node.enterAction === 'guardRifleStrike');
@@ -612,7 +615,11 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         curdist: politicalDispositions.communist, seducedExecutive: hasSeducedExecutive?.(),
         seenDj: hasSeenDjDairy?.() || spokeToDjDairy, spokeToMilo: metMilo
       }) : null;
-    const extraReplies = [reaction, visibility, interview].filter(Boolean);
+    const brieCurd = node === brieMenu && !activeTarget.serviceDuty
+      ? brieCurdTopic(politicalDispositions.communist, node, {
+        seduced: hasSeducedExecutive?.(), relationship: waiterOpening.relationship(), flirts: waiterOpening.completedLinChats()
+      }) : null;
+    const extraReplies = [reaction, visibility, interview, brieCurd].filter(Boolean);
     const exitIndex = replies.findIndex(reply => reply.conversationExit);
     const insertAt = exitIndex < 0 ? replies.length : exitIndex;
     const availableReplies = [...replies.slice(0, insertAt), ...extraReplies, ...replies.slice(insertAt)].filter(reply => !usedReplies.has(reply.once)
@@ -831,6 +838,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       || target.welcome || target.pokieBan || target.pokieRefusal || target.tax || target.danceFee
       || target.baronKarma || target.executiveFraud || target.poolClothesThanks || target.pilloryThanks
       || target.postEscort || target.guestGate || target.summoned || target.withoutMilk;
+    brieMenu = target.id === 'blonde-waitress' && !target.slotReaction ? opening : null;
     departureMenu = !scripted && target.id !== skimId && target.id !== milkMysticId
       && !(target.id === 'baron' && isBaronDancing(baron)) ? opening : null;
     if (target.id === skimId) skimSpillFollowupPending = false;

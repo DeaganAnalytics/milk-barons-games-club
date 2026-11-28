@@ -567,6 +567,11 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic, 
         drawSpeech(ctx, speech.text, speech.opacity, speech.x, speech.headY, speech.feetY, cameraX, cameraY);
       }
     }
+    for (const member of staff) {
+      if (member.departureSpeech && member.walking) {
+        drawSpeech(ctx, member.departureSpeech, 1, member.x, member.y - 65, member.y + 20, cameraX, cameraY);
+      }
+    }
     if (elias.departureSpeech && isReady(eliasArt)) {
       drawSpeech(ctx, elias.departureSpeech, 1, elias.x, eliasFeet - eliasHeight, eliasFeet, cameraX, cameraY);
     }

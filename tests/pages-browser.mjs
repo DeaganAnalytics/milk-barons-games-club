@@ -57,6 +57,39 @@ try {
   assert.deepEqual(playerLines.apology, ['Pip', 'Oh. Sorry.', 'sorry']);
   assert.equal(playerLines.mysticResponse[0], 'Milk Mystic');
 
+  const brieLines = await evaluate(`(async () => {
+    const {createDialogue} = await import('./src/dialogue.mjs');
+    const {createBaron} = await import('./src/baron.mjs');
+    const {elias} = await import('./src/elias.mjs');
+    const dialogue = createDialogue(createBaron());
+    const brie = {id: 'blonde-waitress', title: 'Waitress Brie'};
+    const topic = 'What do you think of Karl Curd?';
+    const find = label => [...document.querySelectorAll('#conversation-replies button, #conversation-advance button')]
+      .find(button => button.textContent === label);
+    const snapshot = () => [
+      document.getElementById('conversation-title').textContent,
+      document.getElementById('conversation-line').textContent
+    ];
+    dialogue.open(brie);
+    const locked = !find(topic);
+    dialogue.open({...elias, welcome: true});
+    find('I refuse to recognise the legitimacy of this bourgeois establishment!').click();
+    dialogue.open(brie);
+    find(topic).click();
+    const pip = [...snapshot(), document.getElementById('conversation-player').dataset.expression.split(':')[0]];
+    find('Continue →').click();
+    const portrait = document.getElementById('conversation-npc');
+    const brieReply = [...snapshot(), portrait.dataset.portrait, portrait.dataset.expression];
+    dialogue.open(brie);
+    const consumed = !find(topic);
+    dialogue.dismiss();
+    return {locked, pip, brieReply, consumed};
+  })()`);
+  assert.deepEqual(brieLines, {
+    locked: true, pip: ['Pip', 'What do you think of Karl Curd?', 'thinking'],
+    brieReply: ['Waitress Brie', 'Oh, I love him!', 'blonde-waitress', 'pleased'], consumed: true
+  });
+
   for (const [choice, expected, mood, pipMood] of [
     ['Even worse!', 'Only to those in debt, Master Pip.', 'self-assured-smirk', 'alarmed'],
     ['Oh, phew.', 'Your relief may be premature.', 'devious', 'happy'],
