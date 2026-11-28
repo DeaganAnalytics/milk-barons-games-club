@@ -1,5 +1,6 @@
+import {pipePourDuration} from './staff.mjs';
 import {attendantMilkProgress} from './attendant-milk.mjs';
-import {PILLORY_ATTENDANT} from './room.mjs';
+import {PILLORY_ATTENDANT, pipeHatch} from './room.mjs';
 import {TURN} from './directions.mjs';
 import {milkProgress} from './milk-service.mjs';
 
@@ -174,6 +175,56 @@ function serverGlassPosition(server) {
 export function drawEmptyServiceGlass(ctx, server) {
   const {x, y} = serverGlassPosition(server);
   drawMilkGlass(ctx, x, y, 0, 0, server.id === 'martini-waiter');
+}
+
+export function drawPipePour(ctx, server) {
+  const progress = server.pipePour / pipePourDuration;
+  const clamp = value => Math.max(0, Math.min(1, value));
+  const handoff = ease(clamp(Math.min(progress / 0.2, (1 - progress) / 0.2)));
+  const tilt = ease(clamp(Math.min((progress - 0.12) / 0.15, (0.87 - progress) / 0.15)));
+  const fill = clamp((progress - 0.27) / 0.45);
+  const grip = serverGlassPosition(server);
+  const glassX = mix(grip.x, pipeHatch.x + 9, handoff);
+  const glassY = mix(grip.y, pipeHatch.top + 58, handoff);
+  const jugX = pipeHatch.x - 7;
+  const jugY = pipeHatch.top + 49;
+  const angle = 1.3 * tilt;
+  const lipX = jugX + Math.sin(angle) * 11;
+  const lipY = jugY - Math.cos(angle) * 11;
+
+  if (progress > 0.27 && progress < 0.72) {
+    ctx.save();
+    ctx.strokeStyle = '#fff3d8';
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(lipX, lipY);
+    ctx.quadraticCurveTo(lipX + 2, glassY - 15, glassX, glassY - 7);
+    ctx.stroke();
+    ctx.restore();
+  }
+  drawMilkGlass(ctx, glassX, glassY, 0, fill, server.id === 'martini-waiter');
+
+  if (!tilt) return;
+  ctx.save();
+  ctx.translate(jugX, jugY);
+  ctx.rotate(angle);
+  ctx.fillStyle = '#fff3d8';
+  ctx.strokeStyle = '#594329';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-3, -11);
+  ctx.lineTo(3, -11);
+  ctx.lineTo(3, -7);
+  ctx.quadraticCurveTo(6, -5, 6, -1);
+  ctx.lineTo(6, 5);
+  ctx.lineTo(-6, 5);
+  ctx.lineTo(-6, -1);
+  ctx.quadraticCurveTo(-6, -5, -3, -7);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
 }
 
 export function attendantGlassPose(scene) {

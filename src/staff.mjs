@@ -100,10 +100,25 @@ function routeToPipe(member, baron, crowd) {
   return {target: null, route: []};
 }
 
+export const pipePourDuration = 1.4;
+
 export function updateStaff(staff, player, baron, guards, elapsed, dt, random = Math.random) {
+  let activePour = staff.find(member => member.pipePour != null && !member.departing && !member.serviceDuty);
   for (const member of staff) {
+    if (member.serviceDuty || member.departing) delete member.pipePour;
     if (member.serviceDuty) continue;
     member.walking = false;
+    if (member.pipePour != null) {
+      member.pipePour = Math.min(pipePourDuration, member.pipePour + dt);
+      if (member.pipePour >= pipePourDuration) {
+        delete member.pipePour;
+        member.withoutMilk = false;
+        member.emptyServiceGlass = false;
+        member.pauseUntil = elapsed + 0.25;
+        activePour = null;
+      }
+      continue;
+    }
     const refilling = member.withoutMilk && !member.departing;
     if (dt <= 0 || elapsed < member.pauseUntil || (!refilling && !member.rushingOffscreen && shouldPauseNpc(member, player))) continue;
     if (guestEnclosure.active && !member.guestAccess && insideGuestEnclosure(member)) {
@@ -148,8 +163,11 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
       member.route?.shift();
       if (member.route?.length) continue;
       if (refilling && Math.abs(member.x - pipeHatch.x) <= 34 && member.y === pipeHatch.y) {
-        member.withoutMilk = false;
-        member.emptyServiceGlass = false;
+        if (!activePour) {
+          activePour = member;
+          member.pipePour = 0;
+          member.walking = false;
+        }
       }
       if (member.rushingOffscreen) {
         const origin = member.departureOrigin ?? player;
