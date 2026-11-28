@@ -80,6 +80,7 @@ try {
     const portrait = document.getElementById('conversation-npc');
     const brieReply = [...snapshot(), portrait.dataset.portrait, portrait.dataset.expression];
     find('I love him too!').click();
+    find('Continue →').click();
     find("No! I don't love him romantically. I just admire him.").click();
     find('Continue →').click();
     find('Continue →').click();
