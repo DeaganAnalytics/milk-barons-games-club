@@ -45,7 +45,7 @@ const linTips = [
   ],
   [
     mood("PIP! You're going to make me blush again!", 'blushing'), 'Again?!', "Oh, don't pretend you haven't noticed!",
-    "I genuinely haven't.", 'Good heavens. What am I going to do with you?',
+    "I genuinely haven't.", 'Good meadows. What am I going to do with you?',
     "I don't know. What would you like to do with me?", "Well, for a start, I'd quite like to spend some time with you when I'm not carrying a tray of milk.",
     'YOU WOULD?!', mood('Yes, you adorable idiot!', 'blushing'), 'Oh my milk.', 'Now, drink your milk before you faint.',
     "This is the best milk I've ever purchased.", "You haven't even tasted it yet!", "Doesn't matter.",
