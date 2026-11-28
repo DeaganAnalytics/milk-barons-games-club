@@ -4,15 +4,31 @@ const unknownGreetings = [
   'Just a humble janitor, my lord.', 'Nobody important here, sir.',
   'Please move along. Nothing of political significance here.',
   'Have we met? No. Definitely not.',
-  "A magnificent establishment, isn't it? Absolutely magnificent."
+  "A magnificent establishment, isn't it? Absolutely magnificent.",
+  ['I have no statement to make at this time.', 'distressed'],
+  ['All enquiries should be directed to management.', 'conspiratorial'],
+  ['I can neither confirm nor deny the presence of milk spillage.', 'conspiratorial'],
+  ['Just a janitor, sir. Nothing newsworthy.', 'attentive']
 ];
 
 const confirmedGreetings = [
-  "Oh, bloody hell. It's you again.", 'Keep your voice down, kid.',
+  "Oh, milkin hell. It's you again.", 'Keep your voice down, kid.',
   'What now? Another question about parliament?', "Please don't use my surname.",
   "I'm working, kid. Some of us don't have wealthy parents.",
-  "If anyone asks, we're discussing cleaning products."
+  "If anyone asks, we're discussing cleaning products.",
+  ['From parliamentary debates to milk stains. What a career.', 'wistful'],
+  ["Unless you're here to announce an election, I'm busy.", 'exasperated'],
+  ['I used to have people who did this for me, kid.', 'wistful'],
+  ['Another day serving the electorate. With a mop.', 'exasperated'],
+  ["I'd resign, but apparently that's not an option.", 'wistful'],
+  ["I've survived three leadership challenges. I can survive this.", 'exasperated'],
+  ["I hope you're not conducting an opinion poll.", 'conspiratorial'],
+  ['If anyone asks, this is a community engagement exercise.', 'conspiratorial']
 ];
+
+const greetingDetails = greeting => Array.isArray(greeting)
+  ? {text: greeting[0], mood: greeting[1]}
+  : {text: greeting, mood: 'attentive'};
 
 const reply = (label, next) => ({label, next, playerMood: 'attentive'});
 const say = (text, replies = [], extras = {}) => ({
@@ -48,7 +64,7 @@ const returnTopics = [
     ["Can't you resign?", 'I have been informed that I am extremely passionate about my work.', distressed]
   ]],
   ['milo', [
-    ['I met Milo.', 'Oh, that bloody idiot.', {mood: 'exasperated'}],
+    ['I met Milo.', 'Oh, that ploughing idiot.', {mood: 'exasperated'}],
     ['You know him?', 'Of course I know him. He was shouting “Where\'s my milk?” outside parliament for six months.'],
     ["Didn't you agree with him?", 'Broadly, yes. But we had a comprehensive, costed milk distribution policy.', {mood: 'wistful'}],
     ['His slogan was catchier.', 'Yes, thank you. My electoral strategist said much the same thing.', {mood: 'exasperated'}]
@@ -59,7 +75,7 @@ const returnTopics = [
     ['Efficient.', 'Frighteningly so.', {mood: 'conspiratorial'}]
   ]],
   ['regret', [
-    ['Do you regret opposing the Baron?', 'Every morning when I pick up this bloody mop.', {mood: 'exasperated'}],
+    ['Do you regret opposing the Baron?', 'Every morning when I pick up this milkin mop.', {mood: 'exasperated'}],
     ["So you'd do things differently?", '...', {mood: 'wistful'}],
     ['Continue', "No, kid. I don't think I would.", {mood: 'wistful'}]
   ]]
@@ -72,7 +88,7 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
   let confirmedIndex = 0;
 
   const usedTopics = new Set();
-  function menu(text, returning = false) {
+  function menu(text, returning = false, mood = 'attentive') {
     const back = more(() => menu(text, returning));
     const followups = returning ? returnTopics
       .filter(([id]) => !usedTopics.has(id) && (id !== 'party' || usedTopics.has('election'))
@@ -108,14 +124,14 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
       ];
       const topic = exchange([
         ["Why do you keep calling me 'my lord'?", 'Employees are required to address patrons with the utmost respect.'],
-        ["But I'm not a lord.", "Yes, and I'm not a bloody janitor. Yet here we are.", {mood: 'exasperated'}]
+        ["But I'm not a lord.", "Yes, and I'm not a ploughing janitor. Yet here we are.", {mood: 'exasperated'}]
       ], responses);
       followups.push(oneTime('myLord', topic.label, topic.next));
     }
     if (returning && !usedTopics.has('falseSpill')) {
-      followups.push(oneTime('falseSpill', "[Lie] Thank God you're here! There's been a milk spillage over there.",
+      followups.push(oneTime('falseSpill', "[Lie] Thank the Cow you're here! There's been a milk spillage over there.",
         say('How much milk?!', [
-          reply('Quite a lot.', say('Bloody hell. Out of my way, kid!', [], {mood: 'exasperated', action: 'skimFalseSpill'}))
+          reply('Quite a lot.', say('Milkin hell. Out of my way, kid!', [], {mood: 'exasperated', action: 'skimFalseSpill'}))
         ], distressed)));
     }
     if (returning && coins > 100 && karma < 0 && !usedTopics.has('patronisingTip')) {
@@ -130,7 +146,7 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
         ['What?!', "I SAID HE'S A MAGNIFICENT INDIVIDUAL!", {mood: 'exasperated'}]
       ], back),
       exchange([
-        ["Do you think you'll ever return to politics?", 'Politics? Me? Good heavens, no!', distressed],
+        ["Do you think you'll ever return to politics?", 'Politics? Me? Good meadows, no!', distressed],
         ['But you were quite popular.', "Yes. I've since learnt the dangers of popularity.", {mood: 'wistful'}],
         ["My dad said you should've been Prime Minister.", 'Your father sounds like an intelligent man.'],
         ['Should I tell the Baron that?', 'Your father sounds like a dangerously misinformed individual.', distressed]
@@ -142,7 +158,7 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
         ['My parents still have the poster.', 'Tell them to burn it.', whisper]
       ], back),
       exchange([
-        ['Why are all the guards cows?', "Oh, for goodness' sake, they're obviously..."],
+        ['Why are all the guards cows?', "Oh, for milk's sake, they're obviously..."],
         ['Continue', '...exceptionally well-trained security personnel.', lookingAround],
         ['But the horns?', 'Decorative.'],
         ['And the tails?', 'Traditional.'],
@@ -156,10 +172,10 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
       ], back),
       ...followups,
       exchange([
-        ["I'll leave you to it.", 'Thank goodness.'],
+        ["I'll leave you to it.", 'Thank the Cow.'],
         ['Continue', 'Ahem. Thank you, my lord.']
       ])
-    ]), linDepartureMenu: true};
+    ]), mood, linDepartureMenu: true};
   }
 
   function spillFollowup() {
@@ -171,7 +187,7 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
         ["It won't happen again.", 'I appreciate that, kid.', {enterAction: 'skimSpillApology'}]
       ], back),
       exchange([
-        ["Hahahaha! You should've seen how fast you ran!", 'Yes, hilarious. The former opposition leader running around with a bloody mop.', {mood: 'exasperated'}],
+        ["Hahahaha! You should've seen how fast you ran!", 'Yes, hilarious. The former opposition leader running around with a ploughing mop.', {mood: 'exasperated'}],
         ['Hahahaha!', "I'm beginning to understand why your parents' generation had such concerns about the future.", {mood: 'exasperated', enterAction: 'skimSpillLaughter'}]
       ], back),
       ...(karma < 0 ? [exchange([
@@ -184,22 +200,25 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
       ], back),
       ...(coins >= 10 && karma > -2 ? [exchange([
         ["Look, I'm sorry. Here, take this for your troubles.", "You're compensating someone for the consequences of your own actions?", {mood: 'distressed'}],
-        ['Yes?', "Good heavens. You'd never survive in politics.", {mood: 'wistful'}],
-        ['Do you want the money or not?', "Of course I bloody do. I'm a janitor.", {enterAction: 'skimSpillCompensation'}]
+        ['Yes?', "Good meadows. You'd never survive in politics.", {mood: 'wistful'}],
+        ['Do you want the money or not?', "Of course I milkin do. I'm a janitor.", {enterAction: 'skimSpillCompensation'}]
       ], back)] : [])
     ], {mood: 'exasperated'});
   }
 
   return function open(followUpOnSpill = false) {
     if (followUpOnSpill) return spillFollowup();
-    if (confirmed) return menu(confirmedGreetings[confirmedIndex++ % confirmedGreetings.length], true);
+    if (confirmed) {
+      const {text, mood} = greetingDetails(confirmedGreetings[confirmedIndex++ % confirmedGreetings.length]);
+      return menu(text, true, mood);
+    }
 
     const recognition = exchange([
-      ["You're Edmund Skim!", 'God damn it.', whisper],
+      ["You're Edmund Skim!", 'Damn it.', whisper],
       ['Continue', 'I mean, get dem it... Ahem. Get to it. Must get to it.', distressed],
       ['I can call over the Baron.', 'NO!', distressed],
       ['What?', 'No need to disturb such a magnificent gentleman.', distressed],
-      ['So you are Edmund Skim?', 'Yes! Now keep your bloody voice down!', whisper],
+      ['So you are Edmund Skim?', 'Yes! Now keep your ploughing voice down!', whisper],
       ['What happened to you?', 'A career change.'],
       ['From opposition leader to janitor?', 'An involuntary career change.'],
       ['But you nearly won the election!', 'Yes. That was apparently the problem.']
@@ -220,8 +239,8 @@ export function createSkimConversation(hasSpokenToMilo = () => false, standing =
       lookalike
     ]);
     if (met) {
-      const greeting = unknownGreetings[unknownIndex++ % unknownGreetings.length];
-      return say(greeting, [reply('Hey, I recognise you!', denial)], {mustContinue: false});
+      const {text, mood} = greetingDetails(unknownGreetings[unknownIndex++ % unknownGreetings.length]);
+      return say(text, [reply('Hey, I recognise you!', denial)], {mood, mustContinue: false});
     }
 
     met = true;

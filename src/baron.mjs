@@ -14,7 +14,7 @@ const rugLines = [
   'Make way! A very important dairy magnate is approaching!',
   'Running is for peasants. I prefer a dignified waddle.',
   'Another rug, another opportunity to expand my fortune!',
-  'Good heavens! This is practically manual labour!'
+  'Merciful milk! This is practically manual labour!'
 ];
 const miloLines = [
   'Milo, I see you!',

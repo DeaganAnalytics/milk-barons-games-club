@@ -40,7 +40,15 @@ const drunkGuardLines = [
   "Don't tell the Baron. He's a bit of a control freak.",
   'MOOVE IT! Actually... could you help me move?',
   "I swear this rifle wasn't this heavy earlier.",
-  'Am I being paid for this? I bloody hope so.'
+  'Am I being paid for this? I milkin hope so.',
+  'My horns feel heavier than usual.',
+  'I could go for a nice lie down in a paddock.',
+  'Anyone else feel like chewing something?',
+  "I reckon I've had a few too many gallons.",
+  "I'm a milkin good guard, you know.",
+  "Don't worry. I've only got double vision in one eye.",
+  "I'd charge at you, but I can't be bothered.",
+  'Lovely bloke, the Baron. Terrible temper, though.'
 ];
 
 export function drunkGuardSpeech(guard, elapsed) {

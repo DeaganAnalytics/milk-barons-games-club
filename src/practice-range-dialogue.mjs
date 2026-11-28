@@ -24,7 +24,7 @@ const greetings = [
 
 const topics = [
   {back: true, lines: [
-    ['What are you doing?', 'Target practice. What does it bloody look like?', 'suspicious'],
+    ['What are you doing?', 'Target practice. What does it ploughing look like?', 'suspicious'],
     ['Those targets look like peasants.', 'Well spotted.', 'deadpan'],
     ['Why are you practising shooting peasants?', 'Because practising on aristocrats would be highly inappropriate.', 'formal']
   ]},
@@ -45,7 +45,7 @@ const topics = [
     ["You didn't!", 'MOOOOOVE IT!', 'angry', 'alarmed']
   ]},
   {back: true, lines: [
-    ['Do you get milk breaks?', "Of course. We're not bloody peasants.", 'speaking'],
+    ['Do you get milk breaks?', "Of course. We're not ploughing peasants.", 'speaking'],
     ['How much milk do you get?', 'As much as we can drink.', 'speaking'],
     ['My family barely gets enough to survive.', "Should've become guards, then.", 'deadpan', 'sorry']
   ]},

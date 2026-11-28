@@ -3,7 +3,7 @@ import {HALL_CENTER, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, pipeHatch, ROOM_WIDTH, R
 
 const assetNames = [
   'wall-panel', 'end-column', 'base-trim', 'double-door',
-  'burgundy-banner', 'red-banner', 'tapestry', 'creamery-hatch', 'creamery-sign', 'pipe-refill-hatch'
+  'burgundy-banner', 'red-banner', 'tapestry', 'creamery-hatch', 'creamery-sign', 'pipe-refill-hatch', 'pipe-refill-sign'
 ];
 
 export function loadHallArt() {
@@ -88,6 +88,7 @@ export function composeHall(art) {
   const hatch = art['pipe-refill-hatch'];
   drawCentered('pipe-refill-hatch', pipeHatch.x, pipeHatch.top, pipeHatch.width,
     pipeHatch.width * hatch.naturalHeight / hatch.naturalWidth);
+  drawCentered('pipe-refill-sign', pipeHatch.x, pipeHatch.top - 28, 76, 25);
   drawCentered('red-banner', HALL_CENTER.x + 170, NORTH_EDGE + 43, 62, 93);
   for (const rug of SIDE_RUGS) drawCentered('tapestry', rug.x, NORTH_EDGE + 28, 112, 130);
 

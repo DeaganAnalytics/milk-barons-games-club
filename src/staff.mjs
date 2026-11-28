@@ -80,9 +80,9 @@ function offscreenRoute(member, player, baron, crowd) {
   return {target: null, route: []};
 }
 
-export function emptyStaffGlass(member) {
+export function emptyStaffGlass(member, hasGlass = true) {
   member.withoutMilk = true;
-  member.emptyServiceGlass = true;
+  member.emptyServiceGlass = hasGlass;
   member.pauseUntil = 0;
   member.target = null;
   member.route = [];

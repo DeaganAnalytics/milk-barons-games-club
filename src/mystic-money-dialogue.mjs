@@ -61,7 +61,7 @@ export function createMysticMoneyTopic(getCoins, transact, menu) {
     return sequence([
       pip("WAIT! I'VE LOST MONEY!", 'alarmed'), mystic('The milk giveth, and the milk taketh away.'),
       pip('I ASKED YOU FOR MONEY!', 'exasperated'), mystic('And the milk has answered.', 'contemplative'),
-      pip('IT ANSWERED THE WRONG BLOODY QUESTION!', 'exasperated')
+      pip('IT ANSWERED THE WRONG MILKIN QUESTION!', 'exasperated')
     ], withReplies(mystic('The milk is not mistaken, child.', 'skeptical'), [
       reply('I should have known better.', sequence([
         mystic('Wisdom has found you at last.')
@@ -70,7 +70,7 @@ export function createMysticMoneyTopic(getCoins, transact, menu) {
         mystic('What has been given to the milk cannot be reclaimed.', 'warning'),
         pip('Well, tell the milk I want to speak to its manager!', 'exasperated'),
         mystic('The milk answers to no earthly authority.')
-      ], endWith(pip('How bloody convenient.'), next))),
+      ], endWith(pip('How milkin convenient.'), next))),
       reply("Fine. I'll take it back myself.", sequence([
         {...pip('Where is it?'), direction: "Pip searches the Milk Mystic's robes."},
         mystic('What do you seek, child?'), pip('MY MONEY!', 'exasperated'),
@@ -92,7 +92,7 @@ export function createMysticMoneyTopic(getCoins, transact, menu) {
       mystic('The milk calls you home, child.', 'warning'), pip('What?', 'alarmed'),
       mystic('Your earthly vessel has served its purpose.', 'warning'),
       pip('WAIT! I ONLY WANTED SOME MONEY!', 'alarmed'),
-      mystic('May you find peace in the eternal dairy.'), pip("OH, FOR GOD'S SAKE!", 'alarmed')
+      mystic('May you find peace in the eternal dairy.'), pip("OH, FOR MILK'S SAKE!", 'alarmed')
     ], mystic('Another vessel emptied.', 'serene', {
       direction: 'Pip collapses.', pipCollapsed: true, action: 'mysticMoneyDeath'
     }));
@@ -100,7 +100,7 @@ export function createMysticMoneyTopic(getCoins, transact, menu) {
     const healthReaction = healthChange < 0 ? [
       pip('AARGH! WHAT THE HELL?!', 'alarmed'), mystic('The balance has been restored.', 'contemplative'),
       pip('YOU COULD HAVE WARNED ME!', 'exasperated'), mystic('I did, child.', 'skeptical'),
-      pip('You were talking about bloody vessels!', 'exasperated'), mystic('And now you understand.', 'wry-smile')
+      pip('You were talking about ploughing vessels!', 'exasperated'), mystic('And now you understand.', 'wry-smile')
     ] : healthChange > 0 ? [
       pip('Oh! I actually feel a little better.', 'happy'), mystic('The milk flows favourably through you, child.', 'wry-smile'),
       pip("I don't suppose you could do that again?"), mystic('One must not become greedy with miracles.', 'warning')

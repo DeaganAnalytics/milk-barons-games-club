@@ -601,7 +601,6 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     closeButton.classList.toggle('conversation-exit', closeButton.textContent === 'End conversation');
     const pipIsSpeaking = node.speaker === 'Pip';
     line.textContent = node.text;
-    title.textContent = pipIsSpeaking ? 'Pip' : activeTarget.title;
     line.hidden = !node.text && !node.direction;
     if (node.direction) {
       const direction = document.createElement('em');
@@ -618,11 +617,15 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       playerPortrait.dataset.expression = portraitKey;
     }
     const currentSpeaker = node.character ?? character;
-    speaker.textContent = (currentSpeaker === milkMysticId ? 'Milk Mystic' : pipIsSpeaking ? null : node.speaker)
-      ?? (currentSpeaker === elias.id ? elias.title
-      : currentSpeaker === bartender.id ? bartender.title
-      : currentSpeaker === 'guard' ? 'Bull Guard'
-      : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
+    const narration = node.speaker === 'Narrator';
+    const npcName = currentSpeaker === milkMysticId ? 'Milk Mystic'
+      : (!pipIsSpeaking && !narration && node.speaker) || (currentSpeaker === elias.id ? elias.title
+        : currentSpeaker === bartender.id ? bartender.title
+        : currentSpeaker === 'guard' ? 'Bull Guard'
+        : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
+    title.textContent = pipIsSpeaking ? 'Pip' : narration ? 'Narrator' : npcName;
+    speaker.textContent = npcName;
+    panel.dataset.speakingSide = pipIsSpeaking ? 'player' : narration ? 'narrator' : 'npc';
     setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactNpcPortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactNpcPortrait);
     const report = node === lifeguardDialogue && clothingReports[activeTarget.missingClothing];
     const options = character === lifeguard.id
@@ -829,7 +832,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     if (['lin-waitress', 'blonde-waitress', 'female-waiter'].includes(target.id)
         && !target.slotReaction && !target.brieMysticIntervention) spokenToMysticStaff.add(target.id);
     const opening = target.brieMysticIntervention ? brieMysticIntervention() : target.waiterTipBan ? waiterTippingIntervention() : target.linDepartureRegret ? {
-      text: 'Oh, bloody hell.', speaker: 'Pip', mood: 'hurt', playerMood: 'exasperated'
+      text: 'Oh, milkin hell.', speaker: 'Pip', mood: 'hurt', playerMood: 'exasperated'
     } : target.linKindness ? linKindnessDialogue() : target.linAftermath ? {
       text: "Oh, I've really messed this up.", speaker: 'Pip', mood: 'attentive', playerMood: 'sad', mustContinue: true,
       replies: [{label: 'Continue', next: {
@@ -894,7 +897,6 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     departureMenu = !scripted && !opening.linBrieReferral && target.id !== skimId && target.id !== milkMysticId && target.id !== 'pipe'
       && !(target.id === 'baron' && isBaronDancing(baron)) ? opening : null;
     if (target.id === skimId) skimSpillFollowupPending = false;
-    speaker.textContent = title.textContent = target.title;
     map.hidden = info.hidden = controls.hidden = true;
     panel.hidden = false;
     show(opening, target.id, (target.id === 'milo' && miloWasInjured) || target.summoned || target.guestGate || target.postEscort ? 'worried' : 'attentive', target.withoutMilk);

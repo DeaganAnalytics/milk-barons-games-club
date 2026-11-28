@@ -46,7 +46,17 @@ const remarks = {
     'Moooooo!',
     "There's too much red around. I'm gonna lose it!",
     "I'm gonna be milking multiple cows tonight! Mooooo!",
-    'God bless the Baron!'
+    'The Great Cow bless the Baron!',
+    'Look at these moves! Light on my hooves!',
+    'Finest specimen on the dance floor!',
+    'The ladies love a bloke with horns!',
+    'Not bad for a big fella, eh?',
+    "I've been practising these moves in the paddock!",
+    "MOOOOOO! That's my singing voice!",
+    'Nothing like a few gallons to loosen the joints!',
+    'Built like a bull, moves like a butterfly!',
+    'You should see me during mating season!',
+    "Careful, little fella. Don't get trampled!"
   ]
 };
 

@@ -756,7 +756,6 @@ function frame(timestamp) {
   }
   if (eliasDeparture) {
     const {route, text} = eliasDeparture;
-    eliasDeparture.time += dt;
     if (route.length && advanceEliasRun(elias, route[0], dt, 0)) {
       route.shift();
       elias.running = route.length > 0;
@@ -764,7 +763,7 @@ function frame(timestamp) {
     elias.departureSpeech = text;
     render(player, baron, milo, guards, cameraLeft(player.x), cameraTop(player.y), elapsed,
       staff, milkService.scene, partyChatter, null, ropeWarning, gateGuard, milkPool, null, attendantMilk.scene);
-    if (!route.length && eliasDeparture.time >= 2.5) {
+    if (!route.length) {
       eliasDeparture = null;
       elias.departureSpeech = null;
       clearInput();

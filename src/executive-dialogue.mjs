@@ -10,7 +10,7 @@ const greetings = [
   'I’m conducting a very important liquidity assessment.',
   'Can’t you see I’m generating shareholder value?',
   'If you’re selling something, I’m not buying. Unless it’s another milk monopoly.',
-  'Good heavens. Do I look like customer service?',
+  'Good meadows. Do I look like customer service?',
   'You have thirty seconds. Consider yourself fortunate.'
 ];
 
@@ -63,7 +63,7 @@ export function createExecutiveConversation(getCoins, canOfferFreeNetworking = (
       action: 'executiveRedundancy2'
     })],
     ['<Puts on fake moustache and eye patch> <Lie>', 'eyePatch', say('For real?! How many of you are there?!', 'impressed', more(
-      say('Good heavens. Here, take ₥20.', 'exasperated', [
+      say('Merciful milk. Here, take ₥20.', 'exasperated', [
         reply('Thank you!', say("Congratulations. I've just hired you as my personal security officer.", 'smug', [
           reply('What?!', say('Your first responsibility is to keep all these redundant employees away from me.', 'stern', [], {
             action: 'executiveRedundancy3'
@@ -71,7 +71,7 @@ export function createExecutiveConversation(getCoins, canOfferFreeNetworking = (
         ]))
       ])
     ))],
-    ['<Dresses as a woman> <Lie>', 'woman', say('Oh, for goodness’ sake! Wait a minute...', 'skeptical', more(
+    ['<Dresses as a woman> <Lie>', 'woman', say('Oh, for milk\'s sake! Wait a minute...', 'skeptical', more(
       say("It's YOU! You've been swindling me!", 'angry', more(
         say('GUARDS!', 'angry', [], {action: 'executiveSummonFraud'})
       ))
@@ -111,7 +111,7 @@ export function createExecutiveConversation(getCoins, canOfferFreeNetworking = (
       const responses = [
         reply("Well, I suppose a little networking couldn't hurt.", () =>
           freeNetworking("That's the spirit, darling.", 'Much better. Nothing like a productive networking session.', 'I suppose not.')),
-        reply("I don't really feel like networking right now.", say("Good heavens. You're not still thinking about that waitress, are you?", 'skeptical', [
+        reply("I don't really feel like networking right now.", say("Good meadows. You're not still thinking about that waitress, are you?", 'skeptical', [
           reply('Maybe.', say('How dreadfully sentimental.', 'exasperated', more(
             say('Well, the offer stands, darling.', 'smug', more(() => {
               freeNetworkingUnlocked = true;
@@ -167,7 +167,7 @@ export function createExecutiveConversation(getCoins, canOfferFreeNetworking = (
 export const executiveFraudWarning = say('Right, you little troublemaker. Hand over everything you’ve taken from this lady.', 'formal', more(
   say('And another ₥20 for wasting my time.', 'speaking', [
     reply('Fine.', say('Now MOOOVE it!', 'angry')),
-    reply("₥20?! That's ridiculous!", say("Would've been ₥50 if you weren't so bloody funny.", 'speaking', more(
+    reply("₥20?! That's ridiculous!", say("Would've been ₥50 if you weren't so milkin funny.", 'speaking', more(
       say('The moustache was particularly good.', 'speaking', more(say('Now MOOOVE it!', 'angry')))
     )))
   ], {enterAction: 'executiveFraudFine'})

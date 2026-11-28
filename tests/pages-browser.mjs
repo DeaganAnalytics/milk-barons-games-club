@@ -43,7 +43,7 @@ try {
     click('She might know what you are!');
     click('Continue →');
     dialogue.open({id: milkMysticId, title: 'Milk Mystic'});
-    click('My God, maybe she can read the future.');
+    click('The Great Cow, maybe she can read the future.');
     click('Continue →');
     const apology = snapshot();
     click('Can you explain to me what happened?');
@@ -108,6 +108,47 @@ try {
     referralLine: ['Waitress Brie', "Have you spoken to Lin? She's single, you know!"],
     referralOpening: ['Pip', 'Excuse me, are you Lin?'],
     linReply: ['Waitress Lin', 'Yes, sir. Can I help you?']
+  });
+
+  const attribution = await evaluate(`(async () => {
+    const {createDialogue} = await import('./src/dialogue.mjs');
+    const {createBaron} = await import('./src/baron.mjs');
+    const {bartender} = await import('./src/creamery.mjs');
+    const dialogue = createDialogue(createBaron());
+    const snapshot = () => [
+      document.getElementById('conversation-title').textContent,
+      document.getElementById('conversation-line').textContent,
+      document.getElementById('conversation').dataset.speakingSide,
+      document.getElementById('conversation-player').nextElementSibling.textContent,
+      document.getElementById('conversation-speaker').textContent,
+      document.getElementById('conversation-npc').dataset.portrait
+    ];
+    const click = label => [...document.querySelectorAll('#conversation-replies button, #conversation-advance button')]
+      .find(button => button.textContent === label).click();
+    const pipe = {id: 'pipe', title: 'Pipe'};
+    dialogue.open(pipe);
+    click("Sorry! I didn't notice the sign.");
+    click('Continue →');
+    document.getElementById('conversation-close').click();
+    dialogue.open(pipe);
+    click("My name's Pip. What's yours?");
+    const player = snapshot();
+    click('Continue →');
+    const other = snapshot();
+    dialogue.dismiss();
+
+    dialogue.open(bartender);
+    document.getElementById('conversation-close').click();
+    click('What?');
+    click('Continue →');
+    const guest = snapshot();
+    dialogue.dismiss();
+    return {player, other, guest};
+  })()`);
+  assert.deepEqual(attribution, {
+    player: ['Pip', "My name's Pip. What's yours?", 'player', 'Pip', 'Pipe', 'pipe'],
+    other: ['Pipe', "Pip?! That's the stupidest name I've ever heard.", 'npc', 'Pip', 'Pipe', 'pipe'],
+    guest: ['Elias', 'He vants a tip.', 'npc', 'Pip', 'Elias', 'elias']
   });
 
   for (const [choice, expected, mood, pipMood] of [

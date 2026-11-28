@@ -48,7 +48,7 @@ export function miloMenu(text, hasBeenSlapped, injuryReply, wasInjured, hasSeenG
           reply('Fat people have rights too.', say('FAT PEOPLE HAVE ALL THE RIGHTS!', angry,
             more(say('...', 'sad', more(finish("Sorry. I shouldn't raise my voice.", 'sad'))))))
         ], {direction: 'Milo stares in disbelief.'})),
-        terminal("God, he's fat. And my family starves!", finish('All our families starve. Except for those in here.', 'sad'))
+        terminal("By the Great Cow, he's fat. And my family starves!", finish('All our families starve. Except for those in here.', 'sad'))
       ]))
     ]
   )));

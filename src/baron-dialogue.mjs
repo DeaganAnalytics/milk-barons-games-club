@@ -63,7 +63,7 @@ export function baronGreetings(karma, coins) {
       say('Capitalism agrees with you, my boy!')
     ] : []),
     ...(coins > 150 ? [
-      say('Good heavens! I might have to start taxing you more!', 'laughing'),
+      say('Merciful milk! I might have to start taxing you more!', 'laughing'),
       say("You're becoming rather wealthy. Not too wealthy, I hope!", 'displeased'),
       say('Perhaps Elias ought to review your financial arrangements.', 'displeased')
     ] : []),
@@ -80,7 +80,7 @@ export function baronGreetings(karma, coins) {
 export const DJ_ADMISSION_PRICE = 60;
 
 export function baronDanceDialogue(used, canPay = () => false, hasAccess = false) {
-  const exhausted = say('Good heavens... that was exhausting. Next time, I ought to just fine you.', 'displeased');
+  const exhausted = say('Oh, my sacred milk... that was exhausting. Next time, I ought to just fine you.', 'displeased');
   const breathing = say('', 'winded', {direction: 'Heavy breathing', replies: more(exhausted), mustContinue: true});
   const slap = say('I SAID NO!', 'displeased', {
     playerMood: 'alarmed', enterAction: 'baronSlap', replies: more(breathing), mustContinue: true
@@ -92,7 +92,7 @@ export function baronDanceDialogue(used, canPay = () => false, hasAccess = false
     replies: more(elias('Provided ze arts make money for you, my lord.', 'current-smile',
       more(say('Precisely!', 'pleased', {action: 'payDjAdmission'}))))
   });
-  const insufficient = elias('Good heavens, Master Pip. Ve gave you ₥100 upon arrival. Vhat have you been doing?', 'insulted',
+  const insufficient = elias('Merciful milk, Master Pip. Ve gave you ₥100 upon arrival. Vhat have you been doing?', 'insulted',
     more(say('Financially irresponsible, is he?', 'displeased', {
       mustContinue: true,
       replies: more(elias('Evidently, my lord.', 'current-smile',
@@ -174,7 +174,7 @@ function baronRewardDialogue(spokeToMilo, askedAboutCowGuards = false) {
   }
 
   replies.push(reply('Is that all?', scene([
-    say("Good heavens! You're developing a sense of entitlement already! Splendid!", 'laughing'),
+    say("By the Great Cow! You're developing a sense of entitlement already! Splendid!", 'laughing'),
     say('You remind me of myself at your age.', 'pleased'),
     end(say('Though I was much fatter!', 'laughing'))
   ])));
@@ -241,7 +241,7 @@ const assessments = [
   [
     ["All the moral qualities of an aristocrat, yet the finances of a peasant. How disappointing.", 'displeased'],
     ["You're going backwards, boy! The dairy awaits those who cannot generate a return on capital.", 'displeased'],
-    ['Poor AND compassionate?! Good heavens, the university really did ruin you!', 'displeased']
+    ['Poor AND compassionate?! Merciful milk, the university really did ruin you!', 'displeased']
   ],
   [
     ['Your moral development is most encouraging. Your financial development, somewhat less so.', 'pleased'],
@@ -256,7 +256,7 @@ const assessments = [
 ];
 
 export function baronAssessment(coins, karma) {
-  if (coins < 25) return say('Good heavens, Pip! At this rate, I ought to start measuring you for a dairy uniform.', 'displeased');
+  if (coins < 25) return say('By the Great Cow, Pip! At this rate, I ought to start measuring you for a dairy uniform.', 'displeased');
   if (coins > 195) return say("You're tantalisingly close to meeting your financial obligations, young Pip! Just a few more coins and you'll be a free man!", 'pleased');
   const moneyTier = coins >= 150 ? 2 : coins >= 100 ? 1 : 0;
   const karmaTier = karma < -5 ? 0 : karma > 5 ? 2 : 1;
@@ -287,7 +287,7 @@ function politicalConversionReply(spokeToMilo) {
     branch("I suppose being wealthy wouldn't be so bad.", [
       ["Now you're thinking! Have you considered a milk fountain?", 'pleased'],
       ["I think I'd buy my family some food first.", 'thinking', 'pip'],
-      ["Good heavens! You're still thinking like a peasant!", 'displeased']
+      ["For milk's sake! You're still thinking like a peasant!", 'displeased']
     ]),
     branch('What if I become wealthier than you?', [
       ['HAHAHAHAHA!', 'laughing'],
@@ -374,7 +374,7 @@ function surveillanceReply(used, seducedExecutive) {
         ['So you respect it?', 'thinking', 'pip'],
         ['Absolutely! Nobody is permitted to watch me without my permission.', 'pleased'],
         ['What about my privacy?', 'skeptical', 'pip'],
-        ['Good heavens, boy! What have you got to hide?', 'displeased'],
+        ['For the love of milk, boy! What have you got to hide?', 'displeased'],
         ['', 'still', 'security-camera']
       ], [{label: 'Unbelievable.', playerMood: 'exasperated', next: {exitAction: stages[stage]}}]);
     case 4:
@@ -504,7 +504,7 @@ export function additionalBaronReplies({used, standing, discoveries, discussedVa
   }
   if (discoveries.fountain) {
     const options = [
-      ['baronFountainPoverty', "We can't afford milk, let alone a fountain!", 'Good heavens! Not even a small fountain?', 'flustered', 'alarmed'],
+      ['baronFountainPoverty', "We can't afford milk, let alone a fountain!", 'Sweet sacred milk! Not even a small fountain?', 'flustered', 'alarmed'],
       ['baronFountainInsult', 'How have you survived this long without a brain?', 'Generational wealth, my boy!', 'laughing', 'exasperated'],
       ['baronFountainRequest', 'Perhaps you could buy my family a fountain?', 'And create a competitor? Absolutely not!', 'displeased', 'thinking'],
       ['baronFountainLeave', 'Never mind.']

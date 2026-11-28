@@ -22,7 +22,7 @@ const touchLines = [
   'Ouch! That was a pinch!',
   'Ooh la la!',
   "You're certainly an enthusiastic swimmer!",
-  'Good heavens! You startled me!',
+  'Good meadows! You startled me!',
   'Oh! There you are!',
   "My goodness, you're persistent!",
   'Hehehe! Not again!',
@@ -30,7 +30,7 @@ const touchLines = [
   'Careful, darling!',
   'Oh, you cheeky thing!',
   "Someone's enjoying himself!",
-  'Good heavens! What are you doing down there?',
+  'Merciful milk! What are you doing down there?',
   'Oh! I nearly swallowed a mouthful of milk!',
   "You're certainly getting your money's worth!"
 ];
@@ -47,15 +47,25 @@ const exchanges = [
   [[0, 'Milko!'], [1, 'Polo!']],
   [[0, 'The lifeguard is rather handsome...'], [1, "Yes, but this one's rich!"]],
   [[0, 'How much milk do you suppose is in here?'], [1, "Oh, darling, it's vulgar to discuss expenditure."]],
-  [[1, "Apparently some peasants can't even afford milk."], [0, 'Good heavens! What do they swim in?']],
-  [[0, "Does your husband know you're here?"], [1, 'Heavens, no! Does yours?']],
+  [[1, "Apparently some peasants can't even afford milk."], [0, 'Good meadows! What do they swim in?']],
+  [[0, "Does your husband know you're here?"], [1, 'Meadows, no! Does yours?']],
   [[1, 'Is that lifeguard still watching us?'], [0, "Well, at least somebody's earning their salary."]]
 ];
 
 const lifeguardLines = [
-  'God, I love this job.',
+  'NO STAMPEDING AROUND THE POOL!',
+  "Don't make me get out of this chair!",
+  "I've got my eye on you, runt.",
+  'KEEP YOUR RUMPS SUBMERGED!',
+  "I swear, I'm supervising a herd of idiots.",
+  "Don't test my milkin patience!",
+  'MY POOL! MY RULES!',
+  "You're lucky I'm not charging today.",
+  "Keep it up and you'll see my horns!",
+  "Some days I reckon I'd be better off in a paddock.",
+  'Milk, I love this job.',
   'Looking the other way has never paid off so well.',
-  'God save the Baron!',
+  'The Great Cow save the Baron!',
   'The Dairy Aristocracy certainly knows how to live.',
   'Your taxes at work!',
   'Some call it decadence. I call it culture.',
@@ -66,7 +76,7 @@ const lifeguardLines = [
 ];
 
 const missingDressesExchanges = [
-  'Good heavens! Where are my clothes?!',
+  'Merciful milk! Where are my clothes?!',
   'That dress cost more than a peasant earns in a year!',
   "Guard! Guard! We've been robbed!",
   'I cannot possibly attend dinner in this state!',
@@ -80,7 +90,7 @@ const missingDressesExchanges = [
 
 const missingDressesGuardLines = [
   'Oh boy, oh boy, oh boy!',
-  'Best day of my bloody career!',
+  'Best day of my milkin career!',
   "Ladies, I assure you, I'm monitoring the situation very closely.",
   'No need to panic, ladies. Take your time getting out.',
   'Hehehehe... MOOOO!',
@@ -88,21 +98,21 @@ const missingDressesGuardLines = [
   "Unfortunately, ladies, we don't have any spare towels.",
   "I'm afraid you'll have to exit the pool eventually. Health and safety regulations.",
   'Nothing gets past these eyes. Nothing.',
-  'I love my job. I bloody love my job!'
+  'I love my job. I milkin love my job!'
 ];
 
 const missingSuitGuardLines = [
   "Sir, I'm going to need you to remain in the pool.",
-  'Nobody wants to see that, mate. Stay submerged.',
-  'Of all the bloody clothes to steal!',
+  'Nobody wants to see your rump, sunshine. Stay submerged.',
+  'Of all the ploughing clothes to steal!',
   'Someone get this bloke a towel. Immediately!',
   'This is NOT what I signed up for!',
   'Sir, if you attempt to exit that pool, I will have you arrested.',
-  'My day is ruined. Absolutely bloody ruined.',
+  'My day is ruined. Trampled into the manure.',
   'Ladies, your clothing is still there. Unfortunately.',
   "I should've called in sick today.",
-  'Keep everything below the milk, mate!',
-  "Whoever did this is getting a bloody fine!"
+  'Keep your udders below the milk!',
+  "Whoever did this is getting a ploughing fine!"
 ];
 
 export function takePoolClothing(pool, selection, elapsed) {

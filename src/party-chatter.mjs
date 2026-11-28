@@ -22,11 +22,11 @@ const enclosedExchanges = [
   [[0, 'The Baron is simply marvellous. These security arrangements are impeccable!'],
     [1, 'Naturally, the cream of society deserves the finest protection.']],
   [[0, "Aren't these velvet ropes simply beautiful?"],
-    [1, 'They must have cost a fortune. Thank goodness for taxpayers!']],
+    [1, 'They must have cost a fortune. Thank the Great Cow for taxpayers!']],
   [[1, 'Finally, something to keep the riff-raff away!'],
     [0, 'The Baron works remarkably fast when his milk is threatened.']],
   [[1, 'That peasant was positively revolting. I bet he bathes in water, not milk.'],
-    [0, 'Good heavens! How was such a creature permitted entry?']],
+    [0, 'Good meadows! How was such a creature permitted entry?']],
   [[0, 'I feel considerably safer with an armed guard protecting us.'],
     [1, "An astute summation of my feelings, darling. One can finally enjoy one's milk in peace."]]
 ];

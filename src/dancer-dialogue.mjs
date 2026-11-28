@@ -14,12 +14,12 @@ const greetings = {
     ['Best night of my life!', 'laughing'],
     ['Do I look good? Be honest!', 'nervous'],
     ["I reckon the girls have been looking at me!", 'happy'],
-    ["Hey, mate! Do you reckon I'm handsome?", 'nervous'],
+    ["Hey, you! Do you reckon I'm handsome?", 'nervous'],
     ['Do girls like blokes who drink lots of milk?', 'thinking'],
-    ["I'm just waiting for the right moment, mate!", 'reserved'],
+    ["I'm just waiting for the right moment, you know!", 'reserved'],
     ["You don't think that guard's better looking than me, do you?", 'nervous'],
     ["Feel my muscles! I've been drinking whole milk!", 'excited'],
-    ["Tonight's the night, mate! I can feel it!", 'excited'],
+    ["Tonight's the night, my friend! I can feel it!", 'excited'],
     ["You haven't got any spare milk, have you?", 'deadpan']
   ],
   coral: [
@@ -42,7 +42,7 @@ const greetings = {
     ['Coral, behave yourself!', 'deadpan'],
     ["Please tell me you're not another waiter.", 'reserved'],
     ["I'm just here to dance!", 'reserved'],
-    ['Oh, thank goodness. Someone relatively normal.', 'happy'],
+    ['Oh, thank the Cow. Someone relatively normal.', 'happy'],
     ['Is that guard looking at me?', 'nervous'],
     ["Sorry about Coral. She's had a lot of milk.", 'reserved'],
     ['Can you tell that guy to stop shouting about milk?', 'deadpan'],
@@ -51,21 +51,26 @@ const greetings = {
     ['Why do we always attract the weird ones?', 'deadpan']
   ],
   guard: [
-    ['MOOOOOO! How are ya, mate?!', 'excited'],
-    ["I'm off duty! No bloody complaints!", 'deadpan'],
+    ['MOOOOOO! How are ya, little fella?!', 'excited'],
+    ["I'm off duty! No ploughing complaints!", 'deadpan'],
     ['What a night! What a magnificent night!', 'happy'],
     ['Have you seen those two ladies?!', 'excited'],
-    ['God bless the Baron!', 'happy'],
-    ["I'd arrest myself for looking this bloody good!", 'laughing'],
+    ['The Great Cow bless the Baron!', 'happy'],
+    ["I'd arrest myself for looking this milkin good!", 'laughing'],
     ["You haven't got any red on you, have ya?", 'nervous'],
-    ["Between you and me, mate, I'm bloody irresistible.", 'reserved'],
+    ["Between you and me, little fella, I'm milkin irresistible.", 'reserved'],
     ['That idiot with the milk bottle is getting on my nerves.', 'deadpan'],
-    ['Watch and learn, mate. Watch and learn!', 'excited'],
+    ['Watch and learn, runt. Watch and learn!', 'excited'],
     ["I'm normally much smoother than this.", 'reserved'],
     ["I'm not drunk! I've just got four... never mind.", 'nervous'],
     ['You reckon the ladies like a man in uniform?', 'thinking'],
-    ["Bloody hell, that milk's starting to hit me.", 'deadpan'],
-    ['MOOOOOO! Sorry, mate. Hiccups.', 'laughing']
+    ["Milkin hell, that milk's starting to hit me.", 'deadpan'],
+    ['MOOOOOO! Sorry about that. Hiccups.', 'laughing'],
+    ['Look at these moves! Light on my hooves!', 'excited'],
+    ['Finest specimen on the dance floor!', 'excited'],
+    ['Not bad for a big fella, eh?', 'excited'],
+    ["MOOOOOO! That's my singing voice!", 'excited'],
+    ["Careful, little fella. Don't get trampled!", 'excited']
   ]
 };
 
