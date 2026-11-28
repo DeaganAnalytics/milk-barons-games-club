@@ -47,6 +47,44 @@ function exchange(lines, ending, playerMood = 'attentive', completeChat) {
   return replies[0];
 }
 
+function genevieveSingleDialogue() {
+  const pip = (text, playerMood) => ({text, speaker: 'Pip', playerMood, mood: 'attentive'});
+  const genevieve = (text, mood) => ({text, mood, exactNpcPortrait: true});
+  const chain = (lines, end) => lines.reduceRight((next, line) => ({
+    ...line, ...(next ? {mustContinue: true, replies: [reply('Continue', next)]}
+      : {action: 'finishGenevieveSingle'})
+  }), end);
+  return chain([
+    pip('So... are you single?', 'thinking'),
+    genevieve("No, sir. I'm married.", 'attentive'),
+    pip('Oh. Happily?', 'worried'),
+    genevieve('Quite happily, thank you.', 'pleased'),
+    pip('Oh.', 'sorry')
+  ], {
+    ...genevieve('Were you hoping for a different answer, sir?', 'attentive'),
+    mustContinue: true,
+    replies: [
+      {...reply('A little bit.', chain([
+        genevieve("Well, that's rather flattering.", 'pleased'),
+        pip('Sorry.', 'sorry'),
+        genevieve("There's no need to apologise, sir. You've done nothing wrong.", 'pleased')
+      ])), playerMood: 'worried'},
+      {...reply('How happily?', chain([
+        genevieve("Happily enough that this conversation isn't going anywhere, sir.", 'attentive'),
+        pip('Right.', 'sorry')
+      ])), playerMood: 'thinking'},
+      {...reply('[Lie] No, no. Just conducting a survey.', chain([
+        pip('No, no. Just conducting a survey.', 'worried'),
+        genevieve('A survey?', 'attentive'),
+        pip('Of marital satisfaction amongst hospitality workers.', 'thinking'),
+        genevieve('How wonderfully specific.', 'pleased'),
+        pip('Thank you.', 'happy'),
+        genevieve('Well, you can put me down as satisfied.', 'pleased')
+      ])), playerMood: 'worried'}
+    ]
+  });
+}
+
 export function waiterTippingIntervention() {
   const [first, ...rest] = eliasTipIntervention;
   const exit = say('', [], undefined, 'current-smile');
@@ -68,6 +106,8 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
   let tipBanComplete = false;
   const askedName = new Set();
   let linStage = 0;
+  let genevieveSingleUsed = false;
+  let linFlirtingStarted = false;
 
   let relationship = 'normal';
   let executiveConfronted = false;
@@ -108,6 +148,7 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
       && (id !== 'female-waiter' || askedAboutOtherServerName)
       && (!isLin || (relationship === 'normal' && !hasSeducedExecutive()) || alternativeLinName);
     const canChatWithLin = isLin && askedName.has(id) && relationship === 'normal' && !hasSeducedExecutive() && !confrontClothing && !confrontPool;
+    const canAskGenevieveSingle = id === 'female-waiter' && askedName.has(id);
     let currentMenu;
     let nameAvailable = canAskName;
     let chatAvailable = canChatWithLin;
@@ -152,6 +193,12 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
       const personal = [];
       if (nameAvailable) personal.push(exchange(isLin && linCold ? linColdNameLines : waiterNameLines[id],
         nameEnding, isLin ? 'worried' : 'thinking'));
+      if (canAskGenevieveSingle && !genevieveSingleUsed) personal.push({
+        label: 'So... are you single?', playerMood: 'thinking', next: () => {
+          genevieveSingleUsed = true;
+          return genevieveSingleDialogue();
+        }
+      });
       if (isLin && linCold) personal.push(exchange(linColdTalkLines, [back], 'worried'));
       if (linCold && executiveConfronted && hasSeducedExecutive() && linStage >= 2 && !finalInsultUsed) {
         const topic = exchange(linFinalInsultLines, [back], 'worried');
@@ -172,7 +219,11 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
             completeChat();
             return menu();
           });
-          personal.push(exchange(linCrushLines[linStage], [finishChat], 'worried', completeChat));
+          const flirt = exchange(linCrushLines[linStage], [finishChat], 'worried', completeChat);
+          personal.push({...flirt, next: () => {
+            linFlirtingStarted = true;
+            return flirt.next;
+          }});
         } else {
           const delighted = {...say('Likewise!', [back]), speaker: 'Pip', playerMood: 'happy', direction: 'Pip looks visibly delighted.'};
           personal.push(reply('Hello, Lin!', say('Hello, Pip. Lovely to see you again.', [
@@ -232,6 +283,7 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
   open.canOfferKindness = () => linStage >= 2 && relationship === 'normal' && !hasSeducedExecutive();
   open.willConfront = () => linStage > 3 && relationship === 'normal';
   open.relationship = () => relationship;
+  open.hasStartedLinFlirting = () => linFlirtingStarted;
   open.completedLinChats = () => linStage;
   open.endRelationship = state => {
     if (relationship === 'normal' || (relationship === 'alienated' && state === 'departed')) relationship = state;

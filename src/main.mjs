@@ -988,7 +988,12 @@ function frame(timestamp) {
   updateAttendantMilk(attendantMilk, baron, staff, guards, {x: cameraX, y: cameraY}, dt);
   updateMilkPool(milkPool, elapsed, dt);
   updateStaff(staff, player, baron, guards, elapsed, dt);
-  brieCurdActions.update(elapsed, dt);
+  if (brieCurdActions.update(elapsed, dt, !guestEscort && !linConfrontation)) {
+    clearInput();
+    dialogue.open({...brie, brieMysticIntervention: true});
+    requestAnimationFrame(frame);
+    return;
+  }
   if (dialogue.linRelationship() === 'departed' && !lin.rushingOffscreen) {
     const staffIndex = staff.indexOf(lin);
     if (staffIndex >= 0) staff.splice(staffIndex, 1);

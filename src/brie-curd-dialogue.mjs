@@ -169,6 +169,7 @@ export function createBrieCurdTopic() {
 }
 
 export function createBrieBoyfriendTopic(random = Math.random) {
+  const finish = node => ({...node, action: 'finishBrieBoyfriend'});
   let met = false;
   let used = false;
   return {
@@ -194,16 +195,16 @@ export function createBrieBoyfriendTopic(random = Math.random) {
           response = brie("Pip! Don't you go breaking Lin's heart!", 'worried');
         } else {
           const neverMind = choice('Oh... Never mind then.', 'sorry',
-            recommendLin("Have you tried talking to Lin? She's single!", 'pleased'));
+            finish(recommendLin("Have you tried talking to Lin? She's single!", 'pleased')));
           const anyoneElse = choice("Oh... Do you know anyone here who doesn't?", 'thinking', chain([
             brie("Hmm... I'm not sure about Genevieve.", 'thinking'),
             recommendLin("Lin's single, though! You should chat to her.", 'pleased', {replies: [
-              choice('Okay, thanks! Will do!', 'happy', pip('Okay, thanks! Will do!', 'happy')),
+              choice('Okay, thanks! Will do!', 'happy', finish(pip('Okay, thanks! Will do!', 'happy'))),
               choice('Anyone else?', 'thinking', chain([
                 brie('Most of the women here are married...', 'attentive'),
                 brie("Though that doesn't seem to matter as much to them as it does to me.", 'apologetic'),
                 brie('You could try talking to some of the aristocrats.', 'gossiping')
-              ], brie("I'd approach the ones who are alone, though. They prefer to be discreet.", 'gossiping')))
+              ], finish(brie("I'd approach the ones who are alone, though. They prefer to be discreet.", 'gossiping'))))
             ]})
           ]));
           response = brie("Yes! His name is Karl. He's such a romantic!", 'lovestruck', {mustContinue: true, replies: [
@@ -215,7 +216,7 @@ export function createBrieBoyfriendTopic(random = Math.random) {
             anyoneElse
           ]});
         }
-        return chain([pip(question, 'thinking')], response);
+        return chain([pip(question, 'thinking')], response.replies?.length ? response : finish(response));
       });
     }
   };

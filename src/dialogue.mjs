@@ -1,3 +1,4 @@
+import {brieMysticIntervention, mysticSingleDialogue, mysticSingleQuestion} from './mystic-single-dialogue.mjs';
 import {createBrieBoyfriendTopic, createBrieCurdTopic} from './brie-curd-dialogue.mjs';
 import {createProfessorInterview} from './professor-interview.mjs';
 import {baronCurdReply} from './baron-curd-dialogue.mjs';
@@ -355,6 +356,10 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   const linDepartureReaction = createLinDepartureReactions();
   let departureMenu;
   let brieMenu;
+  const spokenToMysticStaff = new Set();
+  let finishedBrieBoyfriend = false;
+  let finishedGenevieveSingle = false;
+  let usedMysticSingle = false;
   let returningToBrie = false;
   const brieBoyfriendTopic = createBrieBoyfriendTopic();
   const brieCurdTopic = createBrieCurdTopic();
@@ -452,6 +457,9 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function finishAction(finishedAction, target) {
+    if (finishedAction === 'finishBrieBoyfriend') finishedBrieBoyfriend = true;
+    if (finishedAction === 'finishGenevieveSingle') finishedGenevieveSingle = true;
+    if (finishedAction === 'finishMysticSingle' && !waiterOpening.hasStartedLinFlirting()) return;
     if (finishedAction === 'queueLinBrieReferral') {
       waiterOpening.queueBrieReferral();
       return;
@@ -635,7 +643,14 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       brieTopic = politicalDispositions.communist ? brieCurdTopic(true, node, state)
         : brieBoyfriendTopic.option(false, returningToBrie, state);
     }
-    const extraReplies = [reaction, visibility, interview, brieTopic].filter(Boolean);
+    const mysticSingle = character === milkMysticId && node.linDepartureMenu
+      && !usedMysticSingle && finishedBrieBoyfriend && finishedGenevieveSingle
+      && spokenToMysticStaff.size === 3 && waiterOpening.relationship() === 'normal'
+      ? {label: mysticSingleQuestion, playerMood: 'thinking', next: () => {
+        usedMysticSingle = true;
+        return mysticSingleDialogue();
+      }} : null;
+    const extraReplies = [reaction, visibility, interview, brieTopic, mysticSingle].filter(Boolean);
     const exitIndex = replies.findIndex(reply => reply.conversationExit);
     const insertAt = exitIndex < 0 ? replies.length : exitIndex;
     const availableReplies = [...replies.slice(0, insertAt), ...extraReplies, ...replies.slice(insertAt)].filter(reply => !usedReplies.has(reply.once)
@@ -794,7 +809,9 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     disguise = target.executiveFraud ? 'woman' : null;
     const firstGuestGreeting = !guestGreetingSeen.has(target.id);
     if (partyGuests.some(guest => guest.id === target.id)) guestGreetingSeen.add(target.id);
-    const opening = target.waiterTipBan ? waiterTippingIntervention() : target.linDepartureRegret ? {
+    if (['lin-waitress', 'blonde-waitress', 'female-waiter'].includes(target.id)
+        && !target.slotReaction && !target.brieMysticIntervention) spokenToMysticStaff.add(target.id);
+    const opening = target.brieMysticIntervention ? brieMysticIntervention() : target.waiterTipBan ? waiterTippingIntervention() : target.linDepartureRegret ? {
       text: 'Oh, bloody hell.', speaker: 'Pip', mood: 'hurt', playerMood: 'exasperated'
     } : target.linKindness ? linKindnessDialogue() : target.linAftermath ? {
       text: "Oh, I've really messed this up.", speaker: 'Pip', mood: 'attentive', playerMood: 'sad', mustContinue: true,
@@ -850,11 +867,11 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         }
       : target.id === 'milo' ? openMilo()
         : baronConversation();
-    const scripted = target.waiterTipBan || target.slotReaction || target.linDepartureRegret || target.linKindness || target.linAftermath || target.linConfrontation
+    const scripted = target.brieMysticIntervention || target.waiterTipBan || target.slotReaction || target.linDepartureRegret || target.linKindness || target.linAftermath || target.linConfrontation
       || target.welcome || target.pokieBan || target.pokieRefusal || target.tax || target.danceFee
       || target.baronKarma || target.executiveFraud || target.poolClothesThanks || target.pilloryThanks
       || target.postEscort || target.guestGate || target.summoned || target.withoutMilk;
-    brieMenu = target.id === 'blonde-waitress' && !target.slotReaction ? opening : null;
+    brieMenu = target.id === 'blonde-waitress' && !target.slotReaction && !target.brieMysticIntervention ? opening : null;
     returningToBrie = Boolean(brieMenu) && brieBoyfriendTopic.meet();
     departureMenu = !scripted && !opening.linBrieReferral && target.id !== skimId && target.id !== milkMysticId
       && !(target.id === 'baron' && isBaronDancing(baron)) ? opening : null;
