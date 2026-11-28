@@ -43,7 +43,7 @@ try {
     click('She might know what you are!');
     click('Continue →');
     dialogue.open({id: milkMysticId, title: 'Milk Mystic'});
-    click('My God, maybe she can read the future.');
+    click('The Great Cow, maybe she can read the future.');
     click('Continue →');
     const apology = snapshot();
     click('Can you explain to me what happened?');
