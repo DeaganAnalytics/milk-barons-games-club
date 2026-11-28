@@ -1,3 +1,4 @@
+import {createPipeConversation} from './pipe-dialogue.mjs';
 import {brieMysticIntervention, mysticSingleDialogue, mysticSingleQuestion} from './mystic-single-dialogue.mjs';
 import {createBrieBoyfriendTopic, createBrieCurdTopic} from './brie-curd-dialogue.mjs';
 import {createProfessorInterview} from './professor-interview.mjs';
@@ -344,6 +345,12 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   let completedBaronCowEncounters = 0;
   let slappedByBaron = false;
   let askedEliasAboutVampires = false;
+  let spokeToCreamery = false;
+  const pipeOpening = createPipeConversation(() => ({
+    coins: 100, karma: 0, ...baronStanding?.(),
+    communist: politicalDispositions.communist, spokeToCreamery, askedEliasAboutVampires,
+    seenCowGuard: hasSeenCowGuard?.(), metMystic: mysticVisibility.hasMetMystic()
+  }));
   let vampireStage = 0;
   let askedBaronForMoney = false;
   const usedReplies = new Set();
@@ -465,6 +472,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function finishAction(finishedAction, target) {
+    if (target?.id === 'pipe') pipeOpening.finish(finishedAction);
     if (finishedAction === 'finishBrieBoyfriend') finishedBrieBoyfriend = true;
     if (finishedAction === 'finishGenevieveSingle') finishedGenevieveSingle = true;
     if (finishedAction === 'finishMysticSingle' && !waiterOpening.hasStartedLinFlirting()) return;
@@ -602,7 +610,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     }
     const reactions = pipReactions[node.mood] ?? ['attentive', 'thinking'];
     const preferred = node.playerMood ?? playerMood ?? reactions[0];
-    const playerExpression = chooseExpression(preferred, [...reactions, 'thinking', 'attentive'], pipHistory);
+    const playerExpression = chooseExpression(preferred, node.exactPlayerPortrait ? [] : [...reactions, 'thinking', 'attentive'], pipHistory);
     const milkMoustache = Boolean(node.milkMoustache);
     const portraitKey = playerExpression + ':' + (disguise ?? '') + ':' + pipLipstick + (milkMoustache ? ':milk' : '');
     if (playerPortrait.dataset.expression !== portraitKey) {
@@ -807,6 +815,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function open(target) {
+    spokeToCreamery ||= target.id === bartender.id || Boolean(target.guard?.creamery);
     if (target.id === milkMysticId) mysticVisibility.meetMystic();
     spokeToDjDairy ||= target.id === djTarget.id;
     npcHistory.mood = pipHistory.mood = null;
@@ -840,6 +849,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       : target.id === elias.id && target.danceFee ? eliasDanceConversation
       : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)
       : target.id === 'baron' && target.baronKarma ? (target.baronKarma === 'reward' ? baronKarmaDialogue.reward(metMilo, completedBaronCowEncounters > 0) : baronKarmaDialogue.fine(spokeToProfessor))
+      : target.id === 'pipe' ? pipeOpening()
       : target.id === bartender.id ? bartenderOpening(bartenderGreetingIndex++)
       : target.id === professor.id ? professorOpening()
       : target.id === sleepingGamblerId ? sleepingGamblerDialogue(sleepingGambler)
@@ -881,7 +891,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       || target.postEscort || target.guestGate || target.summoned || target.withoutMilk;
     brieMenu = target.id === 'blonde-waitress' && !target.withoutMilk && !target.slotReaction && !target.brieMysticIntervention ? opening : null;
     returningToBrie = Boolean(brieMenu) && brieBoyfriendTopic.meet();
-    departureMenu = !scripted && !opening.linBrieReferral && target.id !== skimId && target.id !== milkMysticId
+    departureMenu = !scripted && !opening.linBrieReferral && target.id !== skimId && target.id !== milkMysticId && target.id !== 'pipe'
       && !(target.id === 'baron' && isBaronDancing(baron)) ? opening : null;
     if (target.id === skimId) skimSpillFollowupPending = false;
     speaker.textContent = title.textContent = target.title;
