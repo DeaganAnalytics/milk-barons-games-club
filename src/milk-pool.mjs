@@ -22,7 +22,7 @@ const touchLines = [
   'Ouch! That was a pinch!',
   'Ooh la la!',
   "You're certainly an enthusiastic swimmer!",
-  'Good heavens! You startled me!',
+  'Good meadows! You startled me!',
   'Oh! There you are!',
   "My goodness, you're persistent!",
   'Hehehe! Not again!',
@@ -30,7 +30,7 @@ const touchLines = [
   'Careful, darling!',
   'Oh, you cheeky thing!',
   "Someone's enjoying himself!",
-  'Good heavens! What are you doing down there?',
+  'Merciful milk! What are you doing down there?',
   'Oh! I nearly swallowed a mouthful of milk!',
   "You're certainly getting your money's worth!"
 ];
@@ -47,8 +47,8 @@ const exchanges = [
   [[0, 'Milko!'], [1, 'Polo!']],
   [[0, 'The lifeguard is rather handsome...'], [1, "Yes, but this one's rich!"]],
   [[0, 'How much milk do you suppose is in here?'], [1, "Oh, darling, it's vulgar to discuss expenditure."]],
-  [[1, "Apparently some peasants can't even afford milk."], [0, 'Good heavens! What do they swim in?']],
-  [[0, "Does your husband know you're here?"], [1, 'Heavens, no! Does yours?']],
+  [[1, "Apparently some peasants can't even afford milk."], [0, 'Good meadows! What do they swim in?']],
+  [[0, "Does your husband know you're here?"], [1, 'Meadows, no! Does yours?']],
   [[1, 'Is that lifeguard still watching us?'], [0, "Well, at least somebody's earning their salary."]]
 ];
 
@@ -76,7 +76,7 @@ const lifeguardLines = [
 ];
 
 const missingDressesExchanges = [
-  'Good heavens! Where are my clothes?!',
+  'Merciful milk! Where are my clothes?!',
   'That dress cost more than a peasant earns in a year!',
   "Guard! Guard! We've been robbed!",
   'I cannot possibly attend dinner in this state!',
