@@ -105,6 +105,7 @@ try {
   const attribution = await evaluate(`(async () => {
     const {createDialogue} = await import('./src/dialogue.mjs');
     const {createBaron} = await import('./src/baron.mjs');
+    const {elias} = await import('./src/elias.mjs');
     const {bartender} = await import('./src/creamery.mjs');
     const dialogue = createDialogue(createBaron());
     const snapshot = () => [
@@ -137,16 +138,35 @@ try {
       [...document.querySelectorAll('#conversation-replies button')].map(button => button.textContent),
       document.querySelectorAll('#conversation-advance button').length
     ];
+    const pipArt = () => document.querySelector('#conversation-player canvas').toDataURL();
     click('Do all guests pay for milk?');
     const firstPipOptions = pipOptions();
+    const firstPipArt = pipArt();
     const membershipOpening = snapshot().slice(0, 2);
     click('Why?');
     const membershipReply = snapshot().slice(0, 2);
+    const avoidsRepeat = pipArt() !== firstPipArt;
     const secondPipOptions = pipOptions();
     click('How much does membership cost?');
     const membershipPrice = snapshot().slice(0, 2);
     dialogue.dismiss();
-    return {other, guest, membershipOpening, membershipReply, membershipPrice, firstPipOptions, secondPipOptions};
+    const npc = document.getElementById('conversation-npc');
+    const eliasArt = () => npc.style.getPropertyValue('--portrait-image');
+    dialogue.open(elias);
+    const firstEliasArt = eliasArt();
+    dialogue.dismiss();
+    dialogue.open(bartender);
+    dialogue.dismiss();
+    dialogue.open(elias);
+    const secondEliasArt = eliasArt();
+    const alternate = new Image();
+    alternate.src = secondEliasArt.slice(4, -1);
+    await alternate.decode();
+    const eliasRotates = firstEliasArt.endsWith('/current-smile.webp)')
+      && secondEliasArt.endsWith('/current-smile-alt.webp)')
+      && npc.dataset.expression === 'current-smile';
+    dialogue.dismiss();
+    return {other, guest, membershipOpening, membershipReply, membershipPrice, firstPipOptions, secondPipOptions, avoidsRepeat, eliasRotates};
   })()`);
   assert.deepEqual(attribution, {
     other: ['Pipe', "Pip?! That's the stupidest name I've ever heard.", 'npc', 'Pip', 'Pipe', 'pipe'],
@@ -155,7 +175,8 @@ try {
     membershipReply: ['Waiter Sterling', 'Our more affluent patrons prefer not to concern themselves with such trivial transactions.'],
     membershipPrice: ['Waiter Sterling', 'Ten thousand coins, sir.'],
     firstPipOptions: [['Why?'], 0],
-    secondPipOptions: [['How much does membership cost?'], 0]
+    secondPipOptions: [['How much does membership cost?'], 0],
+    avoidsRepeat: true, eliasRotates: true
   });
 
   for (const [choice, expected, mood, pipMood] of [

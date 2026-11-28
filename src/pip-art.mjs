@@ -149,7 +149,7 @@ function drawFrontIdle(ctx, x, y, elapsed, dancing, lipstick) {
   ctx.restore();
 }
 
-function drawPipHead(ctx, x, y, angle, mood, portrait = false, lipstick = false) {
+function drawPipHead(ctx, x, y, angle, mood, portrait = false, lipstick = false, alternate = false) {
   ctx.save();
   ctx.translate(x, y);
   const side = Math.sin(angle);
@@ -166,13 +166,13 @@ function drawPipHead(ctx, x, y, angle, mood, portrait = false, lipstick = false)
     return;
   }
 
-  const face = portrait ? 4 : side * (front < 0 ? 7 : 5.4);
+  const face = portrait ? (alternate ? 3.1 : 4) : side * (front < 0 ? 7 : 5.4);
   if (lipstick) {
     const cheek = side < -0.3 ? 3.8 : -3.8;
     drawLipstickMark(ctx, cheek, 3.5, -0.48, 0.94);
     if (front > 0.4) drawLipstickMark(ctx, side * 3 - 2, -6.4, 0.29, 0.8);
   }
-  const eyes = portrait ? [2, 8.2] : Math.abs(side) < 0.8 ? [face - 3.55, face + 3.55] : [face];
+  const eyes = portrait ? [face - 2, face + 4.2] : Math.abs(side) < 0.8 ? [face - 3.55, face + 3.55] : [face];
   for (const eye of eyes) {
     if (mood === 'happy') {
       stroke(ctx, 1.35, ink, c => {
@@ -180,7 +180,7 @@ function drawPipHead(ctx, x, y, angle, mood, portrait = false, lipstick = false)
         c.quadraticCurveTo(eye, -3.2, eye + 1.6, -0.7);
       });
     } else {
-      ellipse(ctx, eye, -1.25, 1.3, 2, ink);
+      ellipse(ctx, eye, alternate ? -1.65 : -1.25, 1.3, 2, ink);
     }
   }
   if (mood === 'worried' || mood === 'alarmed' || mood === 'sorry' || mood === 'exasperated') {
@@ -229,7 +229,7 @@ function drawLipstickMark(ctx, x, y, angle, scale) {
   ctx.restore();
 }
 
-export function drawPipPortrait(canvas, expression, disguise, lipstick = false, milkMoustache = false) {
+export function drawPipPortrait(canvas, expression, disguise, lipstick = false, milkMoustache = false, alternate = false) {
   const ctx = canvas.getContext('2d');
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -298,7 +298,7 @@ export function drawPipPortrait(canvas, expression, disguise, lipstick = false, 
   ctx.save();
   ctx.translate(114, 83);
   ctx.scale(4.25, 4.25);
-  drawPipHead(ctx, 0, 0, 0, expression, true);
+  drawPipHead(ctx, 0, 0, 0, expression, true, false, alternate);
   if (lipstick) {
     drawLipstickMark(ctx, -5, 3, -0.48, 1);
     drawLipstickMark(ctx, -2, -6.4, 0.29, 0.8);
