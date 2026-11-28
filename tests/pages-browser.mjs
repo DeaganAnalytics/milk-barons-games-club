@@ -36,25 +36,20 @@ try {
     elias.passThroughAt = performance.now();
     dialogue.open(elias);
     click('Did I just... walk through you?');
-    const opening = snapshot();
-    click('Continue →');
     const eliasResponse = snapshot();
     click("I'm going to ask the Milk Mystic about this!");
     click('She might know what you are!');
     click('Continue →');
     dialogue.open({id: milkMysticId, title: 'Milk Mystic'});
     click('The Great Cow, maybe she can read the future.');
-    click('Continue →');
-    const apology = snapshot();
+    click('Oh. Sorry.');
     click('Can you explain to me what happened?');
     const mysticResponse = snapshot();
     dialogue.dismiss();
-    return {opening, eliasResponse, apology, mysticResponse};
+    return {eliasResponse, mysticResponse};
   })()`);
-  assert.deepEqual(playerLines.opening, ['Pip', 'Did I just... walk through you?', 'thinking']);
   assert.equal(playerLines.eliasResponse[0], 'Elias');
   assert.equal(playerLines.eliasResponse[1], 'Vhat are you talking about, Master Pip? Zat is physically impossible.');
-  assert.deepEqual(playerLines.apology, ['Pip', 'Oh. Sorry.', 'sorry']);
   assert.equal(playerLines.mysticResponse[0], 'Milk Mystic');
 
   const brieLines = await evaluate(`(async () => {
@@ -80,33 +75,27 @@ try {
     dialogue.open(brie);
     const exclusive = !find(boyfriendTopic);
     find(topic).click();
-    const pip = [...snapshot(), document.getElementById('conversation-player').dataset.expression.split(':')[0]];
-    find('Continue →').click();
     const portrait = document.getElementById('conversation-npc');
     const brieReply = [...snapshot(), portrait.dataset.portrait, portrait.dataset.expression];
     find('I love him too!').click();
-    find('Continue →').click();
     find("No! I don't love him romantically. I just admire him.").click();
     find('Continue →').click();
     find('Continue →').click();
     find("He's my hero!").click();
-    find('Continue →').click();
-    find('Continue →').click();
+    find('No, not really.').click();
     const referralLine = snapshot();
     dialogue.open({id: 'lin-waitress', title: 'Waitress Lin'});
-    const referralOpening = snapshot();
-    find('Continue →').click();
+    find('Excuse me, are you Lin?').click();
     const linReply = snapshot();
     dialogue.open(brie);
     const consumed = !find(topic);
     dialogue.dismiss();
-    return {locked, unlocked, exclusive, pip, brieReply, consumed, referralLine, referralOpening, linReply};
+    return {locked, unlocked, exclusive, brieReply, consumed, referralLine, linReply};
   })()`);
   assert.deepEqual(brieLines, {
-    locked: true, unlocked: true, exclusive: true, pip: ['Pip', 'What do you think of Karl Curd?', 'thinking'],
+    locked: true, unlocked: true, exclusive: true,
     brieReply: ['Waitress Brie', 'Oh, I love him!', 'blonde-waitress', 'lovestruck'], consumed: true,
     referralLine: ['Waitress Brie', "Have you spoken to Lin? She's single, you know!"],
-    referralOpening: ['Pip', 'Excuse me, are you Lin?'],
     linReply: ['Waitress Lin', 'Yes, sir. Can I help you?']
   });
 
@@ -128,12 +117,9 @@ try {
     const pipe = {id: 'pipe', title: 'Pipe'};
     dialogue.open(pipe);
     click("Sorry! I didn't notice the sign.");
-    click('Continue →');
     document.getElementById('conversation-close').click();
     dialogue.open(pipe);
     click("My name's Pip. What's yours?");
-    const player = snapshot();
-    click('Continue →');
     const other = snapshot();
     dialogue.dismiss();
 
@@ -143,12 +129,22 @@ try {
     click('Continue →');
     const guest = snapshot();
     dialogue.dismiss();
-    return {player, other, guest};
+    dialogue.open({id: 'martini-waiter', title: 'Waiter Sterling'});
+    click('Do all guests pay for milk?');
+    const membershipOpening = snapshot().slice(0, 2);
+    click('Why?');
+    const membershipReply = snapshot().slice(0, 2);
+    click('How much does membership cost?');
+    const membershipPrice = snapshot().slice(0, 2);
+    dialogue.dismiss();
+    return {other, guest, membershipOpening, membershipReply, membershipPrice};
   })()`);
   assert.deepEqual(attribution, {
-    player: ['Pip', "My name's Pip. What's yours?", 'player', 'Pip', 'Pipe', 'pipe'],
     other: ['Pipe', "Pip?! That's the stupidest name I've ever heard.", 'npc', 'Pip', 'Pipe', 'pipe'],
-    guest: ['Elias', 'He vants a tip.', 'npc', 'Pip', 'Elias', 'elias']
+    guest: ['Elias', 'He vants a tip.', 'npc', 'Pip', 'Elias', 'elias'],
+    membershipOpening: ['Waiter Sterling', 'Only those without a membership, sir.'],
+    membershipReply: ['Waiter Sterling', 'Our more affluent patrons prefer not to concern themselves with such trivial transactions.'],
+    membershipPrice: ['Waiter Sterling', 'Ten thousand coins, sir.']
   });
 
   for (const [choice, expected, mood, pipMood] of [
