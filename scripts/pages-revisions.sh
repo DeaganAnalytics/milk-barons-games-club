@@ -23,7 +23,7 @@ select_revision() {
   fi
   mkdir -p "$scratch/$branch"
   git archive "$revision" | tar -x -C "$scratch/$branch"
-  if (cd "$scratch/$branch" && node --test --test-isolation=none tests/*.test.mjs) >&2; then
+  if (cd "$scratch/$branch" && npm ci && npm test) >&2; then
     printf '%s\n' "$revision"
   elif [[ -n "$previous" ]]; then
     printf '::warning::%s tests failed. Retaining %s.\n' "$branch" "$previous" >&2
