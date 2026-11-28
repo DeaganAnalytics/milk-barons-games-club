@@ -382,5 +382,41 @@
   "assets/dialogue/expressions/blonde-waitress-thinking.webp": [
     "Uneven brows, a sideways gaze and pursed lips.",
     "Reflection. Use when trying to remember something. Avoid an immediate outburst."
+  ],
+  "assets/dialogue/pipe/attentive.webp": [
+    "Level gaze and a small flat mouth.",
+    "Neutral attention; low. Use for listening or routine service."
+  ],
+  "assets/dialogue/pipe/flustered.webp": [
+    "Raised inner brows, sweat drop and open mouth.",
+    "Nervous haste; high. Use when overwhelmed or caught off guard."
+  ],
+  "assets/dialogue/pipe/apologetic.webp": [
+    "Lowered eyes, upturned inner brows and downturned mouth.",
+    "Regret; medium. Use for apologies or a small service mistake."
+  ],
+  "assets/dialogue/pipe/relieved.webp": [
+    "Closed smiling eyes, open smile and a puff of breath.",
+    "Relief; medium. Use after a problem passes."
+  ],
+  "assets/dialogue/pipe/angry.webp": [
+    "Pinched brows, open frown and a stress mark.",
+    "Anger; high. Use for a sharp protest."
+  ],
+  "assets/dialogue/pipe/smug.webp": [
+    "Raised eyebrow and one corner of the mouth lifted.",
+    "Condescending amusement; medium. Use for sarcasm or teasing. Avoid sincere pride."
+  ],
+  "assets/dialogue/pipe/unimpressed.webp": [
+    "Half-closed eyes and a flat mouth.",
+    "Bored contempt; low. Use when dismissing an excuse."
+  ],
+  "assets/dialogue/pipe/proud.webp": [
+    "Broad smile, lifted chest and shoulders back.",
+    "Sincere pride; medium. Use when Pipe takes credit for his work. Avoid mockery."
+  ],
+  "assets/dialogue/pipe/disgusted.webp": [
+    "Furrowed brows, wrinkled nose and a curled upper lip.",
+    "Disgust; high. Use when recoiling from something unpleasant."
   ]
 }

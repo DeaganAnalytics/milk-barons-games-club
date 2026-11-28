@@ -1,3 +1,4 @@
+import {createPipeConversation} from './pipe-dialogue.mjs';
 import {brieMysticIntervention, mysticSingleDialogue, mysticSingleQuestion} from './mystic-single-dialogue.mjs';
 import {createBrieBoyfriendTopic, createBrieCurdTopic} from './brie-curd-dialogue.mjs';
 import {createProfessorInterview} from './professor-interview.mjs';
@@ -158,10 +159,16 @@ const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-listening'
   [name, new URL('../assets/dialogue/' + name + '.webp', import.meta.url)]));
 const portraitCache = new Map();
 
+const pipePortraitMoods = [
+  'attentive', 'flustered', 'apologetic', 'relieved', 'angry',
+  'smug', 'unimpressed', 'proud', 'disgusted'
+];
+
 const npcExpressions = new Map([
   ...Object.entries(portraits).map(([id, portrait]) => [id, portrait.expressions]),
   [djTarget.id, djMoods],
   [milkMysticId, milkMysticMoods],
+  ['pipe', pipePortraitMoods],
   ...dancerTargets.map(({id}) => [id, dancerMoods]),
   ...partyGuests.map(({id}) => [id, ['attentive', 'annoyed']]),
   [skimId, ['attentive', 'distressed']],
@@ -237,6 +244,7 @@ const pipReactions = {
 const cameraPortrait = new URL('../assets/dialogue/security-camera.webp', import.meta.url);
 
 function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false, tousled = false) {
+  if (id === 'pipe') return new URL('../assets/dialogue/pipe/' + (mood ?? 'attentive') + '.webp', import.meta.url);
   if (id === milkMysticId) return new URL('../assets/dialogue/milk-mystic/' + mood + '.webp', import.meta.url);
   if (id === djTarget.id) return new URL('../assets/dance/portraits/dj-' + mood + '.webp', import.meta.url);
   if (id === 'security-camera') return cameraPortrait;
@@ -275,6 +283,7 @@ function warmPortraits() {
     for (const mood of moods) urls.push(extraPortraitUrl(id, mood));
   }
   for (const mood of milkMysticMoods) urls.push(standalonePortraitUrl(milkMysticId, false, mood));
+  for (const mood of pipePortraitMoods) urls.push(standalonePortraitUrl('pipe', false, mood));
   for (const mood of [...djMoods, 'microphone']) urls.push(standalonePortraitUrl(djTarget.id, false, mood));
   for (const {id} of dancerTargets) {
     for (const mood of dancerMoods) urls.push(standalonePortraitUrl(id, false, mood));
@@ -336,6 +345,12 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   let completedBaronCowEncounters = 0;
   let slappedByBaron = false;
   let askedEliasAboutVampires = false;
+  let spokeToCreamery = false;
+  const pipeOpening = createPipeConversation(() => ({
+    coins: 100, karma: 0, ...baronStanding?.(),
+    communist: politicalDispositions.communist, spokeToCreamery, askedEliasAboutVampires,
+    seenCowGuard: hasSeenCowGuard?.(), metMystic: mysticVisibility.hasMetMystic()
+  }));
   let vampireStage = 0;
   let askedBaronForMoney = false;
   const usedReplies = new Set();
@@ -457,6 +472,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function finishAction(finishedAction, target) {
+    if (target?.id === 'pipe') pipeOpening.finish(finishedAction);
     if (finishedAction === 'finishBrieBoyfriend') finishedBrieBoyfriend = true;
     if (finishedAction === 'finishGenevieveSingle') finishedGenevieveSingle = true;
     if (finishedAction === 'finishMysticSingle' && !waiterOpening.hasStartedLinFlirting()) return;
@@ -594,7 +610,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     }
     const reactions = pipReactions[node.mood] ?? ['attentive', 'thinking'];
     const preferred = node.playerMood ?? playerMood ?? reactions[0];
-    const playerExpression = chooseExpression(preferred, [...reactions, 'thinking', 'attentive'], pipHistory);
+    const playerExpression = chooseExpression(preferred, node.exactPlayerPortrait ? [] : [...reactions, 'thinking', 'attentive'], pipHistory);
     const milkMoustache = Boolean(node.milkMoustache);
     const portraitKey = playerExpression + ':' + (disguise ?? '') + ':' + pipLipstick + (milkMoustache ? ':milk' : '');
     if (playerPortrait.dataset.expression !== portraitKey) {
@@ -799,6 +815,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
   }
 
   function open(target) {
+    spokeToCreamery ||= target.id === bartender.id || Boolean(target.guard?.creamery);
     if (target.id === milkMysticId) mysticVisibility.meetMystic();
     spokeToDjDairy ||= target.id === djTarget.id;
     npcHistory.mood = pipHistory.mood = null;
@@ -832,6 +849,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       : target.id === elias.id && target.danceFee ? eliasDanceConversation
       : target.id === elias.id ? (target.welcome ? eliasWelcome : elias.hasFollowedPip ? eliasFollowingConversation : eliasConversation)
       : target.id === 'baron' && target.baronKarma ? (target.baronKarma === 'reward' ? baronKarmaDialogue.reward(metMilo, completedBaronCowEncounters > 0) : baronKarmaDialogue.fine(spokeToProfessor))
+      : target.id === 'pipe' ? pipeOpening()
       : target.id === bartender.id ? bartenderOpening(bartenderGreetingIndex++)
       : target.id === professor.id ? professorOpening()
       : target.id === sleepingGamblerId ? sleepingGamblerDialogue(sleepingGambler)
@@ -871,9 +889,9 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       || target.welcome || target.pokieBan || target.pokieRefusal || target.tax || target.danceFee
       || target.baronKarma || target.executiveFraud || target.poolClothesThanks || target.pilloryThanks
       || target.postEscort || target.guestGate || target.summoned || target.withoutMilk;
-    brieMenu = target.id === 'blonde-waitress' && !target.slotReaction && !target.brieMysticIntervention ? opening : null;
+    brieMenu = target.id === 'blonde-waitress' && !target.withoutMilk && !target.slotReaction && !target.brieMysticIntervention ? opening : null;
     returningToBrie = Boolean(brieMenu) && brieBoyfriendTopic.meet();
-    departureMenu = !scripted && !opening.linBrieReferral && target.id !== skimId && target.id !== milkMysticId
+    departureMenu = !scripted && !opening.linBrieReferral && target.id !== skimId && target.id !== milkMysticId && target.id !== 'pipe'
       && !(target.id === 'baron' && isBaronDancing(baron)) ? opening : null;
     if (target.id === skimId) skimSpillFollowupPending = false;
     speaker.textContent = title.textContent = target.title;

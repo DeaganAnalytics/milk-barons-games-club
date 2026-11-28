@@ -1,3 +1,4 @@
+import {pipeTipKarma} from './pipe-dialogue.mjs';
 import {createBrieCurdActions} from './brie-curd-actions.mjs';
 import {mysticMoneyOutcome} from './mystic-money-dialogue.mjs';
 import {createMilkMystic, updateMilkMystic} from './milk-mystic.mjs';
@@ -36,8 +37,8 @@ import {createPartyChatter, updatePartyChatter} from './party-chatter.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {createPlayer, movePlayer, takeDanceExit, updatePlayer} from './player.mjs';
 import {createRenderer} from './render.mjs';
-import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, PRACTICE_RANGE, MILK_FOUNTAIN, MILK_POOL, nearGuestGate, nearestInteraction, onDanceFloor, routeAroundBaron, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
-import {createStaff, updateStaff} from './staff.mjs';
+import {cameraLeft, cameraTop, DANCE_FLOOR, guestEnclosure, insideGuestEnclosure, PRACTICE_RANGE, MILK_FOUNTAIN, MILK_POOL, nearGuestGate, nearestInteraction, onDanceFloor, pipeHatch, routeAroundBaron, ROOM_HEIGHT, ROOM_WIDTH} from './room.mjs';
+import {emptyStaffGlass, createStaff, updateStaff} from './staff.mjs';
 
 const player = createPlayer();
 const baron = createBaron();
@@ -308,6 +309,13 @@ const dialogue = createDialogue(baron, {
   },
   onAction: (action, target) => {
     brieCurdActions.handle(action, elapsed);
+    if (pipeTipKarma.has(action)) {
+      clubEvent('Pip tips Pipe.', () => {
+        karma.change(pipeTipKarma.get(action));
+        coinBalance.change(-1);
+      });
+    }
+    if (action === 'pipeHeritageLie') clubEvent("Pip lies about being the Baron's nephew.", () => karma.change(-0.5));
     if (action === 'linReassuranceLie') clubEvent('Pip lies about why he visited the pool.', () => karma.change(-0.5));
     if (action === 'linClothingLie') clubEvent('Pip lies to Lin about the clothing theft.', () => karma.change(-1));
     if (action === 'linApologyKarma') clubEvent('Pip apologises to Lin.', () => karma.change(0.5));
@@ -363,6 +371,9 @@ const dialogue = createDialogue(baron, {
       health.change(-0.5, 'Lin’s slap was the last straw.');
     }
     if (action === 'buyWaiterMilk' || action === 'buyTippedWaiterMilk') {
+      const server = staff.find(member => member.id === target.id);
+      if (!server || server.withoutMilk || server.serviceDuty) return;
+      emptyStaffGlass(server);
       const tipped = action === 'buyTippedWaiterMilk';
       const healed = health.hearts < MAX_HEARTS;
       clubEvent(healed ? 'Pip drinks a glass of milk and regains half a heart.' : 'Pip drinks a glass of milk.', () => {
@@ -679,7 +690,7 @@ const {readMovement, clearInput} = bindControls({
       && !(guest === lin && (linConfrontation || dialogue.linRelationship() === 'departed'))
       && !(guestEnclosure.active && insideGuestEnclosure(guest))
       && !(guest === sleepingGamblerTarget && sleepingGambler.pose(elapsed).awake));
-    nearbyGuests.push(mystic);
+    nearbyGuests.push(mystic, {id: 'pipe', title: 'Pipe', x: pipeHatch.x, y: pipeHatch.y - 29, radius: 14});
     if (player.djAccess) nearbyGuests.push(djTarget);
     if (!milkPool.stolenClothing) nearbyGuests.push(poolClothing);
     const target = nearbyPracticeGuard(player) ?? nearestInteraction(player, baron, milo, guards, nearbyGuests);
@@ -695,7 +706,9 @@ const {readMovement, clearInput} = bindControls({
         target.poolClothesThanks = true;
       }
       clearInput();
-      dialogue.open(target.id === openSlot.id && pokieProfit.banned ? {...elias, pokieRefusal: true} : target);
+      dialogue.open(target.id === openSlot.id && pokieProfit.banned ? {...elias, pokieRefusal: true}
+        : target.serviceDuty && staff.some(member => member.id === target.id && !member.sweeps)
+          ? {...target, withoutMilk: true} : target);
     } else info.textContent = 'Nobody is close enough to talk to.';
   }
 });

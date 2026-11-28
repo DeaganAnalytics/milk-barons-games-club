@@ -1,3 +1,4 @@
+import {emptyStaffGlass} from './staff.mjs';
 import {runServiceStaff} from './milk-service.mjs';
 import {partyGuests} from './party-guests.mjs';
 import {guestEnclosure, guestGateInside, guestGateOutside, insideGuestEnclosure, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron} from './room.mjs';
@@ -139,9 +140,11 @@ function updateRefill(chatter, staff, baron, guards, elapsed, dt) {
     refill.pour = 0;
     server.facing = 1;
   } else if (guestEnclosure.active) {
+    emptyStaffGlass(server);
     refill.exiting = true;
     refill.route = routeOutOfGuests(server);
   } else {
+    emptyStaffGlass(server);
     server.serviceDuty = false;
     server.pauseUntil = elapsed + 0.5;
     chatter.refill = null;

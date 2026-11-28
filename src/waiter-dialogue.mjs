@@ -125,6 +125,7 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
       return exchange(linPublicReaction, [], 'worried').next;
     }
     if (isLin && relationship === 'departed') return say('');
+    if (withoutMilk) return say('Not now! Busy, busy, busy!');
     const reacts = isLin && hasSeducedExecutive() && relationship === 'normal' && !open.willConfront();
     if (reacts) {
       alternativeLinName = !askedName.has(id);
@@ -138,7 +139,6 @@ export function createWaiterConversation(getCoins, askedAboutCowGuards = () => f
     if (isLin && brieReferralPending && eligibleForBrieReferral() && !reacts && !confrontClothing && !confrontPool) {
       return linBrieReferral(askedName.has(id));
     }
-    if (withoutMilk && !reacts && !confrontClothing && !confrontPool) return say('Not now! Busy, busy, busy!');
 
     const index = greetingIndex++ % greetings.length;
     const greeting = greetings[index];

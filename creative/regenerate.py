@@ -18,7 +18,7 @@ NAMES = {
     "professor": "Professor", "milk-mystic": "Milk Mystic", "slot-executive": "Lady Penelope",
     "male-waiter": "Feta", "handlebar-waiter": "Bull", "martini-waiter": "Sterling",
     "female-waiter": "Genevieve", "blonde-waitress": "Brie", "lin-waitress": "Lin",
-    "edmund-vale": "Edmund Skim", "dj": "DJ Dairy",
+    "edmund-vale": "Edmund Skim", "pipe": "Pipe", "dj": "DJ Dairy",
 }
 CELL_WIDTH, CELL_HEIGHT = 285, 278
 MAX_BYTES = 20_000_000

@@ -15,7 +15,7 @@ import {drawGuestRopes} from './guest-escort.mjs';
 import {createDancerSpeech, dancers, drawDancer} from './dancers.mjs';
 import {danceLayers, danceLyric, drawBaronDance, drawDanceBooth, drawDanceFloor} from './dance-floor.mjs';
 import {bartender, creameryHatch, drunkGuardSpeech} from './creamery.mjs';
-import {attendantGlassPose, drawAttendantMilk, drawEmptyServiceGlass, drawMilkAction, drawMilkShards, usesMilkArm} from './milk-service-art.mjs';
+import {attendantGlassPose, drawAttendantMilk, drawEmptyServiceGlass, drawMilkAction, drawMilkShards, drawPipePour, usesMilkArm} from './milk-service-art.mjs';
 import {partySpeech, refillProgress} from './party-chatter.mjs';
 import {drawGuestRefill, drawPartyGuest, partyGuests} from './party-guests.mjs';
 import {drawPip} from './pip-art.mjs';
@@ -521,7 +521,7 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic, 
       const sprite = member.withoutMilk || usingBottle ? emptySprites[member.id] : staffSprites[member.id];
       actors.push({depth: member.y + 20, draw: () => {
         drawStaff(ctx, sprite, member, elapsed, skimVertical);
-        if (member.emptyServiceGlass) drawEmptyServiceGlass(ctx, member);
+        if (member.emptyServiceGlass && member.pipePour == null) drawEmptyServiceGlass(ctx, member);
       }});
     }
     partyGuests.forEach((guest, index) => {
@@ -549,6 +549,8 @@ export function createRenderer(canvas, onCowGuardSeen, sleepingGambler, mystic, 
     });
     actors.sort((first, second) => first.depth - second.depth);
     for (const actor of actors) actor.draw();
+    const pipeServer = staff.find(member => member.pipePour != null);
+    if (pipeServer) drawPipePour(ctx, pipeServer);
     if (milkPoseAttendant) drawAttendantMilk(ctx, attendantMilk, milkPoseAttendant);
     if (milkScene) drawMilkAction(ctx, milkScene, baron, animateBaronArm);
     if (pouring) drawGuestRefill(ctx, partyGuests[refill.guest], partySprites[refill.guest], refill.server, progress);

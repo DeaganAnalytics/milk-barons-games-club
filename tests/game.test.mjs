@@ -467,7 +467,7 @@ test('milk service waits for eligible time and calls the closest server with mil
   assert.equal(baron.speech.text, milkCalls.at(-1));
 });
 
-test('server delivers and refills offscreen, then Skim clears the glass and restarts the clock', () => {
+test('server carries an empty glass to Pipe after delivering milk to the Baron', async () => {
   const baron = createBaron();
   const service = createMilkService();
   const server = {x: baron.x + 160, y: baron.y + 8, radius: 14, walkTime: 0};
@@ -488,8 +488,17 @@ test('server delivers and refills offscreen, then Skim clears the glass and rest
   assert.equal(service.remaining, 45);
   assert.equal(cleaner.serviceDuty, false);
   assert.equal(server.withoutMilk, true);
+  assert.equal(server.emptyServiceGlass, true);
   updateMilkService(service, baron, staff, [], {x: 1000, y: 0}, 25, 0.05, false);
+  assert.equal(server.withoutMilk, true, 'Leaving the camera cannot refill a glass');
+  const {pipeHatch} = await import('../src/room.mjs');
+  for (let frame = 1; frame <= 1800 && server.withoutMilk; frame++) {
+    updateStaff([server], createPlayer(), baron, [], frame * 0.05, 0.05, () => 0);
+  }
   assert.equal(server.withoutMilk, false);
+  assert.equal(server.emptyServiceGlass, false);
+  assert.equal(server.y, pipeHatch.y);
+  assert.ok(Math.abs(server.x - pipeHatch.x) <= 34);
 });
 
 
@@ -545,15 +554,16 @@ test('party guests shuffle whole conversations and refill both glasses after eve
   const camera = {x: WEST_EDGE, y: SOUTH_EDGE - ROOM_HEIGHT};
   const busyServer = {x: WEST_EDGE + 111, y: SOUTH_TRIM_Y - 79, serviceDuty: true};
   const server = {x: WEST_EDGE + 200, y: SOUTH_TRIM_Y - 100, radius: 14, walkTime: 0};
+  const servers = [server, {...server, x: server.x + 45}, {...server, x: server.x + 90}];
   const baron = createBaron();
   const greetings = [];
   let lastText;
   let elapsed = 0;
   let refills = 0;
-  let sawSecondGlass = false;
+  let currentServer = null;
   const tick = (view = camera) => {
     elapsed += 0.05;
-    updatePartyChatter(chatter, view, [busyServer, server], baron, [], elapsed, 0.05, () => 0.5);
+    updatePartyChatter(chatter, view, [busyServer, ...servers], baron, [], elapsed, 0.05, () => 0.5);
   };
 
   for (let i = 0; i < 40; i++) tick({x: 0, y: 0});
@@ -566,20 +576,23 @@ test('party guests shuffle whole conversations and refill both glasses after eve
     if (chatter.refill) {
       assert.equal(chatter.completed, 4);
       assert.equal(speech, null);
-      assert.equal(chatter.refill.server, server);
-      assert.equal(server.serviceDuty, true);
+      currentServer = chatter.refill.server;
+      assert.equal(currentServer, servers[refills]);
+      assert.equal(currentServer.serviceDuty, true);
       if (chatter.refill.guest === 1) {
         assert.equal(chatter.milk[0], 0.85);
         assert.ok(chatter.milk[1] < 0.85);
-        sawSecondGlass = true;
       }
-    } else if (sawSecondGlass && !refills) {
-      assert.equal(server.serviceDuty, false);
+    } else if (currentServer) {
+      assert.equal(currentServer.serviceDuty, false);
+      assert.equal(currentServer.withoutMilk, true);
+      assert.equal(currentServer.emptyServiceGlass, true);
+      currentServer = null;
       assert.deepEqual(chatter.milk, [0.85, 0.85]);
       refills++;
     }
   }
-  assert.equal(refills, 1);
+  assert.equal(refills, 3);
   assert.equal(new Set(greetings.slice(0, 12)).size, 12);
   assert.equal(greetings.length, 13);
   assert.notEqual(greetings[11], greetings[12]);
@@ -1304,9 +1317,8 @@ test('the Commissioner is reachable, greets Pip once, and has three ways to end 
   assert.deepEqual([...moods].sort(), [...commissionerMoods].sort());
 });
 
-test('the attendant drinks once a minute from a free server who refills offscreen', async () => {
+test('the attendant drinks once a minute and returns an empty glass to the server', async () => {
   const {createAttendantMilk, updateAttendantMilk} = await import('../src/attendant-milk.mjs');
-  const {serviceStaffOnscreen} = await import('../src/milk-service.mjs');
   const {pilloryAttendant} = await import('../src/pillory.mjs');
   const baron = createBaron();
   const camera = {x: cameraLeft(pilloryAttendant.x), y: cameraTop(pilloryAttendant.y)};
@@ -1330,15 +1342,11 @@ test('the attendant drinks once a minute from a free server who refills offscree
   for (let frame = 0; frame < 900 && service.scene; frame++) {
     phases.add(service.scene.phase);
     updateAttendantMilk(service, baron, staff, [], camera, 1 / 60);
-    if (service.scene?.phase === 'leave') {
-      assert.ok(server.emptyServiceGlass && server.withoutMilk && server.serviceDuty);
-    }
   }
-  assert.deepEqual([...phases], ['delivery', 'handoff', 'drink', 'returnGlass', 'leave']);
+  assert.deepEqual([...phases], ['delivery', 'handoff', 'drink', 'returnGlass']);
   assert.equal(service.scene, null);
-  assert.equal(serviceStaffOnscreen(server, camera), false);
-  assert.equal(server.withoutMilk, false);
-  assert.equal(server.emptyServiceGlass, false);
+  assert.equal(server.withoutMilk, true);
+  assert.equal(server.emptyServiceGlass, true);
   assert.equal(server.serviceDuty, false);
   assert.equal(baronServer.serviceDuty, true);
   assert.equal(ladiesServer.serviceDuty, true);
