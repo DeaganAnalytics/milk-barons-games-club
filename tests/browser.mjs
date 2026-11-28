@@ -1,3 +1,4 @@
+import {installPipDialogueCheck} from './pip-dialogue-check.mjs';
 import {clubSightLines} from '../src/club-sight-lines.mjs';
 import {milkCalls} from '../src/milk-service.mjs';
 import {staffIds} from '../src/staff.mjs';
@@ -185,6 +186,7 @@ async function load(width, height, mobile, name, url = site) {
 try {
   await send('Page.enable');
   await send('Runtime.enable');
+  await installPipDialogueCheck(send);
   // Drive the same game loop at 60 Hz without depending on key hold durations.
   await send('Page.addScriptToEvaluateOnNewDocument', {source: `
     // The complete asset roster now exceeds Chromium’s default 250-entry buffer.
