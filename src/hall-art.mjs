@@ -1,9 +1,9 @@
 import {bartender, creameryHatch} from './creamery.mjs';
-import {HALL_CENTER, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {HALL_CENTER, EAST_EDGE, MAP_HEIGHT, NORTH_EDGE, pipeHatch, ROOM_WIDTH, RUGS, SIDE_RUGS, SOUTH_EDGE, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
 const assetNames = [
   'wall-panel', 'end-column', 'base-trim', 'double-door',
-  'burgundy-banner', 'red-banner', 'tapestry', 'creamery-hatch', 'creamery-sign'
+  'burgundy-banner', 'red-banner', 'tapestry', 'creamery-hatch', 'creamery-sign', 'pipe-refill-hatch'
 ];
 
 export function loadHallArt() {
@@ -85,6 +85,9 @@ export function composeHall(art) {
   drawCentered('creamery-sign', bartender.x, NORTH_EDGE + 22, 166, 19);
   drawCentered('double-door', HALL_CENTER.x, NORTH_EDGE + 15, 176, 176);
   drawCentered('burgundy-banner', HALL_CENTER.x - 170, NORTH_EDGE + 43, 62, 93);
+  const hatch = art['pipe-refill-hatch'];
+  drawCentered('pipe-refill-hatch', pipeHatch.x, pipeHatch.top, pipeHatch.width,
+    pipeHatch.width * hatch.naturalHeight / hatch.naturalWidth);
   drawCentered('red-banner', HALL_CENTER.x + 170, NORTH_EDGE + 43, 62, 93);
   for (const rug of SIDE_RUGS) drawCentered('tapestry', rug.x, NORTH_EDGE + 28, 112, 130);
 

@@ -871,7 +871,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       || target.welcome || target.pokieBan || target.pokieRefusal || target.tax || target.danceFee
       || target.baronKarma || target.executiveFraud || target.poolClothesThanks || target.pilloryThanks
       || target.postEscort || target.guestGate || target.summoned || target.withoutMilk;
-    brieMenu = target.id === 'blonde-waitress' && !target.slotReaction && !target.brieMysticIntervention ? opening : null;
+    brieMenu = target.id === 'blonde-waitress' && !target.withoutMilk && !target.slotReaction && !target.brieMysticIntervention ? opening : null;
     returningToBrie = Boolean(brieMenu) && brieBoyfriendTopic.meet();
     departureMenu = !scripted && !opening.linBrieReferral && target.id !== skimId && target.id !== milkMysticId
       && !(target.id === 'baron' && isBaronDancing(baron)) ? opening : null;

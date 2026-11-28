@@ -1,5 +1,5 @@
 import {guardBlocks} from './guards.mjs';
-import {cameraLeft, cameraTop, ROOM_HEIGHT, ROOM_WIDTH, crossesScenery, EAST_EDGE, guestEnclosure, guestGateInside, guestGateOutside, insideGuestEnclosure, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE, shouldPauseNpc } from './room.mjs';
+import {cameraLeft, cameraTop, ROOM_HEIGHT, ROOM_WIDTH, crossesScenery, EAST_EDGE, guestEnclosure, guestGateInside, guestGateOutside, insideGuestEnclosure, routeAroundBaron, isNpcBlocked, NORTH_EDGE, RUGS, SOUTH_TRIM_Y, WEST_EDGE, pipeHatch, shouldPauseNpc } from './room.mjs';
 
 const uniforms = [
   {id: 'male-waiter', title: 'Waiter Feta'},
@@ -80,11 +80,32 @@ function offscreenRoute(member, player, baron, crowd) {
   return {target: null, route: []};
 }
 
+export function emptyStaffGlass(member) {
+  member.withoutMilk = true;
+  member.emptyServiceGlass = true;
+  member.pauseUntil = 0;
+  member.target = null;
+  member.route = [];
+}
+
+function routeToPipe(member, baron, crowd) {
+  const obstacles = crowd.filter(other => other !== member
+    && Math.hypot(other.x - member.x, other.y - member.y) > other.radius + member.radius)
+    .map(({x, y, radius}) => ({x, y, halfWidth: radius, halfHeight: radius}));
+  for (const offset of [0, -34, 34]) {
+    const target = {x: pipeHatch.x + offset, y: pipeHatch.y};
+    const route = routeAroundBaron(member, target, baron, obstacles);
+    if (route.length) return {target, route};
+  }
+  return {target: null, route: []};
+}
+
 export function updateStaff(staff, player, baron, guards, elapsed, dt, random = Math.random) {
   for (const member of staff) {
     if (member.serviceDuty) continue;
     member.walking = false;
-    if (dt <= 0 || elapsed < member.pauseUntil || (!member.rushingOffscreen && shouldPauseNpc(member, player))) continue;
+    const refilling = member.withoutMilk && !member.departing;
+    if (dt <= 0 || elapsed < member.pauseUntil || (!refilling && !member.rushingOffscreen && shouldPauseNpc(member, player))) continue;
     if (guestEnclosure.active && !member.guestAccess && insideGuestEnclosure(member)) {
       member.guestAccess = true;
       member.target = guestGateOutside;
@@ -92,6 +113,8 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
     }
     if (!member.target && member.rushingOffscreen) {
       Object.assign(member, offscreenRoute(member, member.departureOrigin ?? player, baron, [...guards, ...staff]));
+    } else if (!member.target && refilling) {
+      Object.assign(member, routeToPipe(member, baron, [player, ...guards, ...staff]));
     } else if (!member.target) {
       member.target = chooseTarget(member, baron, random);
       member.route = member.target && crossesScenery(member, member.target)
@@ -105,13 +128,13 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
     const dx = targetX - member.x;
     const dy = targetY - member.y;
     const distance = Math.hypot(dx, dy);
-    const speed = member.rushingOffscreen ? 180 : SPEED;
+    const speed = member.rushingOffscreen ? 180 : refilling ? 96 : SPEED;
     const step = Math.min(speed * dt, distance);
     const arrived = step === distance;
     const x = arrived ? targetX : member.x + dx * step / distance;
     const y = arrived ? targetY : member.y + dy * step / distance;
     if (isNpcBlocked(x, y, RADIUS, baron, member) || guardBlocks(x, y, member, guards)
-        || guardBlocks(x, y, member, staff)) {
+        || guardBlocks(x, y, member, staff) || (refilling && guardBlocks(x, y, member, [player]))) {
       if (!member.guestAccess) member.target = null;
       member.pauseUntil = elapsed + 0.5 + random();
       continue;
@@ -124,6 +147,10 @@ export function updateStaff(staff, player, baron, guards, elapsed, dt, random = 
     if (arrived) {
       member.route?.shift();
       if (member.route?.length) continue;
+      if (refilling && Math.abs(member.x - pipeHatch.x) <= 34 && member.y === pipeHatch.y) {
+        member.withoutMilk = false;
+        member.emptyServiceGlass = false;
+      }
       if (member.rushingOffscreen) {
         const origin = member.departureOrigin ?? player;
         const left = cameraLeft(origin.x);

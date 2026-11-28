@@ -1,6 +1,6 @@
-import {runServiceStaff, serviceStaffOnscreen} from './milk-service.mjs';
-import {EAST_EDGE, isNpcBlocked, NORTH_EDGE, PILLORY_ATTENDANT, ROOM_HEIGHT, ROOM_WIDTH,
-  routeAroundBaron, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
+import {emptyStaffGlass} from './staff.mjs';
+import {runServiceStaff} from './milk-service.mjs';
+import {isNpcBlocked, PILLORY_ATTENDANT, routeAroundBaron} from './room.mjs';
 
 const interval = 60;
 const durations = {handoff: 0.65, drink: 1.8, returnGlass: 0.65};
@@ -9,17 +9,6 @@ const byDistance = origin => (a, b) => distance(origin, a) - distance(origin, b)
 
 export function createAttendantMilk() {
   return {remaining: interval, scene: null};
-}
-
-function exitPoint(server, camera, baron) {
-  const clamp = (value, low, high) => Math.min(high, Math.max(low, value));
-  const x = clamp(server.x, WEST_EDGE + 50, EAST_EDGE - 50);
-  const y = clamp(server.y, NORTH_EDGE + 175, SOUTH_TRIM_Y - 30);
-  return [
-    {x: camera.x - 55, y}, {x: camera.x + ROOM_WIDTH + 55, y},
-    {x, y: camera.y - 45}, {x, y: camera.y + ROOM_HEIGHT + 80}
-  ].filter(point => !serviceStaffOnscreen(point, camera) && !isNpcBlocked(point.x, point.y, server.radius, baron))
-    .sort(byDistance(server))[0];
 }
 
 export function updateAttendantMilk(service, baron, staff, guards, camera, dt) {
@@ -45,21 +34,7 @@ export function updateAttendantMilk(service, baron, staff, guards, camera, dt) {
   const scene = service.scene;
   const {server, phase} = scene;
   scene.time += dt;
-  if (phase === 'delivery' || phase === 'leave') {
-    if (phase === 'leave') {
-      if (!serviceStaffOnscreen(server, camera)) {
-        server.withoutMilk = false;
-        server.emptyServiceGlass = false;
-        server.serviceDuty = false;
-        service.scene = null;
-        return;
-      }
-      if (!scene.point || serviceStaffOnscreen(scene.point, camera)) {
-        scene.point = exitPoint(server, camera, baron);
-        scene.route = scene.point ? routeAroundBaron(server, scene.point, baron) : [];
-      }
-    }
-    // Release a stuck server. On the way out, wandering can finish the offscreen refill.
+  if (phase === 'delivery') {
     if (!scene.route.length || scene.time >= 35) {
       server.serviceDuty = false;
       service.scene = null;
@@ -93,10 +68,9 @@ export function updateAttendantMilk(service, baron, staff, guards, camera, dt) {
   if (phase === 'handoff') scene.phase = 'drink';
   else if (phase === 'drink') scene.phase = 'returnGlass';
   else {
-    server.emptyServiceGlass = true;
-    scene.phase = 'leave';
-    scene.point = null;
-    scene.route = [];
+    emptyStaffGlass(server);
+    server.serviceDuty = false;
+    service.scene = null;
   }
 }
 

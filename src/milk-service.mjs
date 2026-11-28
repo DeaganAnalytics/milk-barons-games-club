@@ -1,5 +1,5 @@
 import {isBaronDancing} from './baron.mjs';
-import {faceStaffMovement} from './staff.mjs';
+import {emptyStaffGlass, faceStaffMovement} from './staff.mjs';
 import {guardBlocks} from './guards.mjs';
 import {EAST_EDGE, isNpcBlocked, NORTH_EDGE, ROOM_HEIGHT, ROOM_WIDTH, routeAroundBaron, SOUTH_TRIM_Y, WEST_EDGE} from './room.mjs';
 
@@ -83,12 +83,6 @@ function enter(scene, phase) {
 }
 
 export function updateMilkService(service, baron, staff, guards, camera, elapsed, dt, traveling, random = Math.random) {
-  for (const member of staff) {
-    if (member.withoutMilk && !member.serviceDuty && !serviceStaffOnscreen(member, camera)) {
-      member.withoutMilk = false;
-      member.emptyServiceGlass = false;
-    }
-  }
   if (dt <= 0) return;
 
   if (!service.scene) {
@@ -155,6 +149,7 @@ export function updateMilkService(service, baron, staff, guards, camera, elapsed
 
   if (scene.time < durations[scene.phase]) return;
   if (scene.phase === 'handoff') {
+    emptyStaffGlass(scene.server);
     scene.server.serviceDuty = false;
     enter(scene, 'drink');
     return 'milk-served';

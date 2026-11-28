@@ -675,6 +675,14 @@ try {
   assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Good evening. How may I assist you?');
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
     .backgroundImage.includes('/dialogue/expressions/male-waiter-welcoming.webp')`));
+  const coinsBeforeMilk = Number(await evaluate('document.getElementById("coin-count").textContent'));
+  await reply('Could I have a glass of milk, please?', "Certainly, sir. That'll be ₥2.");
+  await reply('Yes, please.', 'Here you are, sir. Enjoy!');
+  assert.equal(Number(await evaluate('document.getElementById("coin-count").textContent')), coinsBeforeMilk - 2);
+  await closeConversation();
+  await activate('Waiter Feta');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Not now! Busy, busy, busy!');
+  assert.equal(await evaluate('document.querySelectorAll("#conversation-replies button").length'), 0);
   await closeConversation();
 
   const cleanerUrl = new URL(site);
