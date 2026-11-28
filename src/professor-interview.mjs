@@ -43,7 +43,7 @@ function conclusion(assessment) {
   const final = [
     {label: 'That research was completely unscientific!', next: ending([professor('And yet I am the scientist, and you are the peasant.', 'deadpan'), "Curious, isn't it?"])},
     {label: "Well, I'm still a Curdist.", next: ending(['How unfortunate.', 'I suppose every academic study has its limitations.'])},
-    {label: 'Hmm. Maybe you have a point.', next: ending(['Good heavens!', professor('Have I discovered a cure? Could it be?!', 'self-assured-smirk'),
+    {label: 'Hmm. Maybe you have a point.', next: ending(['Good meadows!', professor('Have I discovered a cure? Could it be?!', 'self-assured-smirk'),
       notebook('The Professor hurriedly reopens his notebook.'), 'I must contact the Royal Academy immediately!'])},
     {label: 'DEATH TO THE DAIRY ARISTOCRACY! LIBERATE THE MILK! LONG LIVE THE REVOLUTION!',
       next: ending([notebook('The Professor reopens his notebook.'), professor('Persistent vocal symptoms.', 'deadpan'),
@@ -79,13 +79,13 @@ function education(spokeToMilo, next) {
     ]),
     choice('Q6_D', "Isn't independent thought the purpose of education?", ['For the aristocracy, certainly.',
       pip('And for everyone else?'), 'Literacy, arithmetic and punctuality. Beyond that, the economic returns diminish rather rapidly.',
-      pip("So we're educated just to become workers?"), professor("Good heavens! Your education wasn't entirely wasted after all.", 'condescending'), note], next),
+      pip("So we're educated just to become workers?"), professor("By the Great Cow! Your education wasn't entirely wasted after all.", 'condescending'), note], next),
     choice('Q6_E', 'When I realised I was considerably more intelligent than my lecturers.', [professor('Delusions of intellectual superiority. A particularly common affliction amongst educated peasants.', 'condescending'),
       pip('What if I actually am more intelligent?'), professor('Do you possess a doctorate?', 'skeptical'), pip('No.'),
       'Have you published any academic literature?', pip('No.'), professor('Do you have a hereditary title?', 'skeptical'),
       pip('What does that have to do with intelligence?!', 'exasperated'), 'I think we have established the limitations of your academic understanding.', note], next),
     choice('Q6_F', 'I was trying to impress a girl.', ['Ah! Romantic aspirations manifesting themselves through ideological affiliation.', professor('Did it work?', 'skeptical')], [
-      choice('Q6_F1', 'Yes.', ['Good heavens. Curdism may be sexually transmissible.', note], next),
+      choice('Q6_F1', 'Yes.', ['Good meadows. Curdism may be sexually transmissible.', note], next),
       choice('Q6_F2', 'No.', ['Unsuccessful courtship followed by prolonged ideological commitment. Entirely consistent with my research.', note], next),
       choice('Q6_F3', 'She left me for a wealthy man.', ['A young lady of considerable economic intelligence.', note], next),
       choice('Q6_F4', 'She was a Curdist too.', ["Oh, dear. They're beginning to form breeding pairs.", note], next)
@@ -96,7 +96,7 @@ function education(spokeToMilo, next) {
 function allocation(next) {
   return say(['Let us examine your understanding of resource allocation through a hypothetical economic scenario.',
     'Imagine, if you will, ten peasants and a single cow.', 'How would you propose allocating the milk?'], [
-    choice('Q5_A', 'Equally amongst the ten peasants.', ['Good heavens! Not a single drop allocated to the aristocracy?',
+    choice('Q5_A', 'Equally amongst the ten peasants.', ['Merciful milk! Not a single drop allocated to the aristocracy?',
       pip("You didn't mention any aristocrats."), 'Their presence should be implicit in any respectable economic model.', note], next),
     choice('Q5_B', 'According to how much each peasant contributes.', ['A rudimentary understanding of economic incentives. Encouraging.',
       pip('So you agree?'), 'Provided we recognise hereditary privilege as a considerable economic contribution.',
@@ -104,7 +104,7 @@ function allocation(next) {
     choice('Q5_C', 'From each according to his ability, to each according to his need!', ['An excellent principle! Consider the Baron. His considerable physical proportions necessitate several gallons of milk per day.',
       pip("That's not what Curd meant!"), 'Then I suggest Curd should have given greater consideration to the nutritional requirements of the aristocracy.', note], next),
     choice('Q5_D', 'Give it to whoever owns the cow.', [professor('Splendid! An emerging recognition of private property rights.', 'self-assured-smirk'),
-      pip('What if the ten peasants collectively own the cow?'), 'Good heavens. You were making such promising progress.', note], next),
+      pip('What if the ten peasants collectively own the cow?'), 'Merciful milk. You were making such promising progress.', note], next),
     choice('Q5_E', 'Give it all to the Milk Baron.', [professor('Extraordinary!', 'self-assured-smirk'), notebook('The Professor enthusiastically makes several notes.'),
       'A complete ideological transformation within a single academic session!', professor('I may have inadvertently developed a cure for Curdism!', 'self-assured-smirk'),
       pip('Can I have some milk now?'), "Oh, let's not undo all our progress."], next),
@@ -132,7 +132,7 @@ function milkBreak(next) {
       'A tall glass of milk for our research subject, if you would.', waiter('Right away, sir.'),
       {...direction('Pip drinks the milk.'), enterAction: 'curdistMilk'},
       professor('Excellent. Let us continue.', 'self-assured-smirk', {milkMoustache: true})], next),
-    choice('MILK_B', 'Can I drink from the fountain?', [professor('WHAT?! Good heavens, no! How utterly disgusting!', 'skeptical'), 'Never mind. Moving on.'], next),
+    choice('MILK_B', 'Can I drink from the fountain?', [professor('WHAT?! Good meadows, no! How utterly disgusting!', 'skeptical'), 'Never mind. Moving on.'], next),
     choice('MILK_C', 'No, thank you.', ['Demonstrates sufficient reverence for his betters to decline their milk. Most impressive.', note], next),
     choice('MILK_D', 'Screw you and your milk, you capitalist cow!', [
       guard('HEY! Who are you calling a cow?!', 'speaking'), guard('I mean... never mind. Mooving on.', 'deadpan')], next)
@@ -153,7 +153,7 @@ function women(seducedExecutive, next) {
     choice('Q3_C', '...property?', ['Subject demonstrates an inadequate understanding of the current legal system, but may prove a valuable ideological ally in matters of legislative reform.',
       note, pip("So women aren't property?"), professor('Not presently, no.', 'deadpan'), pip('Presently?!', 'alarmed'),
       professor('There are several legislative proposals circulating amongst my colleagues.', 'condescending'), pip('Have you consulted any women?'),
-      'Good heavens, no. That would introduce an undesirable degree of bias into the research.', note], next),
+      'Good meadows, no. That would introduce an undesirable degree of bias into the research.', note], next),
     choice('Q3_D', '...pretty?', [professor('Subject exhibits encouraging signs of simple-mindedness.', 'condescending'),
       "Appears to possess conventional reproductive inclinations. Reassuring, given the economy's continued reliance upon successive generations of peasants.", note], [
       choice('Q3_D1', 'What if I find aristocratic women attractive?', ["An unfortunate consequence of possessing eyesight beyond one's social station.",
@@ -191,7 +191,7 @@ function workers(seenDj, next) {
   ]);
   return say(['Question two. Complete the following sentence.', '"Workers..."', gesture], [
     choice('Q2_A', '...are an essential part of society.', ["Essential to society, yet subservient to capital. I didn't realise you'd read my book!",
-      'Good heavens. How could you afford it?'], [
+      'Good meadows. How could you afford it?'], [
       choice('Q2_A1', "I didn't... That's from your book?!", [professor('The public propaganda programme has paid dividends. Most interesting.', 'self-assured-smirk'), note,
         pip("What propaganda?! I didn't even say that!"), 'So effective that the subject remains entirely unaware of its influence. Remarkable.', anotherNote], next),
       choice('Q2_A2', '[Lie] I saved up all my pocket money for eight years just to purchase half a page.',
@@ -202,17 +202,17 @@ function workers(seenDj, next) {
         'An inverse relationship between intellectual capacity and the propensity for violence. Entirely consistent with my earlier findings.', note], next)
     ]),
     choice('Q2_B', '...are a regrettable necessity for the present moment, at least until robotics advances sufficiently.',
-      [professor('My God! It is capable of learning!', 'self-assured-smirk'), note], [
+      [professor('By the Great Cow! It is capable of learning!', 'self-assured-smirk'), note], [
         choice('Q2_B1', '...is the sort of propaganda you leeches spew!', [professor('Ah. I was premature in my assessment.', 'deadpan'), note], next),
         choice('Q2_B2', 'What can I say? This place is rubbing off on me.',
           ['So exposure therapy does work?! Although exposing the peasantry to aristocratic living conditions on a meaningful scale would be economically prohibitive...', note], next),
         choice('Q2_B3', "Look, Doc, I just want my two hundred milk tokens so I can be free. I'll say whatever at this point.",
           ['Responds to both the carrot AND the stick. Fascinating.', note], next)
       ]),
-    choice('Q2_C', '...should own the means of milk production.', [professor('Good heavens! Has nobody explained the concept of ownership to these people?', 'skeptical'), note], next),
+    choice('Q2_C', '...should own the means of milk production.', [professor('Merciful milk! Has nobody explained the concept of ownership to these people?', 'skeptical'), note], next),
     choice('Q2_D', 'WORKERS OF THE WORLD UNITE!', ["Excellent, excellent! I've always wanted to ascertain the meaning of this rather pitiable catchphrase. There has been considerable debate on the subject at the Royal Academy.",
       'The prevailing interpretation is "Workers of the world, unite in your love of your betters." Is it not?'], [
-      choice('Q2_D1', "What?! No! You can't be serious!", ['Good heavens. There are several distinguished academics whose reputations depend upon that interpretation.', note], common),
+      choice('Q2_D1', "What?! No! You can't be serious!", ['Merciful milk. There are several distinguished academics whose reputations depend upon that interpretation.', note], common),
       choice('Q2_D2', '[Lie] Yes.', [professor('Splendid! That settles nearly thirty years of academic debate.', 'self-assured-smirk'), note], common),
       choice('Q2_D3', 'It means unite in overthrowing the Dairy Aristocracy and reclaiming the milk produced by our collective labour!',
         ['Oh, how thoroughly unpleasant.', 'I much preferred our interpretation.', note], common)
@@ -224,18 +224,18 @@ function workers(seenDj, next) {
 
 function personalFailure(seducedExecutive, next) {
   const compensation = text => professor(text, 'thinking', {enterAction: 'curdistCompensation'});
-  const profDenial = professor('A severe disconnect from observable reality. Good heavens, the condition is more advanced than I anticipated.', 'condescending');
+  const profDenial = professor('A severe disconnect from observable reality. Good meadows, the condition is more advanced than I anticipated.', 'condescending');
   const personalLabel = 'Well, I suppose when I was seventeen, there was this girl, and she...';
   const personal = say(['Ah! Sexual impotence. A common affliction of the collectivist mind.', note], [
     choice('Q1_4A', 'Hey! I am perfectly potent!', [professor('How peculiar. One would have thought a sexually fulfilled peasant would have little inclination towards revolutionary politics.', 'skeptical')], next),
     choice('Q1_4B', "Wait a minute. You said I'm your first primary source. How would you know?",
       ['My dear peasant, my conclusions are supported by decades of rigorous academic inquiry, extensive peer-reviewed literature and several exceptionally sophisticated models.',
         pip('Models?'), 'Predominantly theoretical in nature, admittedly. The empirical component of my research has been somewhat lacking.',
-        pip("So you've never actually tested your theory?"), "Good heavens, what do you suppose I'm doing now?"], next),
-    choice('Q1_4C', 'That makes a lot of sense.', ['Good heavens. The condition may be more advanced than I anticipated.', anotherNote], next),
+        pip("So you've never actually tested your theory?"), "For milk's sake, what do you suppose I'm doing now?"], next),
+    choice('Q1_4C', 'That makes a lot of sense.', ['Merciful milk. The condition may be more advanced than I anticipated.', anotherNote], next),
     choice('Q1_4D', "I'm starting to question your academic credentials.", ['Intellectual hostility towards established authorities. Yes, Curd did write about that.', note], next),
     ...(seducedExecutive ? [
-      choice('Q1_4G', 'What are you on about?!', [direction('Pip points at his face.'), professor("Good heavens! Is that Lady Penelope's lipstick?", 'skeptical'),
+      choice('Q1_4G', 'What are you on about?!', [direction('Pip points at his face.'), professor("By the Great Cow! Is that Lady Penelope's lipstick?", 'skeptical'),
         pip('YES!', 'alarmed'), 'Oh, dear. I shall have to make some adjustments to my theoretical models.'], next)
     ] : [
       choice('Q1_4E', "[Lie] I've had many sexual partners!", ['Sexual insecurity manifesting itself through exaggerated claims of reproductive success. Fascinating.'], next),
@@ -253,7 +253,7 @@ function personalFailure(seducedExecutive, next) {
     choice('Q1_GUARD_B1', "Alright, alright! I'll do the study!", ['Responds favourably to the threat of violence. How very interesting.', note], next),
     choice('Q1_GUARD_B2', 'Is it too late to accept compensation?', [professor('Oh, splendid! Ideological convictions deteriorate remarkably quickly under pressure.', 'self-assured-smirk'),
       professor('Three milk tokens should suffice. Your negotiating position has deteriorated somewhat.', 'self-assured-smirk', {enterAction: 'curdistCoercedCompensation'}), note], next),
-    choice('Q1_GUARD_B3', 'I still refuse!', [professor('Good heavens. Are you genuinely prepared to sacrifice your life to avoid participating in an academic study?', 'skeptical')], [
+    choice('Q1_GUARD_B3', 'I still refuse!', [professor('Good meadows. Are you genuinely prepared to sacrifice your life to avoid participating in an academic study?', 'skeptical')], [
       choice('Q1_GUARD_B3A', "Alright, alright! I'll participate!", ['Survival instinct ultimately supersedes ideological conviction.', note], next),
       choice('Q1_GUARD_B3B', 'I refuse!', [], ending([professor('How academically inconvenient.', 'skeptical'), professor('Guard, if you would be so kind.', 'deadpan')], 'curdistInterviewDeath'))
     ]),
