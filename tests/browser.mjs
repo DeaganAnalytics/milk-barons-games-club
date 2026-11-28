@@ -76,6 +76,8 @@ async function activate(heading, withButton = false) {
     assert.equal(await evaluate("document.getElementById('conversation').hidden"), true);
     assert.equal(await evaluate("document.getElementById('heading')"), null);
   } else {
+    assert.equal(await evaluate("document.getElementById('conversation').hidden"), false,
+      `Expected ${heading} dialogue to open`);
     assert.equal(await evaluate("document.getElementById('conversation-title').textContent"), heading);
   }
 }
@@ -164,6 +166,16 @@ async function load(width, height, mobile, name, url = site) {
     assert.ok(assets.some(url => url.endsWith('/waiters/' + id + '-walk.webp')));
   }
   await frames(1);
+  // Allow the farewell and initial NPC positions to settle before the scripted routes.
+  await frames(240);
+  const departing = `(async () => Boolean((await import(
+    new URL('./src/elias.mjs', document.baseURI))).elias.departureSpeech))()`;
+  for (let attempt = 0; attempt < 60 && await evaluate(departing, true); attempt++) {
+    await frames(6);
+  }
+  assert.equal(await evaluate(departing, true), false, "Elias's departure should finish before movement");
+  // Later assertions measure ambient speech after the opening cutscene.
+  await evaluate("window.spokenLines.length = 0");
   if (process.env.SCREENSHOT_PREFIX) {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-${name}.png`, Buffer.from(shot.data, 'base64'));
