@@ -203,7 +203,10 @@ export function createPipeConversation(getState, random = Math.random) {
       ['menu', true, 'So... what have you got on the menu?', 'thinking',
         () => pipe('NOTHING! Go bother the bartender next door!', 'angry')],
       ['union', state.communist, "I'm thinking of starting a workers' union. Want to join?", 'happy',
-        () => sequence([pipe('A union?!', 'flustered'), pipe('FOR THE UNEMPLOYED?! Go bother someone else!', 'angry')])],
+        () => options(pipe('A union?!', 'flustered'), [
+          choice('Well, I don’t have a job yet, but…', 'worried',
+            pipe('FOR THE UNEMPLOYED?! Go bother someone else!', 'angry'))
+        ])],
       ['name', true, "My name's Pip. What's yours?", 'happy', nameTopic],
       ['family', true, 'Are we related? We kind of look alike.', 'thinking', familyTopic],
       ['guards', state.seenCowGuard, 'Why are the guards cows?', 'thinking',

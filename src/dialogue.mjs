@@ -157,6 +157,8 @@ const portraits = {
 
 const reportPortraits = new Map(['guard-angry', 'guard-radio', 'guard-listening', 'guard-formal', 'milo-angry'].map(name =>
   [name, new URL('../assets/dialogue/' + name + '.webp', import.meta.url)]));
+const injuredMiloPortraits = new Map(['worried', 'sad', 'relieved', 'angry', 'defiant'].map(mood =>
+  [mood, new URL('../assets/dialogue/milo-injured/' + mood + '.webp', import.meta.url)]));
 const portraitCache = new Map();
 
 const pipePortraitMoods = [
@@ -278,7 +280,7 @@ function standalonePortraitUrl(id, withoutMilk = false, mood, splattered = false
 
 function warmPortraits() {
   if (portraitCache.size) return;
-  const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values(), cameraPortrait];
+  const urls = [new URL('../assets/dialogue/portraits.webp', import.meta.url), ...reportPortraits.values(), ...injuredMiloPortraits.values(), cameraPortrait];
   for (const [id, moods] of extraPortraitMoods) {
     for (const mood of moods) urls.push(extraPortraitUrl(id, mood));
   }
@@ -456,12 +458,14 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
     mood = chooseExpression(mood, alternatives, npcHistory);
     const extraPortrait = extraPortraitUrl(character, mood, withoutMilk);
     const reportPortrait = reportPortraits.get(character + '-' + mood);
-    element.dataset.injured = String(character === 'milo' && miloWasInjured && !reportPortrait);
+    const injuredPortrait = character === 'milo' && miloWasInjured ? injuredMiloPortraits.get(mood) : null;
+    element.dataset.injured = String(Boolean(injuredPortrait));
+    element.classList.toggle('milo-injury-portrait', Boolean(injuredPortrait));
     element.classList.toggle('report-portrait', Boolean(reportPortrait));
     element.dataset.portrait = character;
-    if (extraPortrait || reportPortrait || !portraits[character]) {
+    if (injuredPortrait || extraPortrait || reportPortrait || !portraits[character]) {
       element.classList.add('standalone-portrait');
-      element.style.setProperty('--portrait-image', `url(${extraPortrait ?? reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.(), pipLipstick)})`);
+      element.style.setProperty('--portrait-image', `url(${injuredPortrait ?? extraPortrait ?? reportPortrait ?? standalonePortraitUrl(character, withoutMilk, mood, isCommissionerSplattered?.(), pipLipstick)})`);
       element.dataset.expression = mood;
       return;
     }
@@ -640,13 +644,15 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       playerPortrait.dataset.expression = portraitKey;
     }
     const currentSpeaker = node.character ?? character;
-    const narration = node.speaker === 'Narrator';
+    const directionOnly = Boolean(node.direction && !node.text?.trim());
+    const narration = directionOnly || node.speaker === 'Narrator';
     const npcName = currentSpeaker === milkMysticId ? 'Milk Mystic'
       : (!pipIsSpeaking && !narration && node.speaker) || (currentSpeaker === elias.id ? elias.title
         : currentSpeaker === bartender.id ? bartender.title
         : currentSpeaker === 'guard' ? 'Bull Guard'
         : currentSpeaker === pilloryAttendant.id ? pilloryAttendant.title : activeTarget.title);
-    title.textContent = pipIsSpeaking ? 'Pip' : narration ? 'Narrator' : npcName;
+    title.hidden = directionOnly;
+    title.textContent = directionOnly ? '' : pipIsSpeaking ? 'Pip' : narration ? 'Narrator' : npcName;
     speaker.textContent = npcName;
     panel.dataset.speakingSide = pipIsSpeaking ? 'player' : narration ? 'narrator' : 'npc';
     setPortrait(npcPortrait, currentSpeaker, node.mood, !node.exactNpcPortrait && withoutMilk && !(currentSpeaker === 'lin-waitress' && ['angry', 'hurt', 'skeptical', 'blushing'].includes(node.mood)), node.exactNpcPortrait);
@@ -693,15 +699,17 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
         return mysticSingleDialogue();
       }} : null;
     const extraReplies = [reaction, visibility, interview, brieTopic, mysticSingle].filter(Boolean);
-    const exitIndex = replies.findIndex(reply => reply.conversationExit);
-    const insertAt = exitIndex < 0 ? replies.length : exitIndex;
-    const availableReplies = [...replies.slice(0, insertAt), ...extraReplies, ...replies.slice(insertAt)].filter(reply => !usedReplies.has(reply.once)
+    // Older menus use the standard farewell without explicit exit metadata.
+    const isExit = reply => reply.conversationExit || reply.label === "I'll leave you to it."
+      || reply.label === "I'll leave you to it, then.";
+    const visibleReplies = [...replies, ...extraReplies].filter(reply => !usedReplies.has(reply.once)
       && (!reply.requiresDisposition || politicalDispositions[reply.requiresDisposition])
       && (!reply.requiresUsedReplies || reply.requiresUsedReplies.every(key => usedReplies.has(key)))
       && (!reply.requiresUnusedReplies || reply.requiresUnusedReplies.some(key => !usedReplies.has(key)))
       && (seenCowGuard || !cowGuardQuestions.has(reply.label))
       && (!reply.requiresKarmaChange || hasKarmaChanged?.())
       && (askedEliasAboutVampires || reply.label !== 'Do you have any garlic-flavoured milk?'));
+    const availableReplies = visibleReplies.filter(reply => !isExit(reply));
     if (node.randomizeWelcomeChoices) {
       const communist = availableReplies.filter(reply => reply.requiresDisposition === 'communist' || reply.expressesDisposition === 'communist');
       const regular = availableReplies.filter(reply => !communist.includes(reply));
@@ -711,6 +719,7 @@ export function createDialogue(baron, {onAction, tallies, placePokieWager, trans
       }
       availableReplies.splice(0, availableReplies.length, ...regular, ...communist);
     }
+    availableReplies.push(...visibleReplies.filter(isExit));
     const choiceButtons = [];
     const advanceButtons = [];
     for (const reply of availableReplies) {
@@ -949,6 +958,7 @@ export function dialoguePortraitInventory() {
   for (const [id, moods] of extraPortraitMoods) {
     for (const mood of moods) add(id, mood, extraPortraitUrl(id, mood));
   }
+  for (const [mood, asset] of injuredMiloPortraits) add('milo', mood, asset, 'injured');
   for (const [id, asset] of reportPortraits.entries()) {
     const separator = id.indexOf('-');
     add(id.slice(0, separator), id.slice(separator + 1), asset);

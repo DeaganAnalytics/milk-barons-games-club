@@ -76,6 +76,8 @@ try {
     find('I refuse to recognise the legitimacy of this bourgeois establishment!').click();
     dialogue.open(brie);
     const exclusive = !find(boyfriendTopic);
+    const exitLast = document.querySelector('#conversation-replies').lastElementChild
+      ?.textContent === "I'll leave you to it.";
     find(topic).click();
     const portrait = document.getElementById('conversation-npc');
     const brieReply = [...snapshot(), portrait.dataset.portrait, portrait.dataset.expression];
@@ -93,10 +95,10 @@ try {
     dialogue.open(brie);
     const consumed = !find(topic);
     dialogue.dismiss();
-    return {locked, unlocked, exclusive, brieReply, consumed, referralLine, linReply};
+    return {locked, unlocked, exclusive, exitLast, brieReply, consumed, referralLine, linReply};
   })()`);
   assert.deepEqual(brieLines, {
-    locked: true, unlocked: true, exclusive: true,
+    locked: true, unlocked: true, exclusive: true, exitLast: true,
     brieReply: ['Waitress Brie', 'Oh, I love him!', 'blonde-waitress', 'lovestruck'], consumed: true,
     referralLine: ['Waitress Brie', "Have you spoken to Lin? She's single, you know!"],
     linReply: ['Waitress Lin', 'Yes, sir. Can I help you?']
