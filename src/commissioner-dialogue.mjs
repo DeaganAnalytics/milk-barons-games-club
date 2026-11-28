@@ -117,7 +117,7 @@ export function createCommissionerConversation() {
     exchange([['I just thought it was cool.', 'What... are you? A... child?', frowning]]),
     exchange([
       ["Apparently, it's good for your skin.", 'How... is this... relevant?', deadpan],
-      ['It might help you see the bright side of all this?', 'God help me.', despondent]
+      ['It might help you see the bright side of all this?', 'Great Cow help me.', despondent]
     ]),
     exchange([
       ['Just another display of wastefulness.', "Be quiet! That's how I ended up here.", stressed],
