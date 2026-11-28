@@ -53,7 +53,7 @@ const scenes = {
     'Strange.', 'There are considerably stranger things in this establishment, sir.'
   ],
   'handlebar-waiter': [
-    "Have you seen an old woman wearing a cow's head?", line('Good heavens! What dreadful attire!', 'offended'),
+    "Have you seen an old woman wearing a cow's head?", line('By the horns! What dreadful attire!', 'offended'),
     "So you've seen her?", 'Certainly not, sir! I would remember such an egregious violation of good taste.',
     "She's quite difficult to miss.", 'As is my moustache, sir, yet remarkably few patrons compliment it.',
     "You've got a very nice moustache.", line('HA! A gentleman of impeccable taste!', 'pleased'),
