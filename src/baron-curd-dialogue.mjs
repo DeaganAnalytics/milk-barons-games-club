@@ -41,11 +41,11 @@ export function baronCurdReply(menu) {
       ['Continue', baron("I CAN'T STAND POOR PEOPLE!")],
       ['Continue', elias('A preference for financially established clientele.')],
       ["You're just translating everything he says into something less offensive.", elias('Among my many professional responsibilities, Master Pip.')],
-      ['Continue', baron("AND HE'S BLOODY GOOD AT IT!", 'pleased')]
+      ['Continue', baron("AND HE'S MILKIN GOOD AT IT!", 'pleased')]
     ],
     [
       ["Why shouldn't the dairy belong to those who work in it?", baron("BECAUSE IT'S MINE!")],
-      ["That's not an argument.", baron('IT BLOODY WELL IS!')],
+      ["That's not an argument.", baron('IT PLOUGHING WELL IS!')],
       ['Continue', elias('Collective ownership does not necessarily guarantee efficient management, Master Pip. Individual ownership provides clear incentives and accountability.')],
       ['And who holds the Baron accountable?', elias('Ultimately, ze market.')],
       ['Continue', baron('I OWN THE MARKET!', 'pleased')],
