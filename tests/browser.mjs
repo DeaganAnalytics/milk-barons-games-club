@@ -501,10 +501,11 @@ try {
   await closeConversation();
   await hold('ArrowLeft', 170);
   await hold('ArrowDown', 1900);
-  // Detour east of the slot-machine bank before returning to the west wall.
-  await hold('ArrowRight', 45);
-  await hold('ArrowDown', 470);
-  await hold('ArrowLeft', 45);
+  // Back up before crossing the approach to the occupied slot seats.
+  await hold('ArrowUp', 30);
+  await hold('ArrowRight', 65);
+  await hold('ArrowDown', 510);
+  await hold('ArrowLeft', 65);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [0, 2740]);
   assert.deepEqual(await evaluate(`(() => {
     const original = CanvasRenderingContext2D.prototype.drawImage;
@@ -530,6 +531,10 @@ try {
     const shot = await send('Page.captureScreenshot', {format: 'png'});
     await writeFile(`${process.env.SCREENSHOT_PREFIX}-southeast.png`, Buffer.from(shot.data, 'base64'));
   }
+  // Go around the live firing lanes before following the east wall north.
+  await hold('ArrowLeft', 175);
+  await hold('ArrowUp', 180);
+  await hold('ArrowRight', 175);
   await hold('ArrowUp', 1900);
   assert.deepEqual(await evaluate('[window.mapScrollX, window.mapScrollY]'), [1380, 0]);
   if (process.env.SCREENSHOT_PREFIX) {
@@ -676,8 +681,8 @@ try {
   cleanerUrl.searchParams.set('cleaner-test', '1');
   await load(1100, 950, false, 'cleaner', cleanerUrl.href);
   await hold('ArrowUp', 20);
-  await activate('Edmund Skim');
-  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Pip: Hey, I recognise you!');
+  await activate('Pip');
+  assert.equal(await evaluate('document.getElementById("conversation-line").textContent'), 'Hey, I recognise you!');
   assert.ok(await evaluate(`getComputedStyle(document.getElementById('conversation-npc'), '::before')
     .backgroundImage.includes('/waiters/edmund-vale-portrait.webp')`));
   if (process.env.SCREENSHOT_PREFIX) {
