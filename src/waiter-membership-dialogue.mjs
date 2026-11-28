@@ -41,7 +41,7 @@ const variants = new Map([
     staff('Per week, naturally.')
   ]],
   ['handlebar-waiter', [
-    staff('Good heavens, no, sir!', 'welcoming'),
+    staff('By the Great Cow, no, sir!', 'welcoming'),
     pip('Why not?'),
     staff('Our esteemed members are entitled to an unlimited supply of the finest milk!', 'pleased'),
     pip('How much does membership cost?'),
