@@ -166,8 +166,8 @@ async function load(width, height, mobile, name, url = site) {
     assert.ok(assets.some(url => url.endsWith('/waiters/' + id + '-walk.webp')));
   }
   await frames(1);
-  // Allow the farewell and initial NPC positions to settle before the scripted routes.
-  await frames(240);
+  // The Baron routes need the roaming Mystic to clear the path.
+  if (name === 'desktop' || name === 'mobile') await frames(240);
   const departing = `(async () => Boolean((await import(
     new URL('./src/elias.mjs', document.baseURI))).elias.departureSpeech))()`;
   for (let attempt = 0; attempt < 60 && await evaluate(departing, true); attempt++) {
