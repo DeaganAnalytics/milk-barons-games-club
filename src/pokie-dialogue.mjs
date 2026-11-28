@@ -22,7 +22,7 @@ const greetings = [
 
 const wins = [
   'Winner, winner, chicken dinner!',
-  'Holy moly, guacamole!',
+  'Milky moo, a win for you!',
   "Hip hip hooray! It's your lucky day!",
   "Ding ding ding! You're the king!",
   'Yippee! Money for thee!',
