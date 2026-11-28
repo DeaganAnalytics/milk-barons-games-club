@@ -8,7 +8,10 @@ export const WEST_EDGE = -ROOM_WIDTH;
 export const EAST_EDGE = ROOM_WIDTH * 2;
 export const HALL_CENTER = {x: ROOM_WIDTH / 2, y: (NORTH_EDGE + SOUTH_EDGE) / 2};
 // Pipe's hatch is in the wall panel immediately to the right of the burgundy banner.
-export const pipeHatch = {x: WEST_EDGE + 456, y: NORTH_EDGE + 190, top: NORTH_EDGE + 71, width: 48};
+export const pipeHatch = {
+  x: WEST_EDGE + 456, y: NORTH_EDGE + 190, top: NORTH_EDGE + 79,
+  width: 72, sill: NORTH_EDGE + 133
+};
 export const DANCE_FLOOR = {x: HALL_CENTER.x, y: SOUTH_EDGE - ROOM_HEIGHT / 2 + 25};
 const danceBounds = {...DANCE_FLOOR, halfWidth: 177, halfHeight: 175};
 export const BARON_DANCE_STOP = {x: DANCE_FLOOR.x - 270, y: DANCE_FLOOR.y - 227};
