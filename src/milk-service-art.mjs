@@ -12,6 +12,58 @@ const glassGrips = {
   'blonde-waitress': [86, 78],
   'lin-waitress': [86, 77]
 };
+// Measured from the full-glass sprite cells at their 128×160 reference size.
+const staffGlassProfiles = {
+  'male-waiter': {width: 14, bowl: 15, stem: 5, foot: 11},
+  'female-waiter': {width: 13, bowl: 13, stem: 5, foot: 9},
+  'handlebar-waiter': {width: 14, bowl: 15, stem: 5, foot: 11},
+  'martini-waiter': {width: 20, bowl: 11, stem: 9, foot: 11, martini: true},
+  'blonde-waitress': {width: 14, bowl: 13, stem: 5, foot: 9},
+  'lin-waitress': {width: 15, bowl: 14, stem: 5, foot: 10}
+};
+
+function drawStaffGlass(ctx, server, x, y, angle, milk) {
+  const profile = staffGlassProfiles[server.id];
+  if (!profile) return;
+  const {width, bowl, stem, foot, martini} = profile;
+  const rim = width * 0.3;
+  const footWidth = foot * 0.3;
+  const bottom = -3;
+  const top = bottom - bowl * 0.6;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(angle);
+  ctx.lineWidth = 1.15;
+  ctx.strokeStyle = '#201a16';
+  ctx.fillStyle = '#c4d0cf';
+  ctx.beginPath();
+  ctx.moveTo(-rim, top);
+  ctx.lineTo(rim, top);
+  if (martini) ctx.lineTo(0, bottom);
+  else {
+    ctx.bezierCurveTo(rim + 1, top + 3, rim, bottom, 0, bottom);
+    ctx.bezierCurveTo(-rim, bottom, -rim - 1, top + 3, -rim, top);
+  }
+  ctx.closePath();
+  ctx.fill();
+  if (milk > 0) {
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = '#fff4d8';
+    const level = mix(bottom, top + 2, milk);
+    ctx.fillRect(-rim - 1, level, rim * 2 + 2, bottom - level);
+    ctx.restore();
+  }
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(0, bottom);
+  ctx.lineTo(0, bottom + stem * 0.6);
+  ctx.moveTo(-footWidth, bottom + stem * 0.6);
+  ctx.lineTo(footWidth, bottom + stem * 0.6);
+  ctx.stroke();
+  ctx.restore();
+}
+
 const mix = (a, b, t) => a + (b - a) * t;
 const ease = t => t * t * (3 - 2 * t);
 
@@ -108,7 +160,6 @@ export function drawMilkAction(ctx, scene, baron, animateBaronArm) {
   if (!['handoff', 'drink', 'windup', 'toss'].includes(scene.phase)) return;
   const t = milkProgress(scene);
   const {server, side} = scene;
-  const martini = server.id === 'martini-waiter';
   const restingX = baron.x + side * 22;
   const restingY = baron.y + 3;
   const shoulderX = baron.x + side * 16;
@@ -164,7 +215,7 @@ export function drawMilkAction(ctx, scene, baron, animateBaronArm) {
     }
     reach(ctx, shoulderX, shoulderY, armX, armY, '#302119', '#201814');
   }
-  drawMilkGlass(ctx, x, y, angle, milk, martini);
+  drawStaffGlass(ctx, server, x, y, angle, milk);
 }
 
 function serverGlassPosition(server) {
@@ -174,20 +225,21 @@ function serverGlassPosition(server) {
 
 export function drawEmptyServiceGlass(ctx, server) {
   const {x, y} = serverGlassPosition(server);
-  drawMilkGlass(ctx, x, y, 0, 0, server.id === 'martini-waiter');
+  drawStaffGlass(ctx, server, x, y, 0, 0);
 }
 
 export function drawPipePour(ctx, server) {
   const progress = server.pipePour / pipePourDuration;
   const clamp = value => Math.max(0, Math.min(1, value));
-  const handoff = ease(clamp(Math.min(progress / 0.2, (1 - progress) / 0.2)));
+  const returnToTray = (1 - progress) / 0.2;
+  const handoff = ease(clamp(server.emptyServiceGlass ? Math.min(progress / 0.2, returnToTray) : returnToTray));
   const tilt = ease(clamp(Math.min((progress - 0.12) / 0.15, (0.87 - progress) / 0.15)));
   const fill = clamp((progress - 0.27) / 0.45);
   const grip = serverGlassPosition(server);
   const glassX = mix(grip.x, pipeHatch.x + 9, handoff);
-  const glassY = mix(grip.y, pipeHatch.top + 58, handoff);
+  const glassY = mix(grip.y, pipeHatch.top + 42, handoff);
   const jugX = pipeHatch.x - 7;
-  const jugY = pipeHatch.top + 49;
+  const jugY = pipeHatch.top + 33;
   const angle = 1.3 * tilt;
   const lipX = jugX + Math.sin(angle) * 11;
   const lipY = jugY - Math.cos(angle) * 11;
@@ -203,7 +255,7 @@ export function drawPipePour(ctx, server) {
     ctx.stroke();
     ctx.restore();
   }
-  drawMilkGlass(ctx, glassX, glassY, 0, fill, server.id === 'martini-waiter');
+  drawStaffGlass(ctx, server, glassX, glassY, 0, fill);
 
   if (!tilt) return;
   ctx.save();
@@ -262,5 +314,5 @@ export function drawAttendantMilk(ctx, scene, pose) {
   const {x, y} = PILLORY_ATTENDANT;
   if (!arm) reach(ctx, grip.x, grip.y, glassX, glassY, '#f5e2c2', '#dfbd96');
   if (arm) reach(ctx, x + side * 7, y - 34, glassX, glassY - 1, '#31272c', '#f3d5b0');
-  drawMilkGlass(ctx, glassX, glassY, angle, milk, scene.server.id === 'martini-waiter');
+  drawStaffGlass(ctx, scene.server, glassX, glassY, angle, milk);
 }

@@ -467,7 +467,7 @@ test('milk service waits for eligible time and calls the closest server with mil
   assert.equal(baron.speech.text, milkCalls.at(-1));
 });
 
-test('server carries an empty glass to Pipe after delivering milk to the Baron', async () => {
+test('server visits Pipe for a replacement glass after delivering milk to the Baron', async () => {
   const baron = createBaron();
   const service = createMilkService();
   const server = {x: baron.x + 160, y: baron.y + 8, radius: 14, walkTime: 0};
@@ -488,7 +488,7 @@ test('server carries an empty glass to Pipe after delivering milk to the Baron',
   assert.equal(service.remaining, 45);
   assert.equal(cleaner.serviceDuty, false);
   assert.equal(server.withoutMilk, true);
-  assert.equal(server.emptyServiceGlass, true);
+  assert.equal(server.emptyServiceGlass, false, 'The Baron keeps the glass until he throws it');
   updateMilkService(service, baron, staff, [], {x: 1000, y: 0}, 25, 0.05, false);
   assert.equal(server.withoutMilk, true, 'Leaving the camera cannot refill a glass');
   const {pipeHatch} = await import('../src/room.mjs');

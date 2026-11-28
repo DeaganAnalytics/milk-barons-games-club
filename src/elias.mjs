@@ -636,10 +636,10 @@ export function createEliasDeparture(actor, baron, cameraX, cameraY, nearbyActor
           || target.y < cameraY + 66 || target.y > cameraY + ROOM_HEIGHT - 28
           || isNpcBlocked(target.x, target.y, radius, baron)) continue;
       const route = routeAroundBaron({...actor, radius}, target, baron, obstacles);
-      if (route.length) return {route, text, time: 0};
+      if (route.length) return {route, text};
     }
   }
-  return {route: [], text, time: 0};
+  return {route: [], text};
 }
 
 const followingDialogueDistance = 2 * ROOM_WIDTH;

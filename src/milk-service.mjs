@@ -149,7 +149,7 @@ export function updateMilkService(service, baron, staff, guards, camera, elapsed
 
   if (scene.time < durations[scene.phase]) return;
   if (scene.phase === 'handoff') {
-    emptyStaffGlass(scene.server);
+    emptyStaffGlass(scene.server, false);
     scene.server.serviceDuty = false;
     enter(scene, 'drink');
     return 'milk-served';
